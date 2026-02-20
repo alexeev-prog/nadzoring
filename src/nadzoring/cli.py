@@ -153,7 +153,7 @@ def common_logging_options[F: Callable[..., Any]](func: F) -> F:
 
         if verbose:
             click.secho(
-                f"\n⚡ Completed in {elapsed:.2f} seconds", fg="bright_black", dim=True
+                f"\n⚡ Completed in {elapsed:.2f} seconds", dim=True
             )
 
         return result

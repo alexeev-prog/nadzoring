@@ -11,18 +11,18 @@ sys.path.insert(0, os.path.abspath("src/nadzoring"))
 
 project = "nadzoring"
 author = "Alexeev Bronislav"
-version = "0.1.0"
+version = "0.1.1"
 release = "0.1"
 project_copyright = "2025, Alexeev Bronislaw"
 
-autodoc_default_options = {
+autodoc_default_options: dict[str, bool | str] = {
     "members": True,
     "undoc-members": True,
     "private-members": True,
     "special-members": "__init__",
 }
 
-extensions = [
+extensions: list[str] = [
     "sphinx.ext.autodoc",  # autodoc from docstrings
     "sphinx.ext.viewcode",  # links to source code
     "sphinx.ext.napoleon",  # support google and numpy docs style
@@ -37,9 +37,9 @@ extensions = [
 pygments_style = "gruvbox-dark"
 
 html_theme = "furo"  # theme
-html_static_path = ["_static"]  # static dir
+html_static_path: list[str] = ["_static"]  # static dir
 todo_include_todos = True  # include todo in docs
-auto_doc_default_options = {"autosummary": True}
+auto_doc_default_options: dict[str, bool] = {"autosummary": True}
 
 autodoc_mock_imports = []
 
@@ -50,5 +50,5 @@ def skip(app, what, name, obj, would_skip, options):
     return would_skip
 
 
-def setup(app):
+def setup(app) -> None:
     app.connect("autodoc-skip-member", skip)

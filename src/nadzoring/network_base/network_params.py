@@ -20,9 +20,24 @@ from platform import system
 from socket import gethostbyname
 from subprocess import CalledProcessError, check_output
 
+from requests import get
+
 from nadzoring.logger import get_logger
 
 logger: Logger = get_logger(__name__)
+
+
+def public_ip() -> str:
+    """Getting an external IP address by accessing the service api: https://api.ipify.org/
+
+    Returns:
+        str: public IP
+    """
+    try:
+        return get("https://api.ipify.org/").text  # noqa: S113
+    except Exception:
+        logger.exception("Raised exception when try to access https://api.ipify.org/")
+        return "127.0.0.1"
 
 
 def _get_linux_network_info() -> dict[str, str | None]:
@@ -37,6 +52,7 @@ def _get_linux_network_info() -> dict[str, str | None]:
         "IPv6 address": interface_info.get("ipv6"),
         "Router ip-address": gateway_ip,
         "MAC-address": mac_address,
+        "Public IP address": public_ip(),
     }
 
 
@@ -158,6 +174,7 @@ def _extract_interface_details(interface_parts: list[str]) -> dict[str, str | No
         "IPv6 address": None,
         "Router ip-address": None,
         "MAC-address": None,
+        "Public IP address": public_ip(),
     }
 
     for part in interface_parts:
