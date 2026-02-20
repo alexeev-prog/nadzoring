@@ -1,3 +1,15 @@
+commit cefba08c660df0085bd752a4284b359873543f44
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Feb 20 23:54:23 2026 +0700
+
+    improve CLI App UX/UI and publish package; update readme
+
+commit 113a20855d679499c361fd3b56810c6260be2ede
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Feb 20 23:23:51 2026 +0700
+
+    add get-network-params and ping-address commands
+
 commit c0c74257ad27c31bef2522a541db32834c9e0444
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Fri Feb 20 17:49:24 2026 +0700

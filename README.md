@@ -27,7 +27,6 @@
     <img src="https://img.shields.io/github/issues/alexeev-prog/nadzoring?style=for-the-badge">
     <img src="https://img.shields.io/github/last-commit/alexeev-prog/nadzoring?style=for-the-badge">
     <img src="https://img.shields.io/pypi/wheel/nadzoring?style=for-the-badge">
-    <img src="https://img.shields.io/badge/coverage-100%25-100%25?style=for-the-badge" alt="Coverage">
     <img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/nadzoring?style=for-the-badge">
     <img alt="PyPI - Version" src="https://img.shields.io/pypi/v/nadzoring?style=for-the-badge">
     <img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/nadzoring?style=for-the-badge">
@@ -322,7 +321,6 @@ This project is licensed under **GNU LGPL 2.1 License** - see [LICENSE](https://
 
 [Explore Documentation](https://alexeev-prog.github.io/nadzoring) |
 [Report Issue](https://github.com/alexeev-prog/nadzoring/issues) |
-[View Examples](./examples)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
