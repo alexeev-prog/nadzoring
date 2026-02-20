@@ -1,6 +1,14 @@
 nadzoring package
 =================
 
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   nadzoring.network_base
+
 Submodules
 ----------
 
