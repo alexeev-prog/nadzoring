@@ -1,7 +1,7 @@
 import nox
 
 # uv will handle any missing python versions
-python_versions = ["3.11", "3.12", "3.13"]
+python_versions = ["3.12", "3.13", "3.14"]
 
 
 @nox.session(python=python_versions, venv_backend="uv")
@@ -32,7 +32,7 @@ def test(session):
 @nox.session
 def lint(session):
     session.install("ruff")
-    session.run("ruff", "check", "src/ngpasm/")
+    session.run("ruff", "check", "src/nadzoring/")
 
 
 @nox.session
