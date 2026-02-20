@@ -1,3 +1,9 @@
+commit c0c74257ad27c31bef2522a541db32834c9e0444
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Feb 20 17:49:24 2026 +0700
+
+    update docs
+
 commit dac508e4371aec6586445fd6fa547e373a53cabf
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Fri Feb 20 17:49:08 2026 +0700

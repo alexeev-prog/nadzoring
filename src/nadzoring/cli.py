@@ -1,12 +1,14 @@
 import functools
 from collections.abc import Callable
 from logging import Logger
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import click
 from tabulate import tabulate
 
 from nadzoring.logger import get_logger, setup_cli_logging
+from nadzoring.network_base.network_params import network_param
+from nadzoring.network_base.ping_address import ping_addr
 from nadzoring.network_base.router_ip import (
     check_ipv4,
     check_ipv6,
@@ -33,6 +35,20 @@ def common_logging_options[F: Callable[..., Any]](func: F) -> F:
     return cast(F, wrapper)
 
 
+def print_results_table(results: dict[str, any]) -> None:
+    if results:
+        print(
+            tabulate(
+                results,
+                showindex="never",
+                headers="keys",
+                tablefmt="simple_grid",
+            )
+        )
+    else:
+        print("No results.")
+
+
 @click.group()
 def cli() -> None:
     """FOSS tool for detecting website blocks, downdetecting and network analysis."""
@@ -41,6 +57,29 @@ def cli() -> None:
 @cli.group()
 def network_base() -> None:
     """Network Base"""
+
+
+@network_base.command()
+@common_logging_options
+@click.argument("addresses", type=str, nargs=-1, required=True)
+def ping_address(addresses: tuple[str, ...]) -> None:
+    """Ping one or more addresses."""
+    results: list[dict[str, str]] = []
+
+    for address in addresses:
+        is_pinged: Literal["no", "yes"] = "yes" if ping_addr(address) else "no"
+
+        results.append({"Address": address, "IsPinged": is_pinged})
+
+    print_results_table(results)
+
+
+@network_base.command()
+@common_logging_options
+def get_network_params() -> None:
+    data: dict[str, str | None] | None = network_param()
+
+    print_results_table([data])
 
 
 @network_base.command()
@@ -72,15 +111,7 @@ def get_ip_by_hostname(hostnames: tuple[str, ...]) -> None:
             }
         )
 
-    if results:
-        print(
-            tabulate(
-                results,
-                showindex="never",
-                headers="keys",
-                tablefmt="simple_grid",
-            )
-        )
+    print_results_table(results)
 
 
 @network_base.command()
@@ -98,15 +129,7 @@ def get_service_by_port(ports: tuple[int, ...]) -> None:
 
         results.append({"port": port, "service": service})
 
-    if results:
-        print(
-            tabulate(
-                results,
-                showindex="never",
-                headers="keys",
-                tablefmt="simple_grid",
-            )
-        )
+    print_results_table(results)
 
 
 def main() -> None:
