@@ -95,7 +95,7 @@ def save_results(data: Any, filename: str, fileformat: str) -> None:
         elif fileformat == "csv":
             with file_path.open("w", encoding="utf-8", newline="") as f:
                 if data:
-                    writer = csv.DictWriter(f, fieldnames=data[0].keys())
+                    writer: DictWriter = csv.DictWriter(f, fieldnames=data[0].keys())
                     writer.writeheader()
                     writer.writerows(data)
             click.secho(f"✓ CSV results saved to {file_path}", fg="green")
@@ -137,9 +137,9 @@ def common_logging_options[F: Callable[..., Any]](func: F) -> F:
         save = kwargs.pop("save", False)
         setup_cli_logging(verbose=verbose, quiet=quiet, no_color=no_color)
 
-        start_time = time()
+        start_time: float = time()
         result = func(*args, **kwargs)
-        elapsed = time() - start_time
+        elapsed: float = time() - start_time
 
         if output == "json":
             print(json.dumps(result))
@@ -197,7 +197,7 @@ def get_network_params() -> list[dict[str, str | None] | None]:
 @network_base.command()
 @common_logging_options
 @click.argument("hostnames", type=str, nargs=-1, required=True)
-def get_ip_by_hostname(hostnames: tuple[str, ...]) -> None:
+def get_ip_by_hostname(hostnames: tuple[str, ...]) -> list[dict[str, int | str]]:
     """Get IPs for one or more hostname addresses."""
     results: list[dict[str, str | int]] = []
 
@@ -229,7 +229,7 @@ def get_ip_by_hostname(hostnames: tuple[str, ...]) -> None:
 @network_base.command()
 @common_logging_options
 @click.argument("ports", type=int, nargs=-1, required=True)
-def get_service_by_port(ports: tuple[int, ...]) -> None:
+def get_service_by_port(ports: tuple[int, ...]) -> list[dict[str, int | str]]:
     """Get service names for one or more ports."""
     results: list[dict[str, str | int]] = []
 
