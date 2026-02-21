@@ -1,3 +1,9 @@
+commit eeaae18a16077d09efe52ceef289e0c6603f7a49
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Feb 21 00:10:01 2026 +0700
+
+    add public ip to network params; release 0.1.1
+
 commit ca4ce9f8722613118da634be131cf7fdd9fca552
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Sat Feb 21 00:01:11 2026 +0700

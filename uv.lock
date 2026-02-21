@@ -876,7 +876,7 @@ wheels = [
 
 [[package]]
 name = "nadzoring"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
@@ -884,6 +884,7 @@ dependencies = [
     { name = "dnspython" },
     { name = "elevate" },
     { name = "geopy" },
+    { name = "netifaces" },
     { name = "pandas" },
     { name = "ping3" },
     { name = "pysocks" },
@@ -914,6 +915,7 @@ requires-dist = [
     { name = "dnspython", specifier = ">=2.8.0" },
     { name = "elevate", specifier = ">=0.1.3" },
     { name = "geopy", specifier = ">=2.4.1" },
+    { name = "netifaces", specifier = ">=0.11.0" },
     { name = "pandas", specifier = ">=3.0.1" },
     { name = "ping3", specifier = ">=5.1.5" },
     { name = "pysocks", specifier = ">=1.7.1" },
@@ -936,6 +938,12 @@ dev = [
     { name = "ruff", specifier = ">=0.15.1" },
     { name = "sphinx", specifier = ">=9.1.0" },
 ]
+
+[[package]]
+name = "netifaces"
+version = "0.11.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a6/91/86a6eac449ddfae239e93ffc1918cf33fd9bab35c04d1e963b311e347a73/netifaces-0.11.0.tar.gz", hash = "sha256:043a79146eb2907edf439899f262b3dfe41717d34124298ed281139a8b93ca32", size = 30106, upload-time = "2021-05-31T08:33:02.506Z" }
 
 [[package]]
 name = "nox"

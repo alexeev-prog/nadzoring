@@ -14,6 +14,8 @@ import click
 from tabulate import tabulate
 
 from nadzoring.logger import get_logger, setup_cli_logging
+from nadzoring.network_base.geolocation_ip import geo_ip
+from nadzoring.network_base.ipv4_local_cli import get_local_ipv4
 from nadzoring.network_base.network_params import network_param
 from nadzoring.network_base.ping_address import ping_addr
 from nadzoring.network_base.router_ip import (
@@ -63,7 +65,9 @@ def print_results_table(results: dict[str, any]) -> None:
         print("No results.")
 
 
-def print_csv_table(data: list[dict[str, Any]], file: TextIO | None = None) -> None:
+def print_csv_table(
+    data: list[dict[str, Any]], file: TextIO | None = None
+) -> str | None:
     """Print data as CSV to console or file"""
     if not data:
         click.echo("No data to display")
@@ -152,9 +156,7 @@ def common_logging_options[F: Callable[..., Any]](func: F) -> F:
             save_results(result, save, output)
 
         if verbose:
-            click.secho(
-                f"\n⚡ Completed in {elapsed:.2f} seconds", dim=True
-            )
+            click.secho(f"\n⚡ Completed in {elapsed:.2f} seconds", dim=True)
 
         return result
 
@@ -188,8 +190,29 @@ def ping_address(addresses: tuple[str, ...]) -> list[dict[str, str]]:
 
 @network_base.command()
 @common_logging_options
+@click.argument("ips", type=str, nargs=-1, required=True)
+def get_geolocation_by_ip(ips: tuple[str, ...]) -> list[dict[str, str | None] | None]:
+    results: list[dict[str, str]] = []
+
+    for ip in ips:
+        geolocation: dict[str, str] = geo_ip(ip)
+        results.append(
+            {
+                "IP Address": ip,
+                "lat": geolocation.get("lat"),
+                "lon": geolocation.get("lon"),
+            }
+        )
+
+    return results
+
+
+@network_base.command()
+@common_logging_options
 def get_network_params() -> list[dict[str, str | None] | None]:
     data: dict[str, str | None] | None = network_param()
+
+    data["Local IPv4"] = get_local_ipv4()
 
     return [data]
 
