@@ -192,6 +192,7 @@ def ping_address(addresses: tuple[str, ...]) -> list[dict[str, str]]:
 @common_logging_options
 @click.argument("ips", type=str, nargs=-1, required=True)
 def get_geolocation_by_ip(ips: tuple[str, ...]) -> list[dict[str, str | None] | None]:
+    """Get geolocation for one or more IPs."""
     results: list[dict[str, str]] = []
 
     for ip in ips:
@@ -210,6 +211,7 @@ def get_geolocation_by_ip(ips: tuple[str, ...]) -> list[dict[str, str | None] | 
 @network_base.command()
 @common_logging_options
 def get_network_params() -> list[dict[str, str | None] | None]:
+    """Get network parameters."""
     data: dict[str, str | None] | None = network_param()
 
     data["Local IPv4"] = get_local_ipv4()
