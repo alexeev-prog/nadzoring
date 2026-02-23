@@ -1,9 +1,11 @@
+# src/nadzoring/logger.py
+"""Logging configuration module."""
+
 import logging
 import sys
-from logging import StreamHandler
-from typing import ClassVar, Literal, TextIO
+from typing import ClassVar, Literal
 
-logger: logging.Logger = logging.getLogger("nadzoring")
+logger = logging.getLogger("nadzoring")
 
 logger.handlers.clear()
 logger.propagate = False
@@ -16,7 +18,7 @@ CRITICAL: Literal[50] = logging.CRITICAL
 
 
 class ColoredFormatter(logging.Formatter):
-    """Custom formatter with colors"""
+    """Custom formatter with colors."""
 
     grey: ClassVar[str] = "\x1b[38;20m"
     blue: ClassVar[str] = "\x1b[34;20m"
@@ -67,7 +69,8 @@ class ColoredFormatter(logging.Formatter):
                 )
             else:
                 formatter = logging.Formatter(
-                    self.FORMATS.get(record.levelno, self.format_str), self.datefmt
+                    self.FORMATS.get(record.levelno, self.format_str),
+                    self.datefmt,
                 )
         elif self.simple:
             formatter = logging.Formatter(self.simple_format_str, self.datefmt)
@@ -80,29 +83,30 @@ class ColoredFormatter(logging.Formatter):
 def setup_cli_logging(
     *, verbose: bool = False, quiet: bool = False, no_color: bool = False
 ) -> None:
-    """
-    Setup logging for CLI mode.
+    """Setup logging for CLI mode.
 
     Args:
-        verbose: verbose output (DEBUG)
-        quiet: quiet mode (only ERROR and CRITICAL)
-        no_color: disable colored output
-
+        verbose: Verbose output (DEBUG level)
+        quiet: Quiet mode (only results, no logs)
+        no_color: Disable colored output
     """
     logger.handlers.clear()
 
-    console_handler: StreamHandler[TextIO] = logging.StreamHandler(sys.stderr)
+    if quiet:
+        logger.setLevel(logging.CRITICAL + 1)  # Disable all logging
+        return
+
+    console_handler = logging.StreamHandler(sys.stderr)
 
     if verbose:
         logger.setLevel(logging.DEBUG)
         formatter = ColoredFormatter(
-            datefmt="%Y-%m-%d %H:%M:%S", use_colors=not no_color, simple=False
+            datefmt="%Y-%m-%d %H:%M:%S",
+            use_colors=not no_color,
+            simple=False,
         )
-    elif quiet:
-        logger.setLevel(logging.ERROR)
-        formatter = ColoredFormatter(use_colors=not no_color, simple=True)
     else:
-        logger.setLevel(logging.INFO)
+        logger.setLevel(logging.WARNING)
         formatter = ColoredFormatter(use_colors=not no_color, simple=True)
 
     console_handler.setFormatter(formatter)
@@ -110,15 +114,13 @@ def setup_cli_logging(
 
 
 def get_logger(name: str | None = None) -> logging.Logger:
-    """
-    Get child logger.
+    """Get child logger.
 
     Args:
-        name: module name (for example, 'network_base.service_on_port')
+        name: Module name
 
     Returns:
-        logging.Logger: logger child
-
+        Logger instance
     """
     if name:
         return logger.getChild(name)
