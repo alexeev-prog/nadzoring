@@ -559,7 +559,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 ## License & Support
 
-This project is licensed under **GNU LGPL 2.1 License** - see [LICENSE](https://github.com/alexeev-prog/nadzoring/blob/main/LICENSE). For commercial support and enterprise features, contact [alexeev.dev@mail.ru](mailto:alexeev.dev@mail.ru).
+This project is licensed under **GNU GPL 3 License** - see [LICENSE](https://github.com/alexeev-prog/nadzoring/blob/main/LICENSE). For commercial support and enterprise features, contact [alexeev.dev@mail.ru](mailto:alexeev.dev@mail.ru).
 
 [Explore Documentation](https://alexeev-prog.github.io/nadzoring) |
 [Report Issue](https://github.com/alexeev-prog/nadzoring/issues) |

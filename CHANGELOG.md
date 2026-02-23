@@ -1,3 +1,9 @@
+commit d0b39089a8f9a16748dd47a69bd4ba8bad0e5960
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Mon Feb 23 22:02:22 2026 +0700
+
+    update docs and load 0.1.2
+
 commit aad293a63ca5a6f65786a16023f86eca46cd673d
 Merge: 49a12ef 926a5ea
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
