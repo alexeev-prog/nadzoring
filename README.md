@@ -1,4 +1,4 @@
-# nadzoring
+# Nadzoring
 
 <a id="readme-top"></a>
 
@@ -36,27 +36,36 @@
     <img src="https://raw.githubusercontent.com/alexeev-prog/nadzoring/refs/heads/main/docs/pallet-0.png">
 </p>
 
-Nadzoring (from Russian "надзор" - supervision/oversight + English "-ing" suffix) is a FOSS (Free and Open Source Software) command-line tool for detecting website blocks, monitoring service availability, and network analysis. It helps you investigate network connectivity issues, check if websites are accessible, and analyze network configurations.
+Nadzoring (from Russian "надзор" - supervision/oversight + English "-ing" suffix) is a FOSS (Free and Open Source Software) command-line tool for detecting website blocks, monitoring service availability, and network analysis. It helps you investigate network connectivity issues, check if websites are accessible, and analyze network configurations with comprehensive DNS diagnostics.
 
 ## 📋 Table of Contents
-- [nadzoring](#nadzoring)
+- [Nadzoring](#nadzoring)
   - [📋 Table of Contents](#-table-of-contents)
   - [🚀 Installation](#-installation)
   - [💻 Usage](#-usage)
     - [Global Options](#global-options)
-    - [Commands](#commands)
-      - [Network Base Commands](#network-base-commands)
-        - [ping-address](#ping-address)
-        - [get-network-params](#get-network-params)
-        - [get-ip-by-hostname](#get-ip-by-hostname)
-        - [get-service-by-port](#get-service-by-port)
+    - [DNS Commands](#dns-commands)
+      - [dns resolve](#dns-resolve)
+      - [dns reverse](#dns-reverse)
+      - [dns check](#dns-check)
+      - [dns trace](#dns-trace)
+      - [dns compare](#dns-compare)
+      - [dns health](#dns-health)
+    - [Network Base Commands](#network-base-commands)
+      - [ping](#ping)
+      - [geolocation](#geolocation)
+      - [params](#params)
+      - [host-to-ip](#host-to-ip)
+      - [port-service](#port-service)
   - [📊 Output Formats](#-output-formats)
     - [Table Format (default)](#table-format-default)
     - [JSON Format](#json-format)
     - [CSV Format](#csv-format)
+    - [HTML Format](#html-format)
   - [💾 Saving Results](#-saving-results)
   - [📝 Logging Levels](#-logging-levels)
   - [🔍 Examples](#-examples)
+    - [DNS Diagnostics](#dns-diagnostics)
     - [Complete Network Diagnostics](#complete-network-diagnostics)
     - [Automated Monitoring Script](#automated-monitoring-script)
     - [Quick Website Block Check](#quick-website-block-check)
@@ -71,7 +80,7 @@ pip install nadzoring
 
 ## 💻 Usage
 
-Nadzoring uses a hierarchical command structure. All commands support common global options for output formatting and logging.
+Nadzoring uses a hierarchical command structure with two main command groups: `dns` and `network-base`. All commands support common global options for output formatting and logging.
 
 ### Global Options
 
@@ -79,240 +88,473 @@ These options are available for **all** commands:
 
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
-| `--verbose` | `-v` | Enable verbose output | `False` |
-| `--quiet` | `-q` | Suppress non-error output | `False` |
+| `--verbose` | `-v` | Enable verbose output with execution timing | `False` |
+| `--quiet` | `-q` | Suppress non-error output (progress bars, logs) | `False` |
 | `--no-color` | - | Disable colored output | `False` |
-| `--output` | `-o` | Output format (`table`, `json`, `csv`) | `table` |
+| `--output` | `-o` | Output format (`table`, `json`, `csv`, `html`, `html_table`) | `table` |
 | `--save` | - | Save results to file (provide filename) | None |
 
-### Commands
+### DNS Commands
 
-#### Network Base Commands
+The `dns` command group provides comprehensive DNS analysis and troubleshooting capabilities.
 
-The `network-base` group contains commands for basic network operations.
+#### dns resolve
 
-##### ping-address
-
-Ping one or more addresses to check if they're reachable.
+Resolve DNS records for one or more domains with support for multiple record types.
 
 **Syntax:**
 ```bash
-nadzoring network-base ping-address [OPTIONS] ADDRESSES...
+nadzoring dns resolve [OPTIONS] DOMAINS...
 ```
 
 **Arguments:**
-- `ADDRESSES...` - One or more IP addresses or hostnames to ping (required)
+- `DOMAINS...` - One or more domain names to resolve (required)
 
-**Default behavior:**
-- Returns a table with columns: `Address` and `IsPinged`
-- "yes" (green) = host is reachable
-- "no" (red) = host is unreachable
+**Options:**
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--type` | `-t` | DNS record type (A, AAAA, CNAME, MX, NS, TXT, ALL) | `A` |
+| `--nameserver` | `-n` | Specific nameserver to use | System default |
+| `--short` | - | Compact output like host command style | `False` |
+| `--show-ttl` | - | Show TTL for each record | `False` |
+| `--format-style` | - | Output style (standard, bind, host, dig) | `standard` |
 
 **Examples:**
 ```bash
-# Ping a single address
-nadzoring network-base ping-address 8.8.8.8
+# Basic A record lookup
+nadzoring dns resolve google.com
 
-# Ping multiple addresses
-nadzoring network-base ping-address google.com cloudflare.com 1.1.1.1
+# Multiple record types
+nadzoring dns resolve -t A -t MX -t TXT example.com
 
-# Ping with JSON output
-nadzoring network-base ping-address -o json github.com
+# ALL record types with specific nameserver
+nadzoring dns resolve -t ALL -n 8.8.8.8 github.com
 
-# Ping and save results
-nadzoring network-base ping-address -o csv --save results.csv 8.8.8.8 1.1.1.1
+# Multiple domains with TTL display
+nadzoring dns resolve --show-ttl google.com cloudflare.com
+
+# Short format like host command
+nadzoring dns resolve --short --type ALL example.com
 ```
 
-##### get-network-params
+#### dns reverse
+
+Perform reverse DNS lookup (PTR records) for IP addresses.
+
+**Syntax:**
+```bash
+nadzoring dns reverse [OPTIONS] IP_ADDRESSES...
+```
+
+**Arguments:**
+- `IP_ADDRESSES...` - One or more IP addresses to look up (required)
+
+**Options:**
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--nameserver` | `-n` | Specific nameserver to use |
+
+**Examples:**
+```bash
+# Basic reverse lookup
+nadzoring dns reverse 8.8.8.8
+
+# Multiple IPs
+nadzoring dns reverse 1.1.1.1 8.8.8.8 9.9.9.9
+
+# Using specific nameserver
+nadzoring dns reverse -n 208.67.222.222 8.8.4.4
+```
+
+#### dns check
+
+Perform comprehensive DNS check including validation of MX priorities and TXT records (SPF/DKIM).
+
+**Syntax:**
+```bash
+nadzoring dns check [OPTIONS] DOMAINS...
+```
+
+**Arguments:**
+- `DOMAINS...` - One or more domain names to check (required)
+
+**Options:**
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--nameserver` | `-n` | Specific nameserver to use | System default |
+| `--types` | `-t` | Record types to check (A, AAAA, CNAME, MX, NS, TXT, ALL) | `ALL` |
+
+**Features:**
+- MX record validation (duplicate priority detection)
+- TXT record validation (SPF policy checks, DKIM key presence)
+- Comprehensive error reporting
+
+**Examples:**
+```bash
+# Complete DNS check
+nadzoring dns check example.com
+
+# Check specific record types
+nadzoring dns check -t MX -t TXT gmail.com
+
+# Multiple domains with custom nameserver
+nadzoring dns check -n 9.9.9.9 google.com cloudflare.com
+```
+
+#### dns trace
+
+Trace the DNS resolution path from root servers to authoritative nameservers.
+
+**Syntax:**
+```bash
+nadzoring dns trace [OPTIONS] DOMAIN
+```
+
+**Arguments:**
+- `DOMAIN` - Domain name to trace (required)
+
+**Options:**
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--nameserver` | `-n` | Starting nameserver (default: a.root-servers.net - 198.41.0.4) |
+
+**Output shows:**
+- Each hop with nameserver IP
+- Response time per nameserver
+- Records returned at each level
+- Delegation information
+- Final authoritative answer
+
+**Examples:**
+```bash
+# Trace from root servers
+nadzoring dns trace example.com
+
+# Trace starting from specific nameserver
+nadzoring dns trace -n 8.8.8.8 google.com
+
+# Verbose trace with timing
+nadzoring dns trace -v github.com
+```
+
+#### dns compare
+
+Compare DNS responses from different nameservers to detect discrepancies.
+
+**Syntax:**
+```bash
+nadzoring dns compare [OPTIONS] DOMAIN
+```
+
+**Arguments:**
+- `DOMAIN` - Domain name to compare (required)
+
+**Options:**
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--servers` | `-s` | DNS servers to compare | `8.8.8.8`, `1.1.1.1`, `9.9.9.9` |
+| `--type` | `-t` | Record types to compare | `A` |
+
+**Features:**
+- Response time comparison
+- Record consistency checking
+- Automatic discrepancy detection
+- Progress indicator for multiple queries
+
+**Examples:**
+```bash
+# Compare A records across default servers
+nadzoring dns compare example.com
+
+# Compare MX records with custom servers
+nadzoring dns compare -t MX -s 8.8.8.8 -s 208.67.222.222 -s 9.9.9.9 gmail.com
+
+# Multiple record types
+nadzoring dns compare -t A -t AAAA -t NS cloudflare.com
+```
+
+#### dns health
+
+Perform comprehensive DNS health check with scoring system.
+
+**Syntax:**
+```bash
+nadzoring dns health [OPTIONS] DOMAIN
+```
+
+**Arguments:**
+- `DOMAIN` - Domain name to check (required)
+
+**Options:**
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--nameserver` | `-n` | Nameserver to use for checks |
+
+**Health Scoring:**
+- **80-100**: Healthy - All records properly configured
+- **50-79**: Degraded - Some issues detected
+- **0-49**: Unhealthy - Critical configuration problems
+
+**Validation includes:**
+- Record presence for all standard types
+- MX priority uniqueness
+- SPF policy completeness
+- DKIM key presence
+- CNAME configuration rules
+- Subdomain-specific checks
+
+**Examples:**
+```bash
+# Basic health check
+nadzoring dns health example.com
+
+# Health check with custom nameserver
+nadzoring dns health -n 1.1.1.1 google.com
+
+# Verbose health report
+nadzoring dns health -v github.com
+```
+
+### Network Base Commands
+
+The `network-base` command group provides basic network operations and diagnostics.
+
+#### ping
+
+Ping one or more addresses to check reachability.
+
+**Syntax:**
+```bash
+nadzoring network-base ping [OPTIONS] ADDRESSES...
+```
+
+**Arguments:**
+- `ADDRESSES...` - One or more IP addresses or hostnames (required)
+
+**Examples:**
+```bash
+# Ping single address
+nadzoring network-base ping 8.8.8.8
+
+# Multiple addresses
+nadzoring network-base ping google.com cloudflare.com 1.1.1.1
+
+# JSON output
+nadzoring network-base ping -o json github.com
+```
+
+#### geolocation
+
+Get geolocation information for IP addresses.
+
+**Syntax:**
+```bash
+nadzoring network-base geolocation [OPTIONS] IPS...
+```
+
+**Arguments:**
+- `IPS...` - One or more IP addresses (required)
+
+**Output includes:**
+- Latitude/Longitude
+- Country
+- City
+
+**Examples:**
+```bash
+# Geolocate IPs
+nadzoring network-base geolocation 8.8.8.8 1.1.1.1
+
+# Save results
+nadzoring network-base geolocation --save locations.json 8.8.8.8
+```
+
+#### params
 
 Display detailed network configuration parameters of your system.
 
 **Syntax:**
 ```bash
-nadzoring network-base get-network-params [OPTIONS]
+nadzoring network-base params [OPTIONS]
 ```
 
-**Default behavior:**
-- Returns a table with network interface information, IP addresses, and other network parameters
+**Output includes:**
+- Default interface name
+- IPv4 address
+- IPv6 address
+- Router (gateway) IP
+- MAC address
+- Public IP address
 
 **Examples:**
 ```bash
-# Basic network params display
-nadzoring network-base get-network-params
+# Basic network info
+nadzoring network-base params
 
-# Get network params in JSON format
-nadzoring network-base get-network-params -o json
+# JSON output for scripting
+nadzoring network-base params -o json
 
-# Save network params to file with verbose logging
-nadzoring network-base get-network-params -v --save network_config.json
+# Save configuration
+nadzoring network-base params --save network_config.json
 ```
 
-##### get-ip-by-hostname
+#### host-to-ip
 
-Resolve hostnames to IP addresses and check IPv4/IPv6 availability.
+Resolve hostnames to IP addresses with IPv4/IPv6 availability checking.
 
 **Syntax:**
 ```bash
-nadzoring network-base get-ip-by-hostname [OPTIONS] HOSTNAMES...
+nadzoring network-base host-to-ip [OPTIONS] HOSTNAMES...
 ```
 
 **Arguments:**
-- `HOSTNAMES...` - One or more domain names to resolve (required)
+- `HOSTNAMES...` - One or more domain names (required)
 
-**Output columns:**
-- `Hostname` - The original hostname
-- `IP Address` - Resolved IP address
-- `IPv4 Check` - "passed"/"failed" for IPv4 connectivity
-- `IPv6 Check` - "passed"/"failed" for IPv6 connectivity
-- `Router IPv4` - Your router's IPv4 address (or "Not found")
-- `Router IPv6` - Your router's IPv6 address (or "Not found")
+**Output includes:**
+- Resolved IP address
+- IPv4 connectivity check
+- IPv6 connectivity check
+- Router IPv4/IPv6 addresses
 
 **Examples:**
 ```bash
-# Resolve a single hostname
-nadzoring network-base get-ip-by-hostname google.com
+# Resolve multiple domains
+nadzoring network-base host-to-ip google.com github.com cloudflare.com
 
-# Resolve multiple hostnames
-nadzoring network-base get-ip-by-hostname google.com github.com stackoverflow.com
-
-# Quiet mode - only show results
-nadzoring network-base get-ip-by-hostname -q example.com
-
-# Save results as CSV
-nadzoring network-base get-ip-by-hostname --save dns_results.csv google.com cloudflare.com
+# CSV output for analysis
+nadzoring network-base host-to-ip -o csv --save resolutions.csv example.com
 ```
 
-##### get-service-by-port
+#### port-service
 
 Identify which service typically runs on specified ports.
 
 **Syntax:**
 ```bash
-nadzoring network-base get-service-by-port [OPTIONS] PORTS...
+nadzoring network-base port-service [OPTIONS] PORTS...
 ```
 
 **Arguments:**
-- `PORTS...` - One or more port numbers to check (required)
-
-**Output columns:**
-- `port` - The port number
-- `service` - Service name (or "Unknown" if not recognized)
+- `PORTS...` - One or more port numbers (required)
 
 **Examples:**
 ```bash
 # Check common ports
-nadzoring network-base get-service-by-port 80 443 22 53
+nadzoring network-base port-service 80 443 22 53 3306
 
-# Check a range of ports (using shell expansion)
-nadzoring network-base get-service-by-port 20 21 22 23 25 80 443
-
-# JSON output for programmatic use
-nadzoring network-base get-service-by-port -o json 3306 5432 27017
-
-# Save service information
-nadzoring network-base get-service-by-port --save services.csv 80 443 22 3389
+# JSON output for integration
+nadzoring network-base port-service -o json 8080 5432 27017
 ```
 
 ## 📊 Output Formats
 
-Nadzoring supports three output formats controlled by the `-o/--output` flag:
+Nadzoring supports four output formats controlled by the `-o/--output` flag:
 
 ### Table Format (default)
 ```
-┌─────────────┬────────────┐
-│ Address     │ IsPinged   │
-├─────────────┼────────────┤
-│ 8.8.8.8     │ yes        │
-│ 1.1.1.1     │ yes        │
-│ unreachable │ no         │
-└─────────────┴────────────┘
+┌─────────────┬────────┬─────────────┐
+│ domain      │ type   │ value       │
+├─────────────┼────────┼─────────────┤
+│ example.com │ A      │ 93.184.216.34│
+│ example.com │ MX     │ 10 mail.example.com│
+└─────────────┴────────┴─────────────┘
 ```
 
 ### JSON Format
 ```json
 [
   {
-    "Address": "8.8.8.8",
-    "IsPinged": "yes"
-  },
-  {
-    "Address": "1.1.1.1",
-    "IsPinged": "yes"
+    "domain": "example.com",
+    "type": "A",
+    "value": "93.184.216.34"
   }
 ]
 ```
 
 ### CSV Format
 ```csv
-Address,IsPinged
-8.8.8.8,yes
-1.1.1.1,yes
+domain,type,value
+example.com,A,93.184.216.34
 ```
+
+### HTML Format
+Generates styled HTML tables or complete web pages with CSS styling.
 
 ## 💾 Saving Results
 
 Use the `--save` option to save command output to a file. The format is determined by the `-o/--output` flag:
 
 ```bash
-# Save as JSON
-nadzoring network-base ping-address -o json --save ping_results.json 8.8.8.8
+# Save DNS check as HTML report
+nadzoring dns check -o html --save dns_report.html example.com
 
-# Save as CSV
-nadzoring network-base ping-address -o csv --save ping_results.csv 8.8.8.8
+# Save comparison as CSV
+nadzoring dns compare -o csv --save comparison.csv google.com
 
-# Save as formatted table
-nadzoring network-base ping-address -o table --save ping_results.txt 8.8.8.8
+# Save trace as JSON
+nadzoring dns trace -o json --save trace.json cloudflare.com
 ```
 
 ## 📝 Logging Levels
 
 Nadzoring provides three logging modes:
 
-- **Normal mode** (no flags): Shows command output and warnings
-- **Verbose mode** (`-v/--verbose`): Shows detailed execution information including timing
-- **Quiet mode** (`-q/--quiet`): Suppresses all non-error output
+- **Normal mode** (no flags): Shows command output and warnings with progress bars
+- **Verbose mode** (`-v/--verbose`): Shows detailed execution information, timing, and debug logs
+- **Quiet mode** (`-q/--quiet`): Suppresses progress bars and non-error output, ideal for scripting
 
 ## 🔍 Examples
+
+### DNS Diagnostics
+```bash
+# Complete DNS investigation workflow
+nadzoring dns health example.com
+nadzoring dns trace example.com
+nadzoring dns compare -t A -t MX example.com
+nadzoring dns check -t ALL -v example.com
+```
 
 ### Complete Network Diagnostics
 ```bash
 # Run comprehensive network diagnostics
-nadzoring network-base get-network-params -v
-nadzoring network-base get-ip-by-hostname google.com cloudflare.com github.com
-nadzoring network-base ping-address 8.8.8.8 1.1.1.1 google.com
-nadzoring network-base get-service-by-port 80 443 22 53
+nadzoring network-base params -v
+nadzoring network-base host-to-ip google.com cloudflare.com github.com
+nadzoring network-base ping 8.8.8.8 1.1.1.1 google.com
+nadzoring network-base geolocation 8.8.8.8 1.1.1.1
 ```
 
 ### Automated Monitoring Script
 ```bash
 #!/bin/bash
-# Check critical services and save results with timestamp
+# Check DNS health and network status with timestamp
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
-nadzoring network-base ping-address \
-  -o csv \
-  --save "ping_check_${TIMESTAMP}.csv" \
-  google.com cloudflare.com github.com
+# DNS health check
+nadzoring dns health -o json --save "dns_health_${TIMESTAMP}.json" example.com
 
-nadzoring network-base get-service-by-port \
-  -o json \
-  --save "services_${TIMESTAMP}.json" \
-  80 443 22 53 3306
+# DNS trace
+nadzoring dns trace -o html --save "dns_trace_${TIMESTAMP}.html" example.com
+
+# Network parameters
+nadzoring network-base params -o csv --save "network_${TIMESTAMP}.csv"
 ```
 
 ### Quick Website Block Check
 ```bash
 # Check if a website might be blocked
-nadzoring network-base get-ip-by-hostname example.com
-nadzoring network-base ping-address example.com
+nadzoring dns resolve -t ALL example.com
+nadzoring dns trace example.com
+nadzoring network-base ping example.com
+nadzoring dns compare example.com
 ```
 
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. Key areas for contribution include:
-- Additional test cases for thread-local scenarios
-- Performance optimization proposals
-- Extended version format support
+- Additional DNS record type support
+- New validation rules for health checks
+- Performance optimization
+- Additional output formats
 - IDE integration plugins
 
 ## License & Support
@@ -326,4 +568,3 @@ This project is licensed under **GNU LGPL 2.1 License** - see [LICENSE](https://
 
 ---
 Copyright © 2025 Alexeev Bronislav. Distributed under GNU GPL v3 license.
-

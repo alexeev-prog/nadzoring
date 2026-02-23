@@ -1,3 +1,16 @@
+commit 49a12efeadbe8307f9faca010f63e0944c2ac2f2
+Merge: eeaae18 64afd30
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sun Feb 22 13:32:48 2026 +0700
+
+    Merge pull request #3 from alexeev-prog/network-base-improvements
+
+commit 64afd30a00427af05fcdf48d07b1abd5dd4809c8
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sun Feb 22 13:30:13 2026 +0700
+
+    add help for commands
+
 commit 030143040cf4289f026c8c5893114132c0868698
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Sun Feb 22 00:51:51 2026 +0700
