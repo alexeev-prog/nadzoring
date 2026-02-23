@@ -4,6 +4,24 @@ nadzoring.network\_base package
 Submodules
 ----------
 
+nadzoring.network\_base.geolocation\_ip module
+----------------------------------------------
+
+.. automodule:: nadzoring.network_base.geolocation_ip
+   :members:
+   :private-members:
+   :show-inheritance:
+   :undoc-members:
+
+nadzoring.network\_base.ipv4\_local\_cli module
+-----------------------------------------------
+
+.. automodule:: nadzoring.network_base.ipv4_local_cli
+   :members:
+   :private-members:
+   :show-inheritance:
+   :undoc-members:
+
 nadzoring.network\_base.network\_params module
 ----------------------------------------------
 

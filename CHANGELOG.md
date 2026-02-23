@@ -1,3 +1,16 @@
+commit aad293a63ca5a6f65786a16023f86eca46cd673d
+Merge: 49a12ef 926a5ea
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Mon Feb 23 22:00:53 2026 +0700
+
+    Merge pull request #4 from alexeev-prog/dns-lookup
+
+commit 926a5eae9af473b0048faa45c1da51707fe9266d
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Mon Feb 23 21:54:33 2026 +0700
+
+    create `dns` command group; split architecture cli.py -> commands modules group
+
 commit 49a12efeadbe8307f9faca010f63e0944c2ac2f2
 Merge: eeaae18 64afd30
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
