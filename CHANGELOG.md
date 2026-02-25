@@ -1,3 +1,16 @@
+commit cc6e037af2839aa3f303fcb36c59988f087e3372
+Merge: e68efbb ea14df8
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Feb 25 20:57:40 2026 +0700
+
+    Merge pull request #5 from alexeev-prog/feature/extended-dns-commands
+
+commit ea14df8d7b78be598450cbea55b23988eb738294
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Feb 25 20:56:13 2026 +0700
+
+    update typing
+
 commit 2fe05871e0b8f739ac50b3f9ec3fcd770af92731
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Wed Feb 25 20:55:40 2026 +0700

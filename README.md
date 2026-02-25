@@ -36,7 +36,7 @@
     <img src="https://raw.githubusercontent.com/alexeev-prog/nadzoring/refs/heads/main/docs/pallet-0.png">
 </p>
 
-Nadzoring (from Russian "надзор" - supervision/oversight + English "-ing" suffix) is a FOSS (Free and Open Source Software) command-line tool for detecting website blocks, monitoring service availability, and network analysis. It helps you investigate network connectivity issues, check if websites are accessible, and analyze network configurations with comprehensive DNS diagnostics.
+Nadzoring (from Russian "надзор" - supervision/oversight + English "-ing" suffix) is a FOSS (Free and Open Source Software) command-line tool for detecting website blocks, monitoring service availability, and network analysis. It helps you investigate network connectivity issues, check if websites are accessible, and analyze network configurations with comprehensive DNS diagnostics, including advanced DNS poisoning detection.
 
 ## 📋 Table of Contents
 - [Nadzoring](#nadzoring)
@@ -51,6 +51,8 @@ Nadzoring (from Russian "надзор" - supervision/oversight + English "-ing" 
       - [dns trace](#dns-trace)
       - [dns compare](#dns-compare)
       - [dns health](#dns-health)
+      - [dns benchmark](#dns-benchmark)
+      - [dns poisoning](#dns-poisoning)
     - [Network Base Commands](#network-base-commands)
       - [ping](#ping)
       - [geolocation](#geolocation)
@@ -66,6 +68,8 @@ Nadzoring (from Russian "надзор" - supervision/oversight + English "-ing" 
   - [📝 Logging Levels](#-logging-levels)
   - [🔍 Examples](#-examples)
     - [DNS Diagnostics](#dns-diagnostics)
+    - [DNS Poisoning Detection](#dns-poisoning-detection)
+    - [DNS Performance Benchmarking](#dns-performance-benchmarking)
     - [Complete Network Diagnostics](#complete-network-diagnostics)
     - [Automated Monitoring Script](#automated-monitoring-script)
     - [Quick Website Block Check](#quick-website-block-check)
@@ -315,6 +319,97 @@ nadzoring dns health -n 1.1.1.1 google.com
 nadzoring dns health -v github.com
 ```
 
+#### dns benchmark
+
+Benchmark DNS server performance with configurable queries.
+
+**Syntax:**
+```bash
+nadzoring dns benchmark [OPTIONS]
+```
+
+**Options:**
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--domain` | `-d` | Domain to use for benchmarking | `google.com` |
+| `--servers` | `-s` | DNS servers to benchmark (can be used multiple times) | Public DNS servers |
+| `--type` | `-t` | Record type to query (A, AAAA, MX, NS, TXT) | `A` |
+| `--queries` | `-q` | Number of queries per server | `10` |
+| `--parallel/--sequential` | - | Run benchmarks in parallel or sequentially | `parallel` |
+
+**Output includes:**
+- Average response time
+- Minimum/maximum response time
+- Success rate percentage
+- Failed queries count
+
+**Examples:**
+```bash
+# Benchmark default servers
+nadzoring dns benchmark
+
+# Benchmark specific servers with 20 queries each
+nadzoring dns benchmark -s 8.8.8.8 -s 1.1.1.1 -s 9.9.9.9 --queries 20
+
+# Benchmark MX records sequentially
+nadzoring dns benchmark -t MX --sequential
+
+# Save results as JSON
+nadzoring dns benchmark -o json --save dns_benchmark.json
+```
+
+#### dns poisoning
+
+Detect DNS poisoning, censorship, or CDN-based routing variations.
+
+**Syntax:**
+```bash
+nadzoring dns poisoning [OPTIONS] DOMAIN
+```
+
+**Arguments:**
+- `DOMAIN` - Domain name to check for poisoning (required)
+
+**Options:**
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--control-server` | `-c` | Control server to compare against | `8.8.8.8` |
+| `--test-servers` | `-t` | Test servers to check (can be used multiple times) | All public DNS servers |
+| `--type` | `-T` | Record type to check | `A` |
+| `--additional-types` | `-a` | Additional record types to check on control server | None |
+
+**Detection Capabilities:**
+- **CDN Detection**: Identifies legitimate CDN networks (Cloudflare, Google, Akamai, AWS, etc.)
+- **Anycast/GeoDNS**: Recognizes normal anycast routing behavior
+- **IP Pattern Analysis**: Analyzes IP ownership, geographic diversity, and network ranges
+- **Consensus Checking**: Determines most common response across servers
+- **Severity Classification**: Categorizes issues as INFO, LOW, MEDIUM, HIGH, or CRITICAL
+
+**Output includes:**
+- Poisoning level (NONE, LOW, MEDIUM, HIGH, CRITICAL, SUSPICIOUS)
+- Confidence percentage
+- Control server analysis
+- IP ownership detection
+- CDN detection with provider identification
+- Inconsistency details per server
+- Geo-diversity metrics
+- Final verdict with explanation
+
+**Examples:**
+```bash
+# Basic poisoning check
+nadzoring dns poisoning example.com
+
+# Check with custom control server and additional record types
+nadzoring dns poisoning -c 1.1.1.1 -a MX -a TXT google.com
+
+# Verbose poisoning analysis
+nadzoring dns poisoning -v github.com
+
+# Save detailed HTML report
+nadzoring dns poisoning -o html --save poisoning_report.html example.com
+```
+
 ### Network Base Commands
 
 The `network-base` command group provides basic network operations and diagnostics.
@@ -491,8 +586,11 @@ nadzoring dns check -o html --save dns_report.html example.com
 # Save comparison as CSV
 nadzoring dns compare -o csv --save comparison.csv google.com
 
-# Save trace as JSON
-nadzoring dns trace -o json --save trace.json cloudflare.com
+# Save poisoning detection as JSON
+nadzoring dns poisoning -o json --save poisoning_results.json example.com
+
+# Save trace as HTML
+nadzoring dns trace -o html --save trace.html cloudflare.com
 ```
 
 ## 📝 Logging Levels
@@ -514,6 +612,30 @@ nadzoring dns compare -t A -t MX example.com
 nadzoring dns check -t ALL -v example.com
 ```
 
+### DNS Poisoning Detection
+```bash
+# Check if a domain might be censored or poisoned
+nadzoring dns poisoning -v twitter.com
+
+# Compare with multiple control servers
+nadzoring dns poisoning -c 8.8.8.8 -c 1.1.1.1 -c 9.9.9.9 example.com
+
+# Generate detailed HTML report
+nadzoring dns poisoning -o html --save poisoning_report.html github.com
+```
+
+### DNS Performance Benchmarking
+```bash
+# Find fastest DNS server for your location
+nadzoring dns benchmark --queries 20 --parallel
+
+# Compare specific servers
+nadzoring dns benchmark -s 8.8.8.8 -s 1.1.1.1 -s 208.67.222.222 -s 9.9.9.9
+
+# Benchmark different record types
+nadzoring dns benchmark -t MX -d gmail.com --queries 15
+```
+
 ### Complete Network Diagnostics
 ```bash
 # Run comprehensive network diagnostics
@@ -532,11 +654,17 @@ TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 # DNS health check
 nadzoring dns health -o json --save "dns_health_${TIMESTAMP}.json" example.com
 
+# DNS poisoning check
+nadzoring dns poisoning -o html --save "poisoning_${TIMESTAMP}.html" example.com
+
 # DNS trace
 nadzoring dns trace -o html --save "dns_trace_${TIMESTAMP}.html" example.com
 
 # Network parameters
 nadzoring network-base params -o csv --save "network_${TIMESTAMP}.csv"
+
+# DNS benchmark summary
+nadzoring dns benchmark -o table --save "benchmark_${TIMESTAMP}.txt"
 ```
 
 ### Quick Website Block Check
@@ -546,6 +674,7 @@ nadzoring dns resolve -t ALL example.com
 nadzoring dns trace example.com
 nadzoring network-base ping example.com
 nadzoring dns compare example.com
+nadzoring dns poisoning example.com  # Most comprehensive block detection
 ```
 
 ## Contributing
@@ -553,6 +682,7 @@ nadzoring dns compare example.com
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. Key areas for contribution include:
 - Additional DNS record type support
 - New validation rules for health checks
+- CDN network database expansion
 - Performance optimization
 - Additional output formats
 - IDE integration plugins
