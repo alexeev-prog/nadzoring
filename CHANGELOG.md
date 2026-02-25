@@ -1,3 +1,9 @@
+commit a2466088ff4ff968923cb0010fd7b5c053d25653
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Feb 25 21:02:28 2026 +0700
+
+    update readme and upload 0.1.3
+
 commit cc6e037af2839aa3f303fcb36c59988f087e3372
 Merge: e68efbb ea14df8
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>

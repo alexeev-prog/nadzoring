@@ -1,5 +1,5 @@
 .. nadzoring documentation master file, created by
-   sphinx-quickstart on Mon Feb 23 22:01:40 2026.
+   sphinx-quickstart on Wed Feb 25 21:07:22 2026.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
