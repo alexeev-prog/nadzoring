@@ -1,25 +1,30 @@
-# src/nadzoring/cli/commands/dns_commands.py
+# nadzoring/commands/dns_commands.py
 """DNS-related CLI commands."""
 
 from logging import Logger
+from typing import NoReturn
 
 import click
 from tqdm import tqdm
 
-from nadzoring.dns_lookup.dns_resolver import (
+from nadzoring.dns_lookup import (
     RECORD_TYPES,
+    benchmark_dns_servers,
     check_dns,
+    check_dns_poisoning,
     compare_dns_servers,
     health_check_dns,
     resolve_dns,
     reverse_dns,
     trace_dns,
 )
+from nadzoring.dns_lookup.types import BenchmarkResult
 from nadzoring.logger import get_logger
 from nadzoring.utils.decorators import common_cli_options
 from nadzoring.utils.formatters import (
     format_dns_comparison,
     format_dns_health,
+    format_dns_poisoning,
     format_dns_record,
     format_dns_trace,
 )
@@ -73,7 +78,6 @@ def resolve_command(
     results = []
     total = len(domains) * len(types_to_query)
 
-    # Create progress bar if not quiet
     pbar = (
         None if quiet else tqdm(total=total, desc="Resolving DNS records", unit="query")
     )
@@ -293,3 +297,141 @@ def health_command(
 
     result = health_check_dns(domain, nameserver)
     return format_dns_health(result)
+
+
+@dns.command(name="benchmark")
+@common_cli_options(include_quiet=True)
+@click.option(
+    "--domain",
+    "-d",
+    default="google.com",
+    help="Domain to use for benchmarking",
+)
+@click.option(
+    "--servers",
+    "-s",
+    multiple=True,
+    help="DNS servers to benchmark (default: public DNS servers)",
+)
+@click.option(
+    "--type",
+    "-t",
+    "record_type",
+    default="A",
+    type=click.Choice(["A", "AAAA", "MX", "NS", "TXT"]),
+    help="Record type to query",
+)
+@click.option(
+    "--queries",
+    "-q",
+    default=10,
+    type=int,
+    help="Number of queries per server",
+)
+@click.option(
+    "--parallel/--sequential",
+    default=True,
+    help="Run benchmarks in parallel or sequentially",
+)
+def benchmark_command(
+    domain: str,
+    servers: tuple[str, ...],
+    record_type: str,
+    queries: int,
+    *,
+    parallel: bool,
+    quiet: bool,
+) -> list[dict]:
+    """Benchmark the performance of DNS servers."""
+    if not quiet:
+        click.echo(f"Benchmarking DNS servers for {domain}...", err=True)
+
+    servers_list: list[str] | None = list(servers) if servers else None
+    total_servers: int = len(servers_list) if servers_list else 10
+
+    pbar: tqdm[NoReturn] | None = (
+        None
+        if quiet
+        else tqdm(total=total_servers, desc="Benchmarking servers", unit="server")
+    )
+
+    def progress_callback(server: str, index: int) -> None:
+        if pbar:
+            pbar.set_description(f"Benchmarking {server}")
+            pbar.update(1)
+
+    results: list[BenchmarkResult] = benchmark_dns_servers(
+        domain=domain,
+        servers=servers_list,
+        record_type=record_type,
+        queries=queries,
+        parallel=parallel,
+        progress_callback=progress_callback if not quiet else None,
+    )
+
+    if pbar:
+        pbar.close()
+
+    return [
+        {
+            "server": r["server"],
+            "avg_ms": f"{r['avg_response_time']:.2f}",
+            "min_ms": f"{r['min_response_time']:.2f}",
+            "max_ms": f"{r['max_response_time']:.2f}",
+            "success_rate": f"{r['success_rate']}%",
+        }
+        for r in results
+    ]
+
+
+@dns.command(name="poisoning")
+@common_cli_options(include_quiet=True)
+@click.argument("domain", required=True)
+@click.option(
+    "--control-server",
+    "-c",
+    default="8.8.8.8",
+    help="Control server to compare against",
+)
+@click.option(
+    "--test-servers",
+    "-t",
+    multiple=True,
+    help="Test servers to check (default: all public DNS servers)",
+)
+@click.option(
+    "--type",
+    "-T",
+    "record_type",
+    default="A",
+    help="Record type to check",
+)
+@click.option(
+    "--additional-types",
+    "-a",
+    multiple=True,
+    help="Additional record types to check on control server",
+)
+def poisoning_command(
+    domain: str,
+    control_server: str,
+    test_servers: tuple[str, ...],
+    record_type: str,
+    additional_types: tuple[str, ...],
+    *,
+    quiet: bool,
+) -> list[dict]:
+    """Check for signs of DNS poisoning or censorship."""
+
+    test_servers_list = list(test_servers) if test_servers else None
+    additional = list(additional_types) if additional_types else None
+
+    result = check_dns_poisoning(
+        domain,
+        control_server,
+        test_servers_list,
+        record_type,
+        additional,
+    )
+
+    return format_dns_poisoning(result)
