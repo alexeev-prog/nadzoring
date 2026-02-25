@@ -1,5 +1,5 @@
 # nadzoring/dns_lookup/poisoning.py
-"""DNS poisoning and censorship detection."""
+"""DNS poisoning."""
 
 import ipaddress
 from collections import Counter

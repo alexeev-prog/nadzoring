@@ -1,3 +1,9 @@
+commit 921d51276b2e678effefcbf7ff5bec9aade724c8
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Feb 25 20:49:56 2026 +0700
+
+    update dns-commands and dns lookup, utils
+
 commit e68efbb29cfc29741b5aacdd147a5bda03a74c71
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Mon Feb 23 22:07:17 2026 +0700
