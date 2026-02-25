@@ -32,10 +32,10 @@ def common_cli_options(
     def decorator[F: Callable[..., Any]](func: F) -> F:
         decorated_func = func
         decorated_func = click.option(
-            "--verbose", "-v", is_flag=True, help="Verbose output (DEBUG level)"
+            "--verbose", is_flag=True, help="Verbose output (DEBUG level)"
         )(decorated_func)
         decorated_func = click.option(
-            "--quiet", "-q", is_flag=True, help="Quiet mode (no logs, only results)"
+            "--quiet", is_flag=True, help="Quiet mode (no logs, only results)"
         )(decorated_func)
         decorated_func = click.option(
             "--no-color", is_flag=True, help="Disable colored output"

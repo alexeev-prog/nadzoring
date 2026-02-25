@@ -1,3 +1,9 @@
+commit e68efbb29cfc29741b5aacdd147a5bda03a74c71
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Mon Feb 23 22:07:17 2026 +0700
+
+    update license
+
 commit d0b39089a8f9a16748dd47a69bd4ba8bad0e5960
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Mon Feb 23 22:02:22 2026 +0700

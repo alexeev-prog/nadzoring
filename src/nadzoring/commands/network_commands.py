@@ -98,7 +98,7 @@ def geolocation_command(
 
 @network_base.command(name="params")
 @common_cli_options(include_quiet=True)
-def params_command() -> list[dict]:
+def params_command(*, quiet: bool = False) -> list[dict]:
     """Get network parameters for the current system."""
     data = network_param()
     data["local_ipv4"] = get_local_ipv4()
