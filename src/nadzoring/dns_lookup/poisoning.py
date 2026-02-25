@@ -4,13 +4,14 @@
 import ipaddress
 from collections import Counter
 from ipaddress import IPv4Address, IPv6Address
+from logging import Logger
 from typing import Any, Literal
 
 from nadzoring.dns_lookup.types import DNSResult, PoisoningCheckResult
 from nadzoring.dns_lookup.utils import get_public_dns_servers, resolve_with_timer
 from nadzoring.logger import get_logger
 
-logger = get_logger(__name__)
+logger: Logger = get_logger(__name__)
 
 
 SERVER_NAMES: dict[str, str] = {
@@ -51,8 +52,7 @@ SERVER_COUNTRIES: dict[str, str] = {
 }
 
 
-# Known CDN and cloud provider networks
-CDN_NETWORKS = {
+CDN_NETWORKS: dict[str, list[str]] = {
     "Google": [
         "8.8.8.0/24",
         "8.8.4.0/24",
