@@ -2,7 +2,7 @@
 """DNS-related CLI commands."""
 
 from logging import Logger
-from typing import NoReturn
+from typing import Any, NoReturn
 
 import click
 from tqdm import tqdm
@@ -18,7 +18,9 @@ from nadzoring.dns_lookup import (
     reverse_dns,
     trace_dns,
 )
-from nadzoring.dns_lookup.types import BenchmarkResult
+from nadzoring.dns_lookup.compare import ServerComparisonResult
+from nadzoring.dns_lookup.health import DetailedCheckResult, HealthCheckResult
+from nadzoring.dns_lookup.types import BenchmarkResult, DNSResult, PoisoningCheckResult
 from nadzoring.logger import get_logger
 from nadzoring.utils.decorators import common_cli_options
 from nadzoring.utils.formatters import (
@@ -71,21 +73,24 @@ def resolve_command(
     show_ttl: bool,
 ) -> list[dict]:
     """Resolve DNS records for one or more domains."""
-    types_to_query = list(record_types)
+    types_to_query: list[str] = list(record_types)
     if "ALL" in types_to_query:
-        types_to_query = [t for t in RECORD_TYPES if t != "PTR"]
+        types_to_query: list[str] = [t for t in RECORD_TYPES if t != "PTR"]
 
-    results = []
+    results: list[dict[str, dict[str, DNSResult] | str]] = []
     total = len(domains) * len(types_to_query)
 
-    pbar = (
+    pbar: tqdm[NoReturn] | None = (
         None if quiet else tqdm(total=total, desc="Resolving DNS records", unit="query")
     )
 
     for domain in domains:
-        domain_result = {"domain": domain, "records": {}}
+        domain_result: dict[str, dict[str, DNSResult] | str] = {
+            "domain": domain,
+            "records": {},
+        }
         for rtype in types_to_query:
-            result = resolve_dns(
+            result: DNSResult = resolve_dns(
                 domain=domain,
                 record_type=rtype,
                 nameserver=nameserver,
@@ -116,17 +121,17 @@ def reverse_command(
     quiet: bool,
 ) -> list[dict]:
     """Perform reverse DNS lookup for one or more IP addresses."""
-    results = []
-    total = len(ip_addresses)
+    results: list[dict[str, float | str | None]] = []
+    total: int = len(ip_addresses)
 
-    pbar = (
+    pbar: tqdm[NoReturn] | None = (
         None
         if quiet
         else tqdm(total=total, desc="Performing reverse lookups", unit="lookup")
     )
 
     for ip in ip_addresses:
-        result = reverse_dns(ip, nameserver)
+        result: dict[str, float | str | None] = reverse_dns(ip, nameserver)
         results.append(
             {
                 "ip_address": result["ip_address"],
@@ -167,21 +172,21 @@ def check_command(
     quiet: bool,
 ) -> list[dict]:
     """Perform comprehensive DNS check for one or more domains."""
-    types_to_check = list(record_types)
+    types_to_check: list[str] = list(record_types)
     if "ALL" in types_to_check:
-        types_to_check = [t for t in RECORD_TYPES if t != "PTR"]
+        types_to_check: list[str] = [t for t in RECORD_TYPES if t != "PTR"]
 
-    results = []
-    total = len(domains)
+    results: list[dict[str, str]] = []
+    total: int = len(domains)
 
-    pbar = (
+    pbar: tqdm[NoReturn] | None = (
         None
         if quiet
         else tqdm(total=total, desc="Performing DNS checks", unit="domain")
     )
 
     for domain in domains:
-        result = check_dns(
+        result: DetailedCheckResult = check_dns(
             domain=domain,
             nameserver=nameserver,
             record_types=types_to_check,
@@ -189,11 +194,13 @@ def check_command(
             validate_txt=True,
         )
 
-        formatted_result = {"domain": domain}
+        formatted_result: dict[str, str] = {"domain": domain}
         for rtype in types_to_check:
             if rtype in result["records"] and result["records"][rtype]:
                 if rtype == "MX":
-                    formatted = [f"Priority {r}" for r in result["records"][rtype]]
+                    formatted: list[str] = [
+                        f"Priority {r}" for r in result["records"][rtype]
+                    ]
                     formatted_result[rtype] = "\n".join(formatted)
                 else:
                     formatted_result[rtype] = "\n".join(result["records"][rtype])
@@ -227,7 +234,7 @@ def trace_command(
     if not quiet:
         click.echo(f"Tracing DNS for {domain}...", err=True)
 
-    result = trace_dns(domain, nameserver)
+    result: dict[str, Any] = trace_dns(domain, nameserver)
     return format_dns_trace(result)
 
 
@@ -257,18 +264,18 @@ def compare_command(
     quiet: bool,
 ) -> list[dict]:
     """Compare DNS responses from different servers."""
-    types_to_query = list(record_types) if record_types else ["A"]
-    total = len(servers) * len(types_to_query)
+    types_to_query: list[str] = list(record_types) if record_types else ["A"]
+    total: int = len(servers) * len(types_to_query)
 
-    pbar = (
+    pbar: tqdm[NoReturn] | None = (
         None if quiet else tqdm(total=total, desc="Comparing DNS servers", unit="query")
     )
 
-    def progress_callback():
+    def progress_callback() -> None:
         if pbar:
             pbar.update(1)
 
-    result = compare_dns_servers(
+    result: ServerComparisonResult = compare_dns_servers(
         domain,
         list(servers),
         types_to_query,
@@ -295,7 +302,7 @@ def health_command(
     if not quiet:
         click.echo(f"Checking DNS health for {domain}...", err=True)
 
-    result = health_check_dns(domain, nameserver)
+    result: HealthCheckResult = health_check_dns(domain, nameserver)
     return format_dns_health(result)
 
 
@@ -423,10 +430,10 @@ def poisoning_command(
 ) -> list[dict]:
     """Check for signs of DNS poisoning or censorship."""
 
-    test_servers_list = list(test_servers) if test_servers else None
-    additional = list(additional_types) if additional_types else None
+    test_servers_list: list[str] | None = list(test_servers) if test_servers else None
+    additional: list[str] | None = list(additional_types) if additional_types else None
 
-    result = check_dns_poisoning(
+    result: PoisoningCheckResult = check_dns_poisoning(
         domain,
         control_server,
         test_servers_list,

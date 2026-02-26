@@ -3,9 +3,10 @@
 
 import logging
 import sys
-from typing import ClassVar, Literal
+from logging import Logger, StreamHandler
+from typing import Any, ClassVar, Literal, TextIO
 
-logger = logging.getLogger("nadzoring")
+logger: Logger = logging.getLogger("nadzoring")
 
 logger.handlers.clear()
 logger.propagate = False
@@ -96,7 +97,7 @@ def setup_cli_logging(
         logger.setLevel(logging.CRITICAL + 1)  # Disable all logging
         return
 
-    console_handler = logging.StreamHandler(sys.stderr)
+    console_handler: StreamHandler[TextIO | Any] = logging.StreamHandler(sys.stderr)
 
     if verbose:
         logger.setLevel(logging.DEBUG)

@@ -1,4 +1,3 @@
-# nadzoring/dns_lookup/utils.py
 """Utility functions for DNS lookup module."""
 
 from time import time
@@ -20,7 +19,28 @@ def create_resolver(
     timeout: float = 5.0,
     lifetime: float = 10.0,
 ) -> Resolver:
-    """Create and configure DNS resolver."""
+    """
+    Create and configure a DNS resolver instance.
+
+    Initializes a DNS resolver with specified timeout parameters and optional
+    custom nameserver.
+
+    Args:
+        nameserver: Optional specific nameserver IP address to use for queries.
+                   If None, uses system default nameservers.
+        timeout: Query timeout in seconds for each individual nameserver.
+                Defaults to 5.0 seconds.
+        lifetime: Total lifetime in seconds for the entire query operation.
+                 This includes retries across multiple nameservers.
+                 Defaults to 10.0 seconds.
+
+    Returns:
+        Resolver: Configured dns.resolver.Resolver instance ready for queries.
+
+    Example:
+        >>> resolver = create_resolver("8.8.8.8", timeout=3.0, lifetime=8.0)
+        >>> answers = resolver.resolve("example.com", "A")
+    """
     resolver = dns.resolver.Resolver()
     resolver.timeout = timeout
     resolver.lifetime = lifetime
@@ -30,7 +50,30 @@ def create_resolver(
 
 
 def extract_records(answers: Answer, record_type: str) -> list[str]:
-    """Extract records from DNS answer."""
+    """
+    Extract and format DNS records from a resolution answer.
+
+    Processes DNS answers based on record type, handling special formatting
+    for complex record types like MX, TXT, and SOA.
+
+    Args:
+        answers: DNS answer object from resolver.resolve() containing the
+                resolved records.
+        record_type: Type of DNS record being processed (e.g., 'A', 'MX', 'TXT').
+                    Used to determine special formatting rules.
+
+    Returns:
+        List[str]: List of formatted record strings. Format varies by record type:
+            - MX: "priority mailserver" (e.g., "10 mail.example.com")
+            - TXT: Concatenated string parts (e.g., "v=spf1 include:...")
+            - SOA: fields: "mname rname serial refresh retry expire minimum"
+            - Others: Simple string representation with trailing dots removed
+
+    Example:
+        >>> answers = resolver.resolve("example.com", "MX")
+        >>> extract_records(answers, "MX")
+        ['10 mail.example.com', '20 backup.example.com']
+    """
     records: list[str] = []
 
     for answer in answers:
@@ -63,7 +106,39 @@ def resolve_with_timer(
     timeout: float = 5.0,
     lifetime: float = 10.0,
 ) -> DNSResult:
-    """Resolve DNS with timing information."""
+    """
+    Perform DNS resolution with timing information and error handling.
+
+    Resolves a domain name for a specific record type, measuring response time
+    and optionally capturing TTL information. Handles common DNS errors gracefully.
+
+    Args:
+        domain: Domain name to resolve (e.g., "example.com").
+        record_type: DNS record type to query (e.g., "A", "MX", "TXT").
+                    Defaults to "A".
+        nameserver: Optional specific nameserver IP to use for resolution.
+                   If None, uses system default.
+        include_ttl: Whether to include TTL (Time To Live) value in result.
+                    Defaults to False.
+        timeout: Query timeout in seconds for each nameserver.
+                Defaults to 5.0.
+        lifetime: Total query lifetime in seconds, including retries.
+                 Defaults to 10.0.
+
+    Returns:
+        DNSResult: Dictionary containing resolution results with structure:
+            - domain: The queried domain name
+            - record_type: The queried record type
+            - records: List of resolved records (empty if resolution failed)
+            - ttl: TTL in seconds if include_ttl=True and available, else None
+            - error: Error message string if resolution failed, else None
+            - response_time: Query response time in milliseconds, rounded to 2 decimals
+
+    Example:
+        >>> result = resolve_with_timer("example.com", "MX", include_ttl=True)
+        >>> if not result["error"]:
+        ...     print(f"Records: {result['records']}, TTL: {result['ttl']}")
+    """
     result: DNSResult = {
         "domain": domain,
         "record_type": record_type,
@@ -99,7 +174,25 @@ def resolve_with_timer(
 
 
 def get_public_dns_servers() -> list[str]:
-    """Get list of public DNS servers for testing."""
+    """
+    Get a list of well-known public DNS server IP addresses.
+
+    Returns a curated list of reliable public DNS resolvers from various providers
+    suitable for testing or fallback scenarios.
+
+    Returns:
+        List[str]: List of DNS server IP addresses including:
+            - Google Public DNS (8.8.8.8, 8.8.4.4)
+            - Cloudflare DNS (1.1.1.1, 1.0.0.1)
+            - OpenDNS (208.67.222.222, 208.67.220.220)
+            - Quad9 (9.9.9.9, 149.112.112.112)
+            - Verisign Public DNS (64.6.64.6, 64.6.65.6)
+
+    Example:
+        >>> servers = get_public_dns_servers()
+        >>> for server in servers[:3]:
+        ...     print(f"Testing DNS server: {server}")
+    """
     return [
         "8.8.8.8",  # Google
         "8.8.4.4",  # Google
