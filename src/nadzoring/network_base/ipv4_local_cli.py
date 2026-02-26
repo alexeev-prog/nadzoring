@@ -25,8 +25,8 @@ def _get_linux_ip() -> str | None:
         parts: list[str] = output.strip().split()
 
         if len(parts) >= 3:
-            ip_with_mask = parts[2]
-            return ip_with_mask.split("/")[0]
+            ip_with_mask: str = parts[2]
+            return ip_with_mask.split("/", maxsplit=1)[0]
     except (CalledProcessError, FileNotFoundError, IndexError):
         return None
     else:
@@ -67,10 +67,12 @@ def _parse_windows_network_config(config_lines: list) -> str | None:
         if properties.get("IPEnabled") != "TRUE":
             continue
 
-        ip_address = properties.get("IPAddress", "")
+        ip_address: str = properties.get("IPAddress", "")
         if ip_address:
-            cleaned_ip = ip_address.replace('"', "").replace("{", "").replace("}", "")
-            return cleaned_ip.split(",")[0].strip()
+            cleaned_ip: str = (
+                ip_address.replace('"', "").replace("{", "").replace("}", "")
+            )
+            return cleaned_ip.split(",", maxsplit=1)[0].strip()
 
     return None
 

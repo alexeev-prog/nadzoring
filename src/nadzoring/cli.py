@@ -11,7 +11,6 @@ def cli() -> None:
     """FOSS tool for detecting website blocks, downdetecting and network analysis."""
 
 
-# Register command groups
 cli.add_command(dns_commands.dns)
 cli.add_command(network_commands.network_base)
 

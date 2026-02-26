@@ -1,5 +1,4 @@
-# nadzoring/dns_lookup/trace.py
-"""DNS trace routing functionality."""
+"""DNS trace routing functionality for tracking resolution paths."""
 
 import socket
 from logging import Logger
@@ -25,7 +24,35 @@ def query_nameserver(
     domain: str,
     nameserver: str,
 ) -> tuple[Answer | None, float | None, str | None]:
-    """Query a nameserver for A records."""
+    """
+    Query a specific nameserver for A records of a domain.
+
+    Performs a DNS A record lookup against a specified nameserver, measuring
+    response time and handling various error conditions gracefully.
+
+    Args:
+        domain: Domain name to query (e.g., "example.com").
+        nameserver: IP address of the nameserver to query.
+
+    Returns:
+        Tuple[Optional[Answer], Optional[float], Optional[str]]: A tuple containing:
+            - answers: DNS Answer object if successful, None otherwise.
+            - response_time: Response time in milliseconds rounded to 2 decimals,
+                           None if timeout occurred.
+            - error: Error message string if resolution failed, None if successful.
+
+    Examples:
+        >>> answers, rt, error = query_nameserver("example.com", "8.8.8.8")
+        >>> if answers:
+        ...     print(f"Resolved in {rt}ms: {answers[0]}")
+        >>> elif error:
+        ...     print(f"Failed: {error}")
+
+    Notes:
+        - Timeout is set to 3 seconds per query with 5 seconds total lifetime
+        - Response time is None only for timeout errors
+        - For other errors, response time is still recorded
+    """
     resolver: Resolver = create_resolver(nameserver, timeout=3, lifetime=5)
     start_time: float = time()
 
@@ -50,9 +77,30 @@ def query_nameserver(
 def get_delegation_info(
     current_domain: Name,
     current_ns: str,
-    hop: dict,
+    hop: dict[str, Any],
 ) -> str | None:
-    """Get delegation information from nameserver."""
+    """
+    Get delegation information from a nameserver for the next hop.
+
+    Queries a nameserver for NS records of the current domain to find
+    delegation information, then resolves the nameserver IP for the next hop.
+
+    Args:
+        current_domain: Domain name as dns.name.Name object to query for NS records.
+        current_ns: IP address of the current nameserver to query.
+        hop: Hop dictionary to update with delegation records and errors.
+            Modified in-place to add delegation information.
+
+    Returns:
+        Optional[str]: IP address of the next nameserver to query, or None if
+                      delegation information cannot be obtained or resolved.
+
+    Notes:
+        - Uses UDP query for NS records with 5 second timeout
+        - Attempts to resolve nameserver hostnames to IP addresses
+        - Falls back to socket.gethostbyname() if dns.resolver fails
+        - Logs exceptions but continues execution
+    """
     try:
         ns_query: QueryMessage = dns.message.make_query(
             current_domain, dns.rdatatype.NS
@@ -83,8 +131,29 @@ def get_delegation_info(
     return None
 
 
-def create_hop(nameserver: str) -> dict:
-    """Create a new hop dictionary."""
+def create_hop(nameserver: str) -> dict[str, Any]:
+    """
+    Create a new hop dictionary for DNS trace tracking.
+
+    Initializes a hop structure to store information about a single step
+    in the DNS resolution path.
+
+    Args:
+        nameserver: IP address of the nameserver for this hop.
+
+    Returns:
+        Dict[str, Any]: Hop dictionary with the following structure:
+            - nameserver: IP address of the queried nameserver
+            - records: List of record strings obtained from this hop
+            - response_time: Response time in milliseconds (None if not yet measured)
+            - next: Next nameserver IP or status string (None if unknown)
+            - error: Error message if this hop failed (None otherwise)
+
+    Example:
+        >>> hop = create_hop("198.41.0.4")
+        >>> hop["records"].append("A record response")
+        >>> hop["response_time"] = 45.67
+    """
     return {
         "nameserver": nameserver,
         "records": [],
@@ -95,14 +164,46 @@ def create_hop(nameserver: str) -> dict:
 
 
 def trace_dns(domain: str, nameserver: str | None = None) -> dict[str, Any]:
-    """Trace the DNS resolution path."""
+    """
+    Trace the complete DNS resolution path for a domain.
+
+    Performs a DNS trace following the delegation chain from root servers
+    to authoritative nameservers, similar to dig +trace functionality.
+
+    Args:
+        domain: Domain name to trace (e.g., "example.com").
+        nameserver: Optional starting nameserver IP. If None, starts from
+                   root server (198.41.0.4 - a.root-servers.net).
+
+    Returns:
+        Dict[str, Any]: Trace result containing:
+            - domain: The domain that was traced
+            - hops: List of hop dictionaries, each representing a nameserver
+                   queried along the path
+            - final_answer: The hop dictionary containing the final answer
+                           (None if resolution failed)
+
+    Example:
+        >>> result = trace_dns("example.com")
+        >>> for i, hop in enumerate(result["hops"]):
+        ...     print(f"Hop {i + 1}: {hop['nameserver']} ({hop['response_time']}ms)")
+        >>> if result["final_answer"]:
+        ...     print(f"Final answer: {result['final_answer']['records']}")
+
+    Notes:
+        - Maximum hops limited to 30 to prevent infinite loops
+        - Detects and reports loops in delegation chain
+        - Tracks visited nameservers to avoid repetition
+        - Gracefully handles delegation failures and errors
+    """
     result: dict[str, Any] = {
         "domain": domain,
         "hops": [],
         "final_answer": None,
     }
 
-    current_ns: str = nameserver or "198.41.0.4"  # a.root-servers.net
+    # Start from root server (a.root-servers.net) if no nameserver specified
+    current_ns: str = nameserver or "198.41.0.4"
     current_domain: Name = dns.name.from_text(domain)
     max_hops = 30
     hop_count = 0
@@ -111,6 +212,7 @@ def trace_dns(domain: str, nameserver: str | None = None) -> dict[str, Any]:
     while hop_count < max_hops:
         hop_count += 1
 
+        # Detect loops in delegation chain
         if current_ns in visited_ns:
             hop = create_hop(current_ns)
             hop["error"] = "Loop detected"
@@ -119,11 +221,12 @@ def trace_dns(domain: str, nameserver: str | None = None) -> dict[str, Any]:
             break
 
         visited_ns.add(current_ns)
-        hop: dict = create_hop(current_ns)
+        hop: dict[str, Any] = create_hop(current_ns)
 
         answers, response_time, error = query_nameserver(domain, current_ns)
         hop["response_time"] = response_time
 
+        # If we got answers, we've reached an authoritative server
         if answers:
             for answer in answers:
                 hop["records"].append(str(answer))
@@ -132,11 +235,13 @@ def trace_dns(domain: str, nameserver: str | None = None) -> dict[str, Any]:
             result["hops"].append(hop)
             break
 
+        # Try to get delegation to next nameserver
         next_ns: str | None = get_delegation_info(current_domain, current_ns, hop)
 
         if error:
             hop["error"] = error
 
+        # Move to next nameserver if delegation succeeded
         if next_ns and next_ns != current_ns:
             hop["next"] = next_ns
             result["hops"].append(hop)

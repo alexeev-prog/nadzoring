@@ -2,6 +2,7 @@
 """Network-related CLI commands."""
 
 from logging import Logger
+from typing import NoReturn
 
 import click
 from tqdm import tqdm
@@ -37,13 +38,15 @@ def ping_command(
     quiet: bool,
 ) -> list[dict]:
     """Ping one or more addresses."""
-    results = []
-    total = len(addresses)
+    results: list[dict[str, str]] = []
+    total: int = len(addresses)
 
-    pbar = None if quiet else tqdm(total=total, desc="Pinging addresses", unit="ping")
+    pbar: tqdm[NoReturn] | None = (
+        None if quiet else tqdm(total=total, desc="Pinging addresses", unit="ping")
+    )
 
     for address in addresses:
-        is_pinged = ping_addr(address)
+        is_pinged: bool = ping_addr(address)
         results.append(
             {
                 "address": address,
@@ -70,13 +73,15 @@ def geolocation_command(
     quiet: bool,
 ) -> list[dict]:
     """Get geolocation for one or more IPs."""
-    results = []
-    total = len(ips)
+    results: list[dict[str, str]] = []
+    total: int = len(ips)
 
-    pbar = None if quiet else tqdm(total=total, desc="Getting geolocation", unit="ip")
+    pbar: tqdm[NoReturn] | None = (
+        None if quiet else tqdm(total=total, desc="Getting geolocation", unit="ip")
+    )
 
     for ip in ips:
-        geolocation = geo_ip(ip)
+        geolocation: dict[str, str] = geo_ip(ip)
         results.append(
             {
                 "ip_address": ip,
@@ -100,7 +105,7 @@ def geolocation_command(
 @common_cli_options(include_quiet=True)
 def params_command(*, quiet: bool = False) -> list[dict]:
     """Get network parameters for the current system."""
-    data = network_param()
+    data: dict[str, str | None] | None = network_param()
     data["local_ipv4"] = get_local_ipv4()
     return [data]
 
@@ -114,18 +119,20 @@ def host_to_ip_command(
     quiet: bool,
 ) -> list[dict]:
     """Get IPs for one or more hostname addresses."""
-    results = []
-    total = len(hostnames)
+    results: list[dict[str, str]] = []
+    total: int = len(hostnames)
 
-    pbar = None if quiet else tqdm(total=total, desc="Resolving hostnames", unit="host")
+    pbar: tqdm[NoReturn] | None = (
+        None if quiet else tqdm(total=total, desc="Resolving hostnames", unit="host")
+    )
 
-    router_ipv4 = router_ip(ipv6=False)
-    router_ipv6 = router_ip(ipv6=True)
+    router_ipv4: str | None = router_ip(ipv6=False)
+    router_ipv6: str | None = router_ip(ipv6=True)
 
     for hostname in hostnames:
-        ip = get_ip_from_host(hostname)
-        ipv4_check = check_ipv4(hostname)
-        ipv6_check = check_ipv6(hostname)
+        ip: str = get_ip_from_host(hostname)
+        ipv4_check: str = check_ipv4(hostname)
+        ipv6_check: str = check_ipv6(hostname)
 
         results.append(
             {
@@ -156,13 +163,15 @@ def port_service_command(
     quiet: bool,
 ) -> list[dict]:
     """Get service names for one or more ports."""
-    results = []
-    total = len(ports)
+    results: list[dict[str, int | str]] = []
+    total: int = len(ports)
 
-    pbar = None if quiet else tqdm(total=total, desc="Looking up ports", unit="port")
+    pbar: tqdm[NoReturn] | None = (
+        None if quiet else tqdm(total=total, desc="Looking up ports", unit="port")
+    )
 
     for port in ports:
-        service = get_service_on_port(port)
+        service: str = get_service_on_port(port)
         results.append(
             {
                 "port": port,
