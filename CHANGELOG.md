@@ -1,3 +1,16 @@
+commit 17c5d8c93d1cee3a9e6095bc3b00e789038f6547
+Merge: 4d6f67d c028d3c
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Thu Feb 26 15:12:04 2026 +0700
+
+    Merge pull request #6 from alexeev-prog/refactor/codestyle-improvements
+
+commit c028d3ceede175a4c50d81b2dc79dfa2904c785c
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Thu Feb 26 15:09:00 2026 +0700
+
+    update docstrings, codestyle
+
 commit 4d6f67d81bee6850e05190c0d7d2b83fb963d378
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Wed Feb 25 21:07:31 2026 +0700

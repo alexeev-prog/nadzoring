@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.abspath("src/nadzoring"))
 
 project = "nadzoring"
 author = "Alexeev Bronislav"
-version = "0.1.3"
+version = "0.1.4"
 release = "0.1"
 project_copyright = "2025, Alexeev Bronislaw"
 
