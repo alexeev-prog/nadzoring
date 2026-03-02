@@ -1,3 +1,6 @@
+# src/nadzoring/network_base/service_on_port.py
+"""Service name resolution for port numbers."""
+
 from socket import getservbyport
 
 
@@ -9,11 +12,11 @@ def get_service_on_port(port: int) -> str:
     for the specified port number using the system's service database.
 
     Args:
-        port (int): The port number to look up. Must be in range 0-65535.
+        port: The port number to look up. Must be in range 0-65535.
 
     Returns:
-        str: The service name if found, otherwise returns "Unknown".
-             Service names are typically lowercase strings like 'http', 'ssh', etc.
+        The service name if found, otherwise returns "unknown".
+        Service names are typically lowercase strings like 'http', 'ssh', etc.
 
     Examples:
         >>> get_service_on_port(80)
@@ -21,15 +24,27 @@ def get_service_on_port(port: int) -> str:
         >>> get_service_on_port(22)
         'ssh'
         >>> get_service_on_port(9999)
-        'Unknown'
-
-    Notes:
-        This function wraps socket.getservbyport() and handles any exceptions
-        gracefully by returning "Unknown" instead of raising errors.
-        The service mapping depends on the local system's /etc/services file
-        or equivalent.
+        'unknown'
     """
     try:
         return getservbyport(port)
     except (OSError, OverflowError, TypeError):
-        return "Unknown"
+        common_services: dict[int, str] = {
+            80: "http",
+            443: "https",
+            22: "ssh",
+            21: "ftp",
+            25: "smtp",
+            53: "dns",
+            110: "pop3",
+            143: "imap",
+            993: "imaps",
+            995: "pop3s",
+            3306: "mysql",
+            5432: "postgresql",
+            6379: "redis",
+            27017: "mongodb",
+            8080: "http-alt",
+            8443: "https-alt",
+        }
+        return common_services.get(port, "Unknown")
