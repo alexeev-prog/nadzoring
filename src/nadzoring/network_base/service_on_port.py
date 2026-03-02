@@ -47,4 +47,4 @@ def get_service_on_port(port: int) -> str:
             8080: "http-alt",
             8443: "https-alt",
         }
-        return common_services.get(port, "unknown")
+        return common_services.get(port, "Unknown")

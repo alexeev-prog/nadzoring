@@ -1,3 +1,9 @@
+commit 8f903e9c533bc249e30599b42b8784d60b8930fe
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Mon Mar 2 16:21:24 2026 +0700
+
+    add port-scanner command to network-base
+
 commit 6effb8d2672063c98d0c2c9625b1fed6c1fc2279
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Sat Feb 28 22:03:54 2026 +0700
