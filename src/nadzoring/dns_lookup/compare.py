@@ -154,11 +154,13 @@ def compare_dns_servers(
                             "type": rtype,
                             "expected": base.get("records", []),
                             "got": query_result.get("records", []),
-                            "ttl_difference": _calculate_ttl_difference(
-                                base.get("ttl"), query_result.get("ttl")
-                            )
-                            if base.get("ttl") and query_result.get("ttl")
-                            else None,
+                            "ttl_difference": (
+                                _calculate_ttl_difference(
+                                    base.get("ttl"), query_result.get("ttl")
+                                )
+                                if base.get("ttl") and query_result.get("ttl")
+                                else None
+                            ),
                         }
                     )
 

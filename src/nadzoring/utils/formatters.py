@@ -13,6 +13,8 @@ from typing import Any, Literal
 import click
 from tabulate import tabulate
 
+from nadzoring.network_base.port_scanner import ScanResult
+
 type OutputFormat = Literal["table", "json", "csv", "html", "html_table"]
 """Valid output format types for CLI commands."""
 
@@ -458,6 +460,48 @@ def format_dns_record(
     return formatted
 
 
+def _format_scan_results(
+    results: list[ScanResult], *, show_closed: bool
+) -> list[dict[str, Any]]:
+    """Format scan results for CLI output."""
+    formatted: list[dict[str, str]] = []
+
+    for result in results:
+        if not result.open_ports and not show_closed:
+            formatted.append(
+                {
+                    "target": result.target,
+                    "ip": result.target_ip,
+                    "port": "—",
+                    "state": "NO OPEN PORTS",
+                    "service": "—",
+                    "banner": "—",
+                    "response_time_ms": "—",
+                }
+            )
+            continue
+
+        for port, port_result in sorted(result.results.items()):
+            if port_result.state == "open" or show_closed:
+                formatted.append(
+                    {
+                        "target": result.target,
+                        "ip": result.target_ip,
+                        "port": str(port),
+                        "state": port_result.state.upper(),
+                        "service": port_result.service,
+                        "banner": port_result.banner or "",
+                        "response_time_ms": (
+                            str(port_result.response_time)
+                            if port_result.response_time
+                            else ""
+                        ),
+                    }
+                )
+
+    return formatted
+
+
 def format_dns_trace(trace_result: dict[str, Any]) -> list[dict[str, Any]]:
     """Format DNS trace route results for tabular display.
 
@@ -490,7 +534,7 @@ def format_dns_trace(trace_result: dict[str, Any]) -> list[dict[str, Any]]:
         response_time = hop.get("response_time")
         if response_time is None:
             time_str = "timeout"
-        elif isinstance(response_time, (int, float)):
+        elif isinstance(response_time, int | float):
             time_str = f"{response_time:.2f}ms"
         else:
             time_str = str(response_time)
