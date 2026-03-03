@@ -1,3 +1,16 @@
+commit 2a84be8f420dc3ca40400b50458838125ade1ea3
+Merge: 3ca3a0f e6a7f9a
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Tue Mar 3 22:58:17 2026 +0700
+
+    Merge pull request #8 from alexeev-prog/refactor/codestyle-improvements
+
+commit e6a7f9a6d3cabf594bdde391d215bb05bc9cf461
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Tue Mar 3 22:53:52 2026 +0700
+
+    update init files
+
 commit 95cc802faf98e11d2e3cda67a6116e05c423db68
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Tue Mar 3 16:25:24 2026 +0700
