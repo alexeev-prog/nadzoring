@@ -2,9 +2,9 @@ name: docs
 
 on:
   push:
-    branches: [main]
+    branches: [main]  # для latest версии
   release:
-    types: [published]
+    types: [published]  # для stable версии
 
 jobs:
   deploy-stable:
@@ -19,8 +19,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -29,29 +27,21 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install sphinx furo tomli
+        pip install sphinx furo
 
     - name: Generate API docs
       run: |
+        cd docs
         chmod +x genapidoc.sh
         ./genapidoc.sh
-      working-directory: ./docs
 
-    - name: Build stable docs
-      run: |
-        make clean
-        make html
-      working-directory: ./docs
+    - name: Build and deploy stable docs
+      uses: sphinx-notes/pages@v3
+      with:
+        documentation_path: ./docs
+        publish_path: ./
       env:
         NADZORING_DOCS_TYPE: stable
-
-    - name: Deploy to GitHub Pages (stable)
-      uses: peaceiris/actions-gh-pages@v4
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./docs/_build/html
-        destination_dir: .
-        keep_files: true
 
   deploy-latest:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -65,8 +55,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -75,26 +63,18 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install sphinx furo tomli
+        pip install sphinx furo
 
     - name: Generate API docs
       run: |
+        cd docs
         chmod +x genapidoc.sh
         ./genapidoc.sh
-      working-directory: ./docs
 
-    - name: Build latest docs
-      run: |
-        make clean
-        make html
-      working-directory: ./docs
+    - name: Build and deploy latest docs
+      uses: sphinx-notes/pages@v3
+      with:
+        documentation_path: ./docs
+        publish_path: ./latest
       env:
         NADZORING_DOCS_TYPE: latest
-
-    - name: Deploy to GitHub Pages (latest)
-      uses: peaceiris/actions-gh-pages@v4
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./docs/_build/html
-        destination_dir: latest
-        keep_files: true
