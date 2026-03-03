@@ -1,3 +1,9 @@
+commit 95cc802faf98e11d2e3cda67a6116e05c423db68
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Tue Mar 3 16:25:24 2026 +0700
+
+    refactor:update codestyle, docstrings
+
 commit 3ca3a0f1fe4533df33db7e45198f189660b4ea5c
 Merge: 6effb8d ff854de
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
