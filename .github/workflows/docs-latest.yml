@@ -36,46 +36,20 @@ jobs:
         chmod +x ./genapidoc.sh
         ./genapidoc.sh
 
-    - name: Build documentation (latest)
+    - name: Build documentation
       env:
         NADZORING_DOCS_TYPE: latest
       run: |
         cd docs
         sphinx-build -b html -c . source build
 
-    - name: Create root redirect to latest (only if root doesn't exist)
-      run: |
-        # Создаем временную директорию для корневого файла
-        mkdir -p ./root_temp
-        echo '<!DOCTYPE html>
-        <html>
-        <head>
-          <meta http-equiv="refresh" content="0; url=./latest/">
-          <link rel="canonical" href="./latest/" />
-        </head>
-        <body>
-          <p>Redirecting to <a href="./latest/">latest version</a>...</p>
-        </body>
-        </html>' > ./root_temp/index.html
-
-    - name: Deploy root redirect (if needed)
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./root_temp
-        destination_dir: ./
-        keep_files: true
-        publish_branch: gh-pages
-        user_name: 'github-actions[bot]'
-        user_email: 'github-actions[bot]@users.noreply.github.com'
-
-    - name: Deploy to gh-pages (latest)
+    - name: Deploy to gh-pages
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./docs/build
         destination_dir: latest
-        keep_files: true
+        keep_files: false  # Очищаем папку latest перед деплоем
         publish_branch: gh-pages
         user_name: 'github-actions[bot]'
         user_email: 'github-actions[bot]@users.noreply.github.com'
