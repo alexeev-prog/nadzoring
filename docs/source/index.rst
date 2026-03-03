@@ -14,11 +14,11 @@ monitoring service availability, and network analysis.
    installation
    quickstart
    commands/index
-   api/modules
+   api/index
 
 .. note::
    This documentation is for version |version|.
-   You are viewing the **{docs_type}** version.
+   You are viewing the **{{ docs_type }}** version.
 
 Indices and tables
 ==================

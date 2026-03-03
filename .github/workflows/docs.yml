@@ -31,6 +31,10 @@ jobs:
         pip install sphinx furo
         pip install -e .
 
+    - name: Create _static directory
+      run: |
+        mkdir -p docs/source/_static
+
     - name: Generate API docs
       run: |
         chmod +x ./genapidoc.sh
@@ -41,12 +45,12 @@ jobs:
         NADZORING_DOCS_TYPE: stable
       run: |
         cd docs
-        make html
+        sphinx-build -b html source build
 
     - name: Deploy to GitHub Pages (stable)
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./docs/build/html
+        publish_dir: ./docs/build
         destination_dir: stable
         keep_files: false
