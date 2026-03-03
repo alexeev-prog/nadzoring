@@ -67,10 +67,25 @@ html_theme = "furo"
 html_static_path = ["_static"]
 html_title = f"Nadzoring {version}"
 
-html_context = {
-    "docs_type": docs_type,
-    "version": version,
+html_sidebars = {
+    '**': [
+        'sidebar/scroll-start.html',
+        'sidebar/brand.html',
+        'sidebar/search.html',
+        'sidebar/navigation.html',
+        'sidebar/ethical-ads.html',
+        'sidebar/scroll-end.html',
+        'versioning.html',
+    ]
 }
+
+html_context.update({
+    'versions': [
+        ('stable', '/nadzoring/'),
+        ('latest', '/nadzoring/latest/'),
+    ],
+    'current_version': docs_type,
+})
 
 html_theme_options = {
     "footer_content": f"Documentation version: {version} ({docs_type})",

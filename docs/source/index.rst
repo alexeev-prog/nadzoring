@@ -7,6 +7,12 @@ Welcome to Nadzoring's documentation!
 is a FOSS (Free and Open Source Software) command-line tool for detecting website blocks, 
 monitoring service availability, and network analysis.
 
+Versions
+-------------------
+
+* `Stable </nadzoring/>`_ - last stable release
+* `Latest </nadzoring/latest/>`_ - latest git-repo version
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
