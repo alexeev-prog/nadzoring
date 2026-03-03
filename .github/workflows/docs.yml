@@ -6,6 +6,11 @@ on:
   release:
     types: [published]  # для stable версии
 
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
 jobs:
   deploy-stable:
     if: github.event_name == 'release'

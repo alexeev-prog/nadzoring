@@ -77,8 +77,12 @@ html_context = {
 }
 
 html_theme_options = {
-    "footer_content": f"Documentation version: {version} ({docs_type})",
+    "footer_content": f"Documentation version: {version} ({docs_type}) | "
+                     f"<a href='/nadzoring/'>Stable</a> | "
+                     f"<a href='/nadzoring/latest/'>Latest</a>",
 }
+
+
 
 todo_include_todos = True
 
