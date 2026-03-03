@@ -44,17 +44,30 @@ jobs:
         cd docs
         sphinx-build -b html -c . source build
 
-    - name: Deploy root index
+    - name: Create root index redirect
+      run: |
+        echo '<!DOCTYPE html>
+        <html>
+        <head>
+          <meta http-equiv="refresh" content="0; url=./stable/">
+          <link rel="canonical" href="./stable/" />
+        </head>
+        <body>
+          <p>Redirecting to <a href="./stable/">stable version</a>...</p>
+        </body>
+        </html>' > ./docs/build/redirect.html
+
+    - name: Deploy root index (stable redirect)
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./docs
+        publish_dir: ./docs/build
         destination_dir: ./
         keep_files: true
         publish_branch: gh-pages
         user_name: 'github-actions[bot]'
         user_email: 'github-actions[bot]@users.noreply.github.com'
-
+        
     - name: Deploy to gh-pages (stable)
       uses: peaceiris/actions-gh-pages@v3
       with:

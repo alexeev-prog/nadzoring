@@ -43,17 +43,6 @@ jobs:
         cd docs
         sphinx-build -b html -c . source build
 
-    - name: Deploy root index
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./docs
-        destination_dir: ./
-        keep_files: true
-        publish_branch: gh-pages
-        user_name: 'github-actions[bot]'
-        user_email: 'github-actions[bot]@users.noreply.github.com'
-
     - name: Deploy to gh-pages (latest)
       uses: peaceiris/actions-gh-pages@v3
       with:
