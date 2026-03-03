@@ -1,5 +1,6 @@
 """Reverse DNS lookup functionality for IP address to hostname resolution."""
 
+from logging import Logger
 from time import time
 
 import dns.exception
@@ -11,7 +12,7 @@ from dns.resolver import Answer
 from nadzoring.dns_lookup.utils import create_resolver
 from nadzoring.logger import get_logger
 
-logger = get_logger(__name__)
+logger: Logger = get_logger(__name__)
 
 
 def reverse_dns(
@@ -66,6 +67,7 @@ def reverse_dns(
         - Trailing dots are automatically removed from hostnames for
           consistency with forward lookup formats.
         - Debug logs are generated for failed lookups to aid troubleshooting.
+
     """
     result: dict[str, str | float | None] = {
         "ip_address": ip_address,

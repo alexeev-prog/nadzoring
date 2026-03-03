@@ -1,4 +1,5 @@
-"""DNS poisoning detection and analysis functionality.
+"""
+DNS poisoning detection and analysis functionality.
 
 This module provides tools to detect DNS cache poisoning, censorship,
 and manipulation by comparing responses from multiple DNS resolvers
@@ -263,6 +264,7 @@ class IPAnalysisResult(TypedDict, total=False):
         reserved: Count of reserved IP addresses.
         owners: List of inferred owners for each IP (CDN/provider names).
         countries: List of inferred countries for each IP.
+
     """
 
     count: int
@@ -299,6 +301,7 @@ class InconsistencyDetail(TypedDict):
         owner: Common owner if applicable (optional).
         control_owner: Owner of control records (optional).
         test_owner: Owner of test records (optional).
+
     """
 
     server: str
@@ -343,6 +346,7 @@ class MetricsResult(TypedDict):
         anycast_likely: Whether anycast routing is likely.
         cdn_likely: Whether CDN usage is likely.
         poisoning_likely: Whether poisoning is likely.
+
     """
 
     total_tested: int
@@ -390,6 +394,7 @@ def get_ip_owner(ip: str) -> str:
         - Only IPv4 networks are currently supported in CDN_NETWORKS.
         - IPv6 addresses will always return "Unknown" with current data.
         - Exceptions during IP parsing are logged and result in "Unknown".
+
     """
     try:
         ip_obj: IPv4Address | IPv6Address = ipaddress.ip_address(ip)
@@ -432,6 +437,7 @@ def is_likely_cdn(ips: list[str]) -> tuple[bool, str, float]:
         - Returns (False, "Unknown", 0.0) for empty input.
         - The 50% threshold is used to determine CDN likelihood.
         - Only considers IPs from known CDN networks.
+
     """
     if not ips:
         return False, "Unknown", 0.0
@@ -479,6 +485,7 @@ def _analyze_ip_patterns(records: list[str]) -> IPAnalysisResult:
         - Returns empty dict for empty input.
         - Country inference is simplified based on IP prefixes.
         - Exceptions during analysis are logged and skipped.
+
     """
     if not records:
         return {}
@@ -559,6 +566,7 @@ def _compare_results(
           low (minor), info (informational)
         - CDN variations are flagged as "info" severity
         - Error mismatches with NXDOMAIN are considered high severity
+
     """
     if test["error"] != control["error"]:
         severity: Literal["high", "medium"] = (
@@ -743,6 +751,7 @@ def check_dns_poisoning(
         - CDN variations are flagged as informational, not poisoning
         - Geographic diversity of test servers improves detection accuracy
         - Timeout errors are logged but don't affect poisoning detection
+
     """
     if test_servers is None:
         test_servers = get_public_dns_servers()
@@ -807,6 +816,7 @@ def _get_additional_records(
     Returns:
         Optional[Dict[str, DNSResult]]: Dictionary mapping record types to
             their DNS results, or None if no additional types requested.
+
     """
     if not additional_types:
         return None
@@ -843,6 +853,7 @@ def _test_dns_servers(
             - inconsistencies: List of detected inconsistencies
             - mismatches: Count of record mismatches found
             - cdn_variations: Count of CDN variations found
+
     """
     test_results: dict[str, DNSResult] = {}
     inconsistencies: list[InconsistencyDetail] = []
@@ -894,6 +905,7 @@ def _calculate_metrics(
     Returns:
         MetricsResult: Comprehensive metrics including confidence scores,
             diversity measures, and detection flags.
+
     """
     total_tested: int = len(test_results)
 
@@ -986,6 +998,7 @@ def _determine_poisoning_level(
     Notes:
         - Returns "NONE" if not poisoned
         - CDN detection downgrades severity to "SUSPICIOUS" for high confidence
+
     """
     if not poisoned:
         return "NONE"
@@ -1037,6 +1050,7 @@ def _build_result(
     Returns:
         PoisoningCheckResult: Complete poisoning check result with all fields
             populated according to the type definition.
+
     """
     # Analyze control server records
     control_analysis: IPAnalysisResult = _analyze_ip_patterns(
@@ -1109,6 +1123,7 @@ def _count_severities(inconsistencies: list[InconsistencyDetail]) -> dict[str, i
             - "medium": Suspicious issues
             - "low": Minor issues
             - "info": Informational items
+
     """
     severity_counts: dict[str, int] = {"high": 0, "medium": 0, "low": 0, "info": 0}
     for inc in inconsistencies:

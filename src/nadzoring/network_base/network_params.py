@@ -1,4 +1,6 @@
 """
+Get network params on Linux, Windows.
+
 The script returns the result of parsing the execution of standard
 Linux and Windows commands. A dictionary with basic
 parameters of the default network interface is returned.
@@ -28,10 +30,12 @@ logger: Logger = get_logger(__name__)
 
 
 def public_ip() -> str:
-    """Getting an external IP address by accessing the service api: https://api.ipify.org/
+    """
+    Getting an external IP address by accessing the service api: https://api.ipify.org/.
 
     Returns:
         str: public IP
+
     """
     try:
         return get("https://api.ipify.org/").text  # noqa: S113
@@ -215,10 +219,12 @@ def _create_empty_network_info() -> dict[str, None]:
 
 
 def network_param() -> dict[str, str | None] | None:
-    """Get basic network parameters for the current system.
+    """
+    Get basic network parameters for the current system.
 
     Returns:
         Dictionary with network interface information or None if OS not supported.
+
     """
     operating_system: str = system()
 

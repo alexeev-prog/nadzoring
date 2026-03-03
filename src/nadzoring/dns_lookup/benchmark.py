@@ -1,5 +1,6 @@
 # nadzoring/dns_lookup/benchmark.py
-"""DNS server benchmarking functionality for performance testing and comparison.
+"""
+DNS server benchmarking functionality for performance testing and comparison.
 
 This module provides tools to benchmark DNS server performance by measuring
 response times, success rates, and statistical metrics across multiple queries.
@@ -74,6 +75,7 @@ def benchmark_single_server(
         - The delay between queries helps prevent rate limiting by DNS providers
         - Exceptions during individual queries are caught and logged as debug messages
           without stopping the benchmark
+
     """
     responses: list[float] = []
     failed = 0
@@ -185,6 +187,7 @@ def benchmark_dns_servers(
         - Consider rate limiting when using parallel=True with many servers
         - Default server list includes major public DNS providers:
             Google, Cloudflare, OpenDNS, Quad9, Verisign, and others
+
     """
     if servers is None:
         servers = get_public_dns_servers()

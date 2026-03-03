@@ -43,7 +43,7 @@ select = [
   "C4",   # flake8-comprehensions
   "C90",  # maccabe
   "COM",  # flake8-commas
-  # "D",    # pydocstyle
+  "D",    # pydocstyle
   "DTZ",  # flake8-datetimez
   "E",    # pycodestyle
   "ERA",  # flake8-eradicate

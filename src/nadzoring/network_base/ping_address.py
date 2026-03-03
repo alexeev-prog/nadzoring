@@ -1,4 +1,6 @@
 """
+Ping address using ping3 library.
+
 This script performs a standard ping of a specific address or domain name.
 It works in the same way as the standard OS module. It does not ping addresses that
 are protected from pinging, such as "codeby.net".
@@ -16,7 +18,8 @@ logger: Logger = get_logger(__name__)
 
 
 def ping_addr(addr: str) -> bool:
-    """A normal ping of a specific ip address or domain.
+    """
+    A normal ping of a specific ip address or domain.
 
     The original function returns if the domain or address is unavailable None.
     If successful, the time for which ping is being performed.
@@ -28,6 +31,7 @@ def ping_addr(addr: str) -> bool:
 
     Returns:
         bool: is pinged
+
     """
     try:
         IPv4Address(addr)

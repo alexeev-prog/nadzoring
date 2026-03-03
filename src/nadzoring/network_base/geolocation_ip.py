@@ -2,7 +2,8 @@ from requests import get
 
 
 def geo_ip(ip: str) -> dict[str, str]:
-    """A function for getting coordinates based on an external IP address.
+    """
+    A function for getting coordinates based on an external IP address.
 
     Performs a request to the service, which transmits the address.
     In response, it receives JSON with coordinates and more
@@ -14,6 +15,7 @@ def geo_ip(ip: str) -> dict[str, str]:
 
     Returns:
         dict[str, str] | None: dict with lat and lon or None
+
     """
     try:
         req = get(url=f"http://ip-api.com/json/{ip}").json()  # noqa: S113

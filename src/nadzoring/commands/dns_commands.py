@@ -1,4 +1,3 @@
-# nadzoring/commands/dns_commands.py
 """DNS-related CLI commands."""
 
 from logging import Logger
@@ -429,7 +428,6 @@ def poisoning_command(
     quiet: bool,
 ) -> list[dict]:
     """Check for signs of DNS poisoning or censorship."""
-
     test_servers_list: list[str] | None = list(test_servers) if test_servers else None
     additional: list[str] | None = list(additional_types) if additional_types else None
 

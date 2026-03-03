@@ -1,4 +1,5 @@
-"""DNS health check functionality for comprehensive domain DNS evaluation.
+"""
+DNS health check functionality for comprehensive domain DNS evaluation.
 
 This module provides functions to perform health checks on DNS configurations,
 including scoring, validation, and detailed analysis of various record types.
@@ -29,6 +30,7 @@ class HealthCheckResult(dict[str, Any]):
         issues: List of critical issues found.
         warnings: List of warnings found.
         record_scores: Dictionary mapping record types to their individual scores.
+
     """
 
     domain: str
@@ -52,6 +54,7 @@ class DetailedCheckResult(dict[str, Any]):
         errors: Dictionary mapping record types to any errors encountered.
         response_times: Dictionary mapping record types to response times in ms.
         validations: Dictionary containing validation results for MX and TXT records.
+
     """
 
     domain: str
@@ -110,6 +113,7 @@ def health_check_dns(domain: str, nameserver: str | None = None) -> HealthCheckR
             * >= 80: healthy
             * 50-79: degraded
             * < 50: unhealthy
+
     """
     result: HealthCheckResult = {
         "domain": domain,
@@ -213,6 +217,7 @@ def check_dns(
         - MX validation checks for duplicate priorities
         - TXT validation checks SPF for missing all and DKIM for missing public key
         - Errors are recorded per record type if resolution fails
+
     """
     if record_types is None:
         record_types = ["A", "AAAA", "MX", "NS", "TXT", "CNAME"]

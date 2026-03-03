@@ -6,12 +6,13 @@ from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from ipaddress import ip_address
+from logging import Logger
 from typing import Literal
 
 from nadzoring.logger import get_logger
 from nadzoring.network_base.service_on_port import get_service_on_port
 
-logger = get_logger(__name__)
+logger: Logger = get_logger(__name__)
 
 COMMON_PORTS: list[int] = [
     21,

@@ -1,4 +1,5 @@
-"""DNS server comparison functionality for analyzing differences between resolvers.
+"""
+DNS server comparison functionality for analyzing differences between resolvers.
 
 This module provides tools to compare DNS responses from multiple servers,
 identifying discrepancies in records, TTLs, and response characteristics.
@@ -19,6 +20,7 @@ class ServerComparisonResult(TypedDict):
         domain: The domain name that was queried.
         servers: Dictionary mapping server IPs to their per-record-type results.
         differences: List of detected differences between servers.
+
     """
 
     domain: str
@@ -36,6 +38,7 @@ class DifferenceDetail(TypedDict):
         expected: Records expected (from the first/baseline server).
         got: Actual records received from this server.
         ttl_difference: Optional TTL difference if significant.
+
     """
 
     server: str
@@ -125,6 +128,7 @@ def compare_dns_servers(
           allowing for accurate progress tracking in UIs
         - Empty responses (no records) are considered valid and compared normally
         - Error responses are included in the comparison and may cause differences
+
     """
     result: ServerComparisonResult = {
         "domain": domain,
@@ -185,6 +189,7 @@ def _calculate_ttl_difference(ttl1: int | None, ttl2: int | None) -> int | None:
     Returns:
         Optional[int]: Absolute difference between TTLs if both are provided,
                       None otherwise.
+
     """
     if ttl1 is None or ttl2 is None:
         return None

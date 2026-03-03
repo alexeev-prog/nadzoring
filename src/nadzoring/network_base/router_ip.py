@@ -18,7 +18,8 @@ logger: Logger = get_logger(__name__)
 
 
 def get_ip_from_host(hostname: str) -> str:
-    """Attempts to retrieve an IP address from a domain name.
+    """
+    Attempts to retrieve an IP address from a domain name.
 
     If unsuccessful, returns the value passed to the function.
 
@@ -27,6 +28,7 @@ def get_ip_from_host(hostname: str) -> str:
 
     Returns:
         str: host
+
     """
     try:
         sock: str = gethostbyname(hostname)
@@ -37,17 +39,19 @@ def get_ip_from_host(hostname: str) -> str:
 
 
 def check_ipv4(hostname: str) -> str:
-    """Checking whether the received value is an ip address.
+    """
+    Checking whether the received value is an ip address.
 
     If the received value is not an ip address, an exception is thrown and the received
     value is passed to the function to obtain the address from the domain name. If the
     check is successful, the address is returned from the function.
 
     Args:
-        ip (str): hostname address
+        hostname (str): hostname address
 
     Returns:
         str: hostname
+
     """
     try:
         IPv4Address(hostname)
@@ -58,17 +62,19 @@ def check_ipv4(hostname: str) -> str:
 
 
 def check_ipv6(hostname: str) -> str:
-    """Checking whether the received value is an ip address.
+    """
+    Checking whether the received value is an ip address.
 
     If the received value is not an ip address, an exception is thrown and the received
     value is passed to the function to obtain the address from the domain name. If the
     check is successful, the address is returned from the function.
 
     Args:
-        ip (str): hostname address
+        hostname (str): hostname address
 
     Returns:
         str: hostname
+
     """
     try:
         IPv6Address(hostname)
@@ -79,8 +85,8 @@ def check_ipv6(hostname: str) -> str:
 
 
 def router_ip(*, ipv6: bool = False) -> str | None:
-    """The OS version is determined, then, using the subprocess library,
-    a command specific to each OS is executed to determine the router address.
+    """
+    The OS version is determined, then determine the router address.
 
     Then the received value is sent to check if it matches the address. If the received
     address is IPv4, it is returned from the function.
@@ -94,8 +100,8 @@ def router_ip(*, ipv6: bool = False) -> str | None:
 
     Returns:
         str | None: ip route result or None
-    """
 
+    """
     if system() == "Linux":
         try:
             ip_route: str = str(

@@ -52,6 +52,7 @@ def query_nameserver(
         - Timeout is set to 3 seconds per query with 5 seconds total lifetime
         - Response time is None only for timeout errors
         - For other errors, response time is still recorded
+
     """
     resolver: Resolver = create_resolver(nameserver, timeout=3, lifetime=5)
     start_time: float = time()
@@ -100,6 +101,7 @@ def get_delegation_info(
         - Attempts to resolve nameserver hostnames to IP addresses
         - Falls back to socket.gethostbyname() if dns.resolver fails
         - Logs exceptions but continues execution
+
     """
     try:
         ns_query: QueryMessage = dns.message.make_query(
@@ -153,6 +155,7 @@ def create_hop(nameserver: str) -> dict[str, Any]:
         >>> hop = create_hop("198.41.0.4")
         >>> hop["records"].append("A record response")
         >>> hop["response_time"] = 45.67
+
     """
     return {
         "nameserver": nameserver,
@@ -195,6 +198,7 @@ def trace_dns(domain: str, nameserver: str | None = None) -> dict[str, Any]:
         - Detects and reports loops in delegation chain
         - Tracks visited nameservers to avoid repetition
         - Gracefully handles delegation failures and errors
+
     """
     result: dict[str, Any] = {
         "domain": domain,
