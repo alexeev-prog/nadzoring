@@ -1,3 +1,16 @@
+commit ee67f574fe928f92f8e53c58e4ff508504d3daba
+Merge: 2a84be8 61980b1
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Tue Mar 3 23:09:48 2026 +0700
+
+    Merge pull request #9 from alexeev-prog/docs/update
+
+commit 61980b16c4b778b9ccb47c8fdc5fcc67b35eb6c8
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Tue Mar 3 23:07:48 2026 +0700
+
+    add docs-latest workflow, set docs-stable to publishing release, update docs structure
+
 commit 2a84be8f420dc3ca40400b50458838125ade1ea3
 Merge: 3ca3a0f e6a7f9a
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>

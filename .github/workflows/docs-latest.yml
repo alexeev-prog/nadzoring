@@ -13,7 +13,7 @@ jobs:
     permissions:
       pages: write
       id-token: write
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -28,7 +28,7 @@ jobs:
     - name: Install dependencies
       run: |
         pip install sphinx furo
-        pip install -e 
+        pip install -e .
 
     - name: Generate API docs
       run: |
