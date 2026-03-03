@@ -18,9 +18,6 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    permissions:
-      pages: write
-      id-token: write
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -56,6 +53,7 @@ jobs:
         publish_dir: ./docs/_build/html
         destination_dir: .  # корень сайта
         keep_files: true
+        publish_branch: gh-pages
 
   deploy-latest:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -63,9 +61,6 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    permissions:
-      pages: write
-      id-token: write
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -101,3 +96,4 @@ jobs:
         publish_dir: ./docs/_build/html
         destination_dir: latest
         keep_files: true
+        publish_branch: gh-pages
