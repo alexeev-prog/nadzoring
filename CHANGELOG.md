@@ -1,3 +1,9 @@
+commit a03a9e9f29ad0bfbadb36a740e32754a799a041d
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Tue Mar 3 23:33:29 2026 +0700
+
+    update (fix) docs workflows
+
 commit ebcd0bcaca0b671fd0995476964cd6be1f136f6e
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Tue Mar 3 23:23:05 2026 +0700
