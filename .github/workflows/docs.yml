@@ -1,31 +1,28 @@
-name: Docs (Stable)
+name: Docs
 
 on:
+  push:
+    branches: [main]
   release:
     types: [published]
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
-  build-and-deploy-stable:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    permissions:
-      pages: write
-      id-token: write
-    
     steps:
-    - name: Checkout repository at tag
+    - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        ref: ${{ github.event.release.tag_name }}
         fetch-depth: 0
-        token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Set up Python
       uses: actions/setup-python@v6
@@ -37,26 +34,76 @@ jobs:
         pip install sphinx furo
         pip install -e .
 
-    - name: Create _static directory
+    - name: Create necessary directories
       run: |
         mkdir -p docs/source/_static
+        mkdir -p docs/source/api
 
     - name: Generate API docs
       run: |
         chmod +x ./genapidoc.sh
         ./genapidoc.sh
 
-    - name: Build documentation (stable)
+    - name: Build latest docs
+      env:
+        NADZORING_DOCS_TYPE: latest
+      run: |
+        cd docs
+        sphinx-build -b html -c . source build_latest
+
+    - name: Build stable docs (if release)
+      if: github.event_name == 'release'
       env:
         NADZORING_DOCS_TYPE: stable
       run: |
         cd docs
-        sphinx-build -b html -c . source build
+        sphinx-build -b html -c . source build_stable
 
-    - name: Deploy to GitHub Pages (stable)
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./docs/build
-        destination_dir: stable
-        keep_files: false
+    - name: Prepare Pages artifact
+      run: |
+        mkdir -p _site
+        
+        cp -r docs/build_latest _site/latest
+        
+        if [ -d "docs/build_stable" ]; then
+          cp -r docs/build_stable _site/stable
+          cat > _site/index.html << 'EOF'
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="refresh" content="0; url=stable/">
+    <title>Nadzoring Documentation</title>
+</head>
+<body>
+    <p>Redirecting to <a href="stable/">stable documentation</a>...</p>
+</body>
+</html>
+EOF
+        else
+          cat > _site/index.html << 'EOF'
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="refresh" content="0; url=latest/">
+    <title>Nadzoring Documentation</title>
+</head>
+<body>
+    <p>Redirecting to <a href="latest/">latest documentation</a>...</p>
+</body>
+</html>
+EOF
+        fi
+
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
