@@ -4,21 +4,24 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
 jobs:
   build-and-deploy-latest:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    permissions:
-      pages: write
-      id-token: write
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Set up Python
       uses: actions/setup-python@v6
@@ -30,9 +33,10 @@ jobs:
         pip install sphinx furo
         pip install -e .
 
-    - name: Create _static directory
+    - name: Create necessary directories
       run: |
         mkdir -p docs/source/_static
+        mkdir -p docs/source/api
 
     - name: Generate API docs
       run: |
@@ -46,10 +50,13 @@ jobs:
         cd docs
         sphinx-build -b html -c . source build
 
-    - name: Deploy to GitHub Pages (latest)
+    - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./docs/build
         destination_dir: latest
         keep_files: false
+        publish_branch: gh-pages
+        user_name: 'github-actions[bot]'
+        user_email: 'github-actions[bot]@users.noreply.github.com'
