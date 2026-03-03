@@ -44,8 +44,9 @@ jobs:
         cd docs
         sphinx-build -b html -c . source build
 
-    - name: Create root index redirect
+    - name: Create root redirect to stable
       run: |
+        mkdir -p ./root_temp
         echo '<!DOCTYPE html>
         <html>
         <head>
@@ -55,19 +56,19 @@ jobs:
         <body>
           <p>Redirecting to <a href="./stable/">stable version</a>...</p>
         </body>
-        </html>' > ./docs/build/redirect.html
+        </html>' > ./root_temp/index.html
 
-    - name: Deploy root index (stable redirect)
+    - name: Deploy root redirect
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./docs/build
+        publish_dir: ./root_temp
         destination_dir: ./
         keep_files: true
         publish_branch: gh-pages
         user_name: 'github-actions[bot]'
         user_email: 'github-actions[bot]@users.noreply.github.com'
-        
+
     - name: Deploy to gh-pages (stable)
       uses: peaceiris/actions-gh-pages@v3
       with:
