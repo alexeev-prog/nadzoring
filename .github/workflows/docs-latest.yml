@@ -1,11 +1,11 @@
-name: Docs (Stable)
+name: Docs (Latest)
 
 on:
-  release:
-    types: [published]
+  push:
+    branches: [main]
 
 jobs:
-  build-and-deploy-stable:
+  build-and-deploy-latest:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -15,10 +15,9 @@ jobs:
       id-token: write
     
     steps:
-    - name: Checkout repository at tag
+    - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        ref: ${{ github.event.release.tag_name }}
         fetch-depth: 0
 
     - name: Set up Python
@@ -29,24 +28,24 @@ jobs:
     - name: Install dependencies
       run: |
         pip install sphinx furo
-        pip install -e .
+        pip install -e 
 
     - name: Generate API docs
       run: |
         chmod +x ./genapidoc.sh
         ./genapidoc.sh
 
-    - name: Build documentation (stable)
+    - name: Build documentation (latest)
       env:
-        NADZORING_DOCS_TYPE: stable
+        NADZORING_DOCS_TYPE: latest
       run: |
         cd docs
         make html
 
-    - name: Deploy to GitHub Pages (stable)
+    - name: Deploy to GitHub Pages (latest)
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./docs/build/html
-        destination_dir: stable
+        destination_dir: latest
         keep_files: false
