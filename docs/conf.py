@@ -88,18 +88,6 @@ source_suffix = ".rst"
 master_doc = "index"
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
-html_sidebars = {
-    '**': [
-        'sidebar/scroll-start.html',
-        'sidebar/brand.html',
-        'sidebar/search.html',
-        'sidebar/navigation.html',
-        'sidebar/ethical-ads.html',
-        'sidebar/scroll-end.html',
-        'versioning.html',
-    ]
-}
-
 def skip(app, what, name, obj, would_skip, options):
     if name == "__init__":
         return False
