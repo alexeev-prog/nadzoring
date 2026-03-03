@@ -3,7 +3,6 @@ import tomllib
 import sys
 from datetime import datetime
 
-# Пути для импорта
 sys.path.insert(0, os.path.abspath("."))
 sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("../src"))
@@ -67,25 +66,15 @@ html_theme = "furo"
 html_static_path = ["_static"]
 html_title = f"Nadzoring {version}"
 
-html_sidebars = {
-    '**': [
-        'sidebar/scroll-start.html',
-        'sidebar/brand.html',
-        'sidebar/search.html',
-        'sidebar/navigation.html',
-        'sidebar/ethical-ads.html',
-        'sidebar/scroll-end.html',
-        'versioning.html',
-    ]
-}
-
-html_context.update({
-    'versions': [
-        ('stable', '/nadzoring/'),
-        ('latest', '/nadzoring/latest/'),
+html_context = {
+    "docs_type": docs_type,
+    "version": version,
+    "versions": [
+        ("stable", "/nadzoring/"),
+        ("latest", "/nadzoring/latest/"),
     ],
-    'current_version': docs_type,
-})
+    "current_version": docs_type,
+}
 
 html_theme_options = {
     "footer_content": f"Documentation version: {version} ({docs_type})",
@@ -98,6 +87,18 @@ autosummary_generate = True
 source_suffix = ".rst"
 master_doc = "index"
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+
+html_sidebars = {
+    '**': [
+        'sidebar/scroll-start.html',
+        'sidebar/brand.html',
+        'sidebar/search.html',
+        'sidebar/navigation.html',
+        'sidebar/ethical-ads.html',
+        'sidebar/scroll-end.html',
+        'versioning.html',
+    ]
+}
 
 def skip(app, what, name, obj, would_skip, options):
     if name == "__init__":
