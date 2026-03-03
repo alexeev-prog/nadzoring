@@ -23,17 +23,20 @@ type RecordData = dict[str, Any]
 
 
 def get_terminal_width() -> int:
-    """Get the current terminal width in columns.
+    """
+    Get the current terminal width in columns.
 
     Returns:
         int: Number of columns available in the terminal. Falls back to a
             reasonable default if terminal size cannot be determined.
+
     """
     return shutil.get_terminal_size().columns
 
 
 def truncate_string(s: str, max_width: int, placeholder: str = "...") -> str:
-    """Truncate a string to fit within a specified width.
+    """
+    Truncate a string to fit within a specified width.
 
     If the string exceeds the maximum width, it is truncated and the placeholder
     is appended to indicate truncation.
@@ -50,6 +53,7 @@ def truncate_string(s: str, max_width: int, placeholder: str = "...") -> str:
     Example:
         >>> truncate_string("very long string", 10)
         'very lo...'
+
     """
     if len(s) <= max_width:
         return s
@@ -57,7 +61,8 @@ def truncate_string(s: str, max_width: int, placeholder: str = "...") -> str:
 
 
 def colorize_value(value: Any, *, no_color: bool = False) -> str:
-    """Apply color formatting to values based on content and severity.
+    r"""
+    Apply color formatting to values based on content and severity.
 
     Colors are applied based on keywords in the string value:
         - Red/bold: Critical/high severity terms
@@ -75,6 +80,7 @@ def colorize_value(value: Any, *, no_color: bool = False) -> str:
     Example:
         >>> colorize_value("CRITICAL")
         '\x1b[1;31mCRITICAL\x1b[0m'  # Red bold text
+
     """
     if no_color:
         return str(value)
@@ -100,7 +106,8 @@ def print_results_table(
     *,
     no_color: bool = False,
 ) -> None:
-    """Print results as a formatted table that fits terminal width.
+    """
+    Print results as a formatted table that fits terminal width.
 
     Automatically adjusts column widths based on terminal size and content.
     Special handling for DNS record types (TXT, AAAA, etc.) with predefined
@@ -122,6 +129,7 @@ def print_results_table(
         +-------------+-------------+
         | example.com | 192.168.1.1 |
         +-------------+-------------+
+
     """
     if not data:
         click.echo("No results to display")
@@ -181,7 +189,8 @@ def _calculate_column_widths(
     max_widths: dict[str, int],
     available: int,
 ) -> list[int]:
-    """Calculate optimal column widths within available space.
+    """
+    Calculate optimal column widths within available space.
 
     Distributes extra space proportionally while respecting minimum and
     maximum constraints for each column.
@@ -194,6 +203,7 @@ def _calculate_column_widths(
 
     Returns:
         list[int]: Calculated width for each column in header order.
+
     """
     total_min: Literal[0] | int = sum(min_widths.values())
 
@@ -225,7 +235,8 @@ def _calculate_column_widths(
 
 
 def print_csv_table(data: Sequence[dict[str, Any]]) -> None:
-    """Print data as CSV format to console.
+    """
+    Print data as CSV format to console.
 
     Args:
         data: List of dictionaries to convert to CSV format. All dictionaries
@@ -239,6 +250,7 @@ def print_csv_table(data: Sequence[dict[str, Any]]) -> None:
         >>> print_csv_table(data)
         domain,ip
         example.com,192.168.1.1
+
     """
     if not data:
         click.echo("No data to display")
@@ -254,7 +266,8 @@ def print_csv_table(data: Sequence[dict[str, Any]]) -> None:
 def print_html_table(
     data: Sequence[dict[str, Any]], *, full_page: bool = False
 ) -> None:
-    """Print results as HTML table or complete HTML page.
+    """
+    Print results as HTML table or complete HTML page.
 
     Args:
         data: List of dictionaries containing the results to format.
@@ -268,6 +281,7 @@ def print_html_table(
         >>> data = [{"domain": "example.com", "status": "OK"}]
         >>> print_html_table(data)
         <table>...
+
     """
     if not data:
         return
@@ -305,7 +319,8 @@ def print_html_table(
 def save_results(
     data: Any, filename: str, fileformat: Literal["json", "csv", "html", "html_table"]
 ) -> None:
-    """Save results to a file in the specified format.
+    """
+    Save results to a file in the specified format.
 
     Creates parent directories if they don't exist. Handles various file formats
     with appropriate formatting and error handling.
@@ -327,6 +342,7 @@ def save_results(
 
     Raises:
         Prints error messages to console but does not raise exceptions.
+
     """
     try:
         file_path = Path(filename)
@@ -395,7 +411,8 @@ def format_dns_record(
     *,
     show_ttl: bool = False,
 ) -> list[dict[str, Any]]:
-    """Format DNS records in different display styles.
+    """
+    Format DNS records in different display styles.
 
     Transforms raw DNS record data into human-readable formats suitable for
     different display contexts.
@@ -422,6 +439,7 @@ def format_dns_record(
     Example (short style):
         >>> format_dns_record(data, style="short")
         [{"domain": "example.com", "type": "A", "value": "1.2.3.4"}]
+
     """
     formatted: list[dict[str, Any]] = []
 
@@ -503,7 +521,8 @@ def _format_scan_results(
 
 
 def format_dns_trace(trace_result: dict[str, Any]) -> list[dict[str, Any]]:
-    """Format DNS trace route results for tabular display.
+    """
+    Format DNS trace route results for tabular display.
 
     Converts a DNS trace result into a list of dictionaries suitable for
     table formatting, showing each hop in the resolution path.
@@ -525,6 +544,7 @@ def format_dns_trace(trace_result: dict[str, Any]) -> list[dict[str, Any]]:
         >>> trace = {"hops": [{"nameserver": "8.8.8.8", "response_time": 42}]}
         >>> format_dns_trace(trace)
         [{"hop": 0, "nameserver": "8.8.8.8", "response_time": "42.00ms", ...}]
+
     """
     formatted: list[dict[str, int | str]] = []
 
@@ -576,7 +596,8 @@ def format_dns_trace(trace_result: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def format_dns_comparison(comparison_result: dict[str, Any]) -> list[dict[str, Any]]:
-    """Format DNS server comparison results for display.
+    """
+    Format DNS server comparison results for display.
 
     Transforms comparison results showing differences between multiple DNS servers
     into a tabular format.
@@ -597,6 +618,7 @@ def format_dns_comparison(comparison_result: dict[str, Any]) -> list[dict[str, A
         >>> comp = {"servers": {"8.8.8.8": {"A": {"records": ["1.2.3.4"]}}}}
         >>> format_dns_comparison(comp)
         [{"server": "8.8.8.8", "type": "A", "response_time_ms": "N/A", ...}]
+
     """
     formatted: list[dict[str, str | int]] = []
 
@@ -615,7 +637,8 @@ def format_dns_comparison(comparison_result: dict[str, Any]) -> list[dict[str, A
 
 
 def format_dns_health(health_result: dict[str, Any]) -> list[dict[str, Any]]:
-    """Format DNS health check results for tabular display.
+    """
+    Format DNS health check results for tabular display.
 
     Converts health check results showing overall domain health and
     per-record-type scores into a readable format.
@@ -641,6 +664,7 @@ def format_dns_health(health_result: dict[str, Any]) -> list[dict[str, Any]]:
         >>> health = {"domain": "example.com", "score": 85, "status": "healthy"}
         >>> format_dns_health(health)
         [{"domain": "example.com", "overall_score": "85/100", ...}]
+
     """
     formatted: list[dict[str, str | int]] = [
         {
@@ -669,7 +693,8 @@ def format_dns_health(health_result: dict[str, Any]) -> list[dict[str, Any]]:
 def format_dns_poisoning(  # noqa: C901
     poisoning_result: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    """Format DNS poisoning check results with detailed analysis.
+    """
+    Format DNS poisoning check results with detailed analysis.
 
     Creates a comprehensive, human-readable breakdown of DNS poisoning test
     results, including server analysis, CDN detection, and verdict.
@@ -705,6 +730,7 @@ def format_dns_poisoning(  # noqa: C901
         >>> result = {"domain": "example.com", "poisoning_level": "NONE"}
         >>> format_dns_poisoning(result)
         [{"section": "DNS ANALYSIS", "detail": "example.com (A)", ...}]
+
     """
     formatted: list[dict[str, str]] = []
 

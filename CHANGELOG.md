@@ -1,3 +1,16 @@
+commit 3ca3a0f1fe4533df33db7e45198f189660b4ea5c
+Merge: 6effb8d ff854de
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Mon Mar 2 16:26:17 2026 +0700
+
+    Merge pull request #7 from alexeev-prog/feature/port-scanner
+
+commit ff854dec517f8680ffb6e2dc3b9ba70f6412e7bc
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Mon Mar 2 16:25:07 2026 +0700
+
+    fix test error: network_base.service_on_port unknown->Unknown
+
 commit 8f903e9c533bc249e30599b42b8784d60b8930fe
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Mon Mar 2 16:21:24 2026 +0700

@@ -29,6 +29,7 @@ def calculate_record_score(
     Notes:
         The function delegates record-type specific checks to
         apply_rtype_specific_checks() for further validation.
+
     """
     record_score = 100
 
@@ -71,6 +72,7 @@ def apply_rtype_specific_checks(
     See Also:
         check_mx_priorities: Validates MX record priorities.
         check_txt_records: Validates TXT record content (SPF, DKIM).
+
     """
     if rtype == "MX" and record_result.get("records"):
         record_score = check_mx_priorities(
@@ -112,6 +114,7 @@ def check_mx_priorities(
         80
         >>> result["issues"]
         ['Duplicate MX priority: 10']
+
     """
     priorities: list[int] = []
     for mx in records:
@@ -147,6 +150,7 @@ def check_txt_records(
     See Also:
         check_spf_record: Validates SPF record syntax and requirements.
         check_dkim_record: Validates DKIM record presence of public key.
+
     """
     for txt in records:
         if txt.startswith("v=spf1"):
@@ -177,6 +181,7 @@ def check_spf_record(txt: str, record_score: int, result: dict[str, list[str]]) 
         90
         >>> result["warnings"]
         ['SPF record missing softfail/hardfail']
+
     """
     if "~all" not in txt and "-all" not in txt:
         record_score -= 10
@@ -205,6 +210,7 @@ def check_dkim_record(txt: str, record_score: int, result: dict[str, list[str]])
         80
         >>> result["issues"]
         ['DKIM record missing public key']
+
     """
     if "p=" not in txt:
         record_score -= 20
@@ -234,6 +240,7 @@ def determine_status(score: int) -> str:
         'degraded'
         >>> determine_status(30)
         'unhealthy'
+
     """
     if score >= 80:
         return "healthy"
@@ -262,6 +269,7 @@ def validate_mx_records(mx_records: list[str]) -> dict[str, bool | list[str]]:
     Example:
         >>> validate_mx_records(["10 mail1.com", "10 mail2.com"])
         {'valid': False, 'issues': ['Duplicate priority: 10'], 'warnings': []}
+
     """
     validation: dict[str, bool | list[str]] = {
         "valid": True,
@@ -304,6 +312,7 @@ def validate_txt_records(txt_records: list[str]) -> dict[str, bool | list[str]]:
         True
         >>> result["warnings"]
         ['SPF missing softfail/hardfail']
+
     """
     validation: dict[str, bool | list[str]] = {
         "valid": True,

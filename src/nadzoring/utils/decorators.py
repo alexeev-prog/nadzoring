@@ -28,7 +28,8 @@ def common_cli_options(
     include_output: bool = False,
     include_save: bool = False,
 ) -> Callable[[F], F]:
-    """Decorator factory that adds common CLI options to click commands.
+    """
+    Decorator factory that adds common CLI options to click commands.
 
     This decorator provides standardized CLI options across all commands,
     with selective inclusion based on the command's needs. It handles:
@@ -59,6 +60,7 @@ def common_cli_options(
             '''My command implementation.'''
             if verbose:
                 click.echo("Running in verbose mode")
+
     """
 
     def decorator(func: F) -> F:
@@ -86,7 +88,8 @@ def common_cli_options(
 
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            """Wrapper function that handles CLI options and output formatting.
+            """
+            Wrapper function that handles CLI options and output formatting.
 
             Args:
                 *args: Variable positional arguments passed to the wrapped function.
@@ -94,6 +97,7 @@ def common_cli_options(
 
             Returns:
                 The result of the wrapped function.
+
             """
             cli_options: SimpleNamespace = _extract_cli_options(kwargs)
 
@@ -127,7 +131,8 @@ def common_cli_options(
 
 
 def _extract_cli_options(kwargs: dict[str, Any]) -> SimpleNamespace:
-    """Extract CLI options from function keyword arguments.
+    """
+    Extract CLI options from function keyword arguments.
 
     This function removes CLI-specific options from the kwargs dictionary
     and returns them as a SimpleNamespace object.
@@ -138,6 +143,7 @@ def _extract_cli_options(kwargs: dict[str, Any]) -> SimpleNamespace:
     Returns:
         SimpleNamespace containing extracted CLI options with default values
         for any missing options.
+
     """
     return SimpleNamespace(
         verbose=kwargs.pop("verbose", False),
@@ -158,7 +164,8 @@ def _filter_func_kwargs(
     include_output: bool,
     include_save: bool,
 ) -> dict[str, Any]:
-    """Filter which CLI options are passed to the wrapped function.
+    """
+    Filter which CLI options are passed to the wrapped function.
 
     Based on the include flags, this function selectively adds CLI options
     to the keyword arguments that will be passed to the wrapped function.
@@ -174,6 +181,7 @@ def _filter_func_kwargs(
 
     Returns:
         Filtered dictionary of keyword arguments for the wrapped function.
+
     """
     func_kwargs: dict[str, Any] = kwargs.copy()
 
@@ -194,13 +202,15 @@ def _filter_func_kwargs(
 
 
 def _setup_logging(cli_options: SimpleNamespace) -> None:
-    """Configure logging based on CLI options.
+    """
+    Configure logging based on CLI options.
 
     Sets up logging with appropriate verbosity, quiet mode, and color settings.
 
     Args:
         cli_options: SimpleNamespace containing CLI options with verbose,
                     quiet, and no_color attributes.
+
     """
     setup_cli_logging(
         verbose=cli_options.verbose,
@@ -210,7 +220,8 @@ def _setup_logging(cli_options: SimpleNamespace) -> None:
 
 
 def _handle_output(result: Any, output_format: str, *, no_color: bool) -> None:
-    """Display command results in the requested format.
+    """
+    Display command results in the requested format.
 
     Args:
         result: The result data from the command to display.
@@ -219,6 +230,7 @@ def _handle_output(result: Any, output_format: str, *, no_color: bool) -> None:
 
     Raises:
         click.ClickException: If there's an error processing the output format.
+
     """
     try:
         if output_format == "json":
@@ -234,7 +246,8 @@ def _handle_output(result: Any, output_format: str, *, no_color: bool) -> None:
 
 
 def _handle_save(result: Any, save_path: str | None, output_format: str) -> None:
-    """Save command results to a file if a save path is provided.
+    """
+    Save command results to a file if a save path is provided.
 
     Args:
         result: The result data from the command to save.
@@ -243,6 +256,7 @@ def _handle_save(result: Any, save_path: str | None, output_format: str) -> None
 
     Raises:
         click.ClickException: If there's an error saving the file.
+
     """
     if save_path:
         try:
@@ -254,11 +268,13 @@ def _handle_save(result: Any, save_path: str | None, output_format: str) -> None
 
 
 def _show_completion_time(elapsed: float, *, verbose: bool) -> None:
-    """Display command completion time in verbose mode.
+    """
+    Display command completion time in verbose mode.
 
     Args:
         elapsed: Time elapsed in seconds since command started.
         verbose: If True, display the completion time.
+
     """
     if verbose:
         click.secho(f"\n⚡ Completed in {elapsed:.2f} seconds", dim=True)

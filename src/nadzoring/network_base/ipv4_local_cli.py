@@ -1,4 +1,6 @@
 """
+Get local IP address using OS utils.
+
 Script for obtaining the local IP address using standard OS utilities.
 Supports Linux and Windows operating systems by parsing command outputs.
 No additional library installations required.
@@ -19,6 +21,7 @@ def _get_linux_ip() -> str | None:
 
     Returns:
         str | None: Local IPv4 address if found, None otherwise.
+
     """
     try:
         output: str = check_output("ip -h -br a | grep UP", shell=True, text=True)  # noqa: S602, S607
@@ -42,6 +45,7 @@ def _parse_windows_network_config(config_lines: list) -> str | None:
 
     Returns:
         str | None: Local IPv4 address if found, None otherwise.
+
     """
     current_device: list[str] = []
     parsed_devices: list[list[str]] = []
@@ -83,6 +87,7 @@ def _get_windows_ip() -> str | None:
 
     Returns:
         str | None: Local IPv4 address if found, None otherwise.
+
     """
     try:
         output: str = check_output(  # noqa: S602
@@ -107,6 +112,7 @@ def get_local_ipv4() -> str | None:
 
     Raises:
         NotImplementedError: If running on an unsupported operating system.
+
     """
     os_name: str = system()
 

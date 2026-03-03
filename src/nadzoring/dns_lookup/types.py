@@ -1,10 +1,10 @@
-# nadzoring/dns_lookup/types.py
 """Type definitions for DNS lookup module."""
 
 from typing import Any, Literal, TypedDict
 
-# Type alias for supported DNS record types
-RecordType = Literal["A", "AAAA", "CNAME", "MX", "NS", "TXT", "PTR", "SOA", "DNSKEY"]
+RecordType: type["RecordType"] = Literal[
+    "A", "AAAA", "CNAME", "MX", "NS", "TXT", "PTR", "SOA", "DNSKEY"
+]
 """Supported DNS record types for queries and validation.
 
 Type Aliases:
@@ -20,7 +20,6 @@ Type Aliases:
         - DNSKEY: DNS key records (DNSSEC)
 """
 
-# List of all supported record types for iteration and validation
 RECORD_TYPES: list[str] = [
     "A",
     "AAAA",
@@ -71,6 +70,7 @@ class DNSResult(TypedDict, total=False):
         ...     "error": None,
         ...     "response_time": 45.67,
         ... }
+
     """
 
     domain: str
@@ -114,6 +114,7 @@ class BenchmarkResult(TypedDict):
         ...     "failed_queries": 2,
         ...     "responses": [15.2, 23.4, 31.7, ...],
         ... }
+
     """
 
     server: str
@@ -165,6 +166,7 @@ class PoisoningCheckResult(TypedDict):
         ...     "poisoned": True,
         ...     "confidence": 0.95,
         ... }
+
     """
 
     server: str

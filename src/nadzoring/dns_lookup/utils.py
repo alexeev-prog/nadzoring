@@ -1,5 +1,6 @@
 """Utility functions for DNS lookup module."""
 
+from logging import Logger
 from time import time
 
 import dns.exception
@@ -11,7 +12,7 @@ from dns.resolver import Answer, Resolver
 from nadzoring.dns_lookup.types import DNSResult, RecordType
 from nadzoring.logger import get_logger
 
-logger = get_logger(__name__)
+logger: Logger = get_logger(__name__)
 
 
 def create_resolver(
@@ -40,6 +41,7 @@ def create_resolver(
     Example:
         >>> resolver = create_resolver("8.8.8.8", timeout=3.0, lifetime=8.0)
         >>> answers = resolver.resolve("example.com", "A")
+
     """
     resolver = dns.resolver.Resolver()
     resolver.timeout = timeout
@@ -73,6 +75,7 @@ def extract_records(answers: Answer, record_type: str) -> list[str]:
         >>> answers = resolver.resolve("example.com", "MX")
         >>> extract_records(answers, "MX")
         ['10 mail.example.com', '20 backup.example.com']
+
     """
     records: list[str] = []
 
@@ -138,6 +141,7 @@ def resolve_with_timer(
         >>> result = resolve_with_timer("example.com", "MX", include_ttl=True)
         >>> if not result["error"]:
         ...     print(f"Records: {result['records']}, TTL: {result['ttl']}")
+
     """
     result: DNSResult = {
         "domain": domain,
@@ -192,6 +196,7 @@ def get_public_dns_servers() -> list[str]:
         >>> servers = get_public_dns_servers()
         >>> for server in servers[:3]:
         ...     print(f"Testing DNS server: {server}")
+
     """
     return [
         "8.8.8.8",  # Google

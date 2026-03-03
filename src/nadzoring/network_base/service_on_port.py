@@ -1,4 +1,3 @@
-# src/nadzoring/network_base/service_on_port.py
 """Service name resolution for port numbers."""
 
 from socket import getservbyport
@@ -25,6 +24,7 @@ def get_service_on_port(port: int) -> str:
         'ssh'
         >>> get_service_on_port(9999)
         'unknown'
+
     """
     try:
         return getservbyport(port)
