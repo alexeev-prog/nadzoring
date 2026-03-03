@@ -45,7 +45,7 @@ jobs:
         NADZORING_DOCS_TYPE: stable
       run: |
         cd docs
-        sphinx-build -b html source build
+        sphinx-build -b html -c . source build
 
     - name: Deploy to GitHub Pages (stable)
       uses: peaceiris/actions-gh-pages@v3
