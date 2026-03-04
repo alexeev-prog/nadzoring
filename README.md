@@ -29,7 +29,6 @@
     <img src="https://img.shields.io/pypi/wheel/nadzoring?style=for-the-badge">
     <img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/nadzoring?style=for-the-badge">
     <img alt="PyPI - Version" src="https://img.shields.io/pypi/v/nadzoring?style=for-the-badge">
-    <img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/nadzoring?style=for-the-badge">
     <img alt="GitHub contributors" src="https://img.shields.io/github/contributors/alexeev-prog/nadzoring?style=for-the-badge">
 </p>
 <p align="center">
