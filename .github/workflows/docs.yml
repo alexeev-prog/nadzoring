@@ -31,9 +31,8 @@ jobs:
     - name: Install dependencies
       run: |
         pip install sphinx furo sphinx-polyversion
-
-    - name: Install project
-      run: |
+        # Устанавливаем все зависимости проекта чтобы autodoc мог их импортировать
+        pip install aiohttp click dnspython elevate geopy netifaces pandas ping3 pysocks python-dateutil python-whois "requests[socks]" scapy tabulate tqdm
         pip install -e .
 
     - name: Build versioned docs
@@ -46,7 +45,9 @@ jobs:
     - name: Debug output structure
       run: |
         echo "=== docs/_build/html ==="
-        find docs/_build/html -maxdepth 3 | head -50
+        find docs/_build/html -maxdepth 2
+        echo "=== main/ html files ==="
+        find docs/_build/html/main -name "*.html" 2>/dev/null || echo "NO HTML FILES IN main/"
 
     - name: Upload pages artifact
       uses: actions/upload-pages-artifact@v3

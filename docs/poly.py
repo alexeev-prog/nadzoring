@@ -7,25 +7,16 @@ from sphinx_polyversion.git import Git, GitRef, GitRefType, file_predicate
 from sphinx_polyversion.pyvenv import Pip, VenvWrapper
 from sphinx_polyversion.sphinx import SphinxBuilder
 
-#: Regex matching the branches to build docs for
 BRANCH_REGEX = r"^main$"
-
-#: Regex matching the tags to build docs for
 TAG_REGEX = r"^v\d+\.\d+.*$"
 
-#: Output dir relative to project root
 OUTPUT_DIR = "docs/_build/html"
-
-#: Source directory relative to project root
 SOURCE_DIR = "docs"
 
-#: Arguments to pass to `sphinx-build`
-SPHINX_ARGS = ["-a", "-v"]
+SPHINX_ARGS = "-a -v".split()
 
-#: Pip packages to install in each version's venv
-PIP_ARGS = ["-e", ".", "sphinx", "furo", "sphinx-polyversion"]
+PIP_ARGS = "-e .[dev] sphinx furo sphinx-polyversion".split()
 
-#: Mock data used for building local version (for local testing)
 MOCK_DATA = {
     "revisions": [
         GitRef("main", "", "", GitRefType.BRANCH, datetime.fromtimestamp(0)),
