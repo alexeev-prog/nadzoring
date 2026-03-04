@@ -4,6 +4,7 @@ from pathlib import Path
 from sphinx_polyversion.api import apply_overrides
 from sphinx_polyversion.driver import DefaultDriver
 from sphinx_polyversion.git import Git, GitRef, GitRefType, file_predicate
+from sphinx_polyversion.pyvenv import Pip
 from sphinx_polyversion.sphinx import SphinxBuilder
 
 #: Regex matching the branches to build docs for
@@ -21,6 +22,9 @@ SOURCE_DIR = "docs"
 #: Arguments to pass to `sphinx-build`
 SPHINX_ARGS = "-a -v".split()
 
+#: Pip packages to install in each version's venv
+PIP_ARGS = "-e . sphinx furo sphinx-polyversion".split()
+
 #: Mock data used for building local version (for local testing)
 MOCK_DATA = {
     "revisions": [
@@ -29,18 +33,12 @@ MOCK_DATA = {
     "current": GitRef("main", "", "", GitRefType.BRANCH, datetime.fromtimestamp(0)),
 }
 
-#: Whether to build using only local files and mock data
 MOCK = False
-
-#: Whether to run the builds sequentially
 SEQUENTIAL = False
 
-# Load overrides read from commandline to global scope
 apply_overrides(globals())
 
-# Determine repository root directory
 root = Git.root(Path(__file__).parent)
-
 src = Path(SOURCE_DIR)
 
 DefaultDriver(
@@ -53,6 +51,7 @@ DefaultDriver(
         predicate=file_predicate([src]),
     ),
     builder=SphinxBuilder(src, args=SPHINX_ARGS),
+    env=Pip.factory(args=PIP_ARGS),
     template_dir=root / "docs/_templates",
     static_dir=root / "docs/_static",
     mock=MOCK_DATA,
