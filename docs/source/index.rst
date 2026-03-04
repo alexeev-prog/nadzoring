@@ -13,7 +13,6 @@ monitoring service availability, and network analysis.
 
    installation
    quickstart
-   commands/index
    api/index
 
 Indices and tables

@@ -12,5 +12,6 @@ Submodules
 .. toctree::
    :maxdepth: 4
 
+   nadzoring.commands.arp_commands
    nadzoring.commands.dns_commands
    nadzoring.commands.network_commands

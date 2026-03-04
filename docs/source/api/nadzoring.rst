@@ -12,6 +12,7 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
+   nadzoring.arp
    nadzoring.commands
    nadzoring.dns_lookup
    nadzoring.network_base
