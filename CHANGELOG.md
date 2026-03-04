@@ -1,3 +1,9 @@
+commit 2b9dce76b71ddc398874a21a26bc565a92acd38e
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Mar 4 07:29:03 2026 +0700
+
+    remove index.html
+
 commit 915ff318063533b8abf9a72aacd6f530f89d34e1
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Wed Mar 4 07:24:11 2026 +0700
