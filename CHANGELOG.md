@@ -1,3 +1,9 @@
+commit 73bad5f352c399eb8f28fce620fd45874aa1ca9f
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Mar 4 18:20:10 2026 +0700
+
+    update docs and publish release
+
 commit 2124419608551f030d05bb46b931d3c5180e9da9
 Merge: 8c151e0 7afe709
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
