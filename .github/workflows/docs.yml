@@ -30,7 +30,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install "sphinx<8" furo sphinx-multiversion
+        pip install sphinx furo sphinx-multiversion
 
     - name: Build versioned docs
       run: |
