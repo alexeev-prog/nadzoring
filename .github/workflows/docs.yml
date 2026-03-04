@@ -10,6 +10,9 @@ permissions:
   contents: write
 
 jobs:
+  # ──────────────────────────────────────────────────────────────
+  # Stable: деплоится в /nadzoring/ только при релизе
+  # ──────────────────────────────────────────────────────────────
   deploy-stable:
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
@@ -40,7 +43,8 @@ jobs:
         env:
           NADZORING_DOCS_TYPE: stable
 
-      - name: Deploy stable → /
+      # Деплоим в корень gh-pages (= /nadzoring/ для GitHub Pages)
+      - name: Deploy stable → /nadzoring/
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -49,6 +53,9 @@ jobs:
           keep_files: true
           publish_branch: gh-pages
 
+  # ──────────────────────────────────────────────────────────────
+  # Latest: деплоится в /nadzoring/latest/ при каждом пуше в main
+  # ──────────────────────────────────────────────────────────────
   deploy-latest:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -79,7 +86,8 @@ jobs:
         env:
           NADZORING_DOCS_TYPE: latest
 
-      - name: Deploy latest → /latest
+      # Деплоим в /latest/ на gh-pages (= /nadzoring/latest/)
+      - name: Deploy latest → /nadzoring/latest/
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -88,17 +96,19 @@ jobs:
           keep_files: true
           publish_branch: gh-pages
 
+      # Если stable (корневой index.html) ещё не существует —
+      # кладём редирект / → /nadzoring/latest/
       - name: Check if stable root exists on gh-pages
         id: check-stable
         run: |
           git fetch origin gh-pages 2>/dev/null || true
-          if git ls-tree -r origin/gh-pages --name-only 2>/dev/null | grep -q "^index.html$"; then
+          if git ls-tree origin/gh-pages --name-only 2>/dev/null | grep -q "^index.html$"; then
             echo "stable_exists=true"  >> $GITHUB_OUTPUT
           else
             echo "stable_exists=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Create redirect index.html (/ → /latest) if no stable yet
+      - name: Create redirect index.html → /nadzoring/latest/
         if: steps.check-stable.outputs.stable_exists == 'false'
         run: |
           mkdir -p _redirect_root
@@ -108,7 +118,7 @@ jobs:
             <head>
               <meta charset="utf-8">
               <meta http-equiv="refresh" content="0; url=latest/">
-              <title>Redirecting…</title>
+              <title>Redirecting to latest docs…</title>
             </head>
             <body>
               <p>Redirecting to <a href="latest/">latest documentation</a>…</p>
@@ -116,7 +126,7 @@ jobs:
           </html>
           EOF
 
-      - name: Deploy redirect → /
+      - name: Deploy redirect → /nadzoring/ root
         if: steps.check-stable.outputs.stable_exists == 'false'
         uses: peaceiris/actions-gh-pages@v4
         with:

@@ -19,7 +19,7 @@ if docs_type == "stable":
         with open("../pyproject.toml", "rb") as f:
             data = tomllib.load(f)
             version = data["project"]["version"]
-    except:
+    except Exception:
         version = "unknown"
 else:
     version = "latest (development)"
@@ -66,6 +66,14 @@ html_theme = "furo"
 html_static_path = ["_static"]
 html_title = f"Nadzoring {version}"
 
+# Базовый URL зависит от типа сборки:
+# stable → https://alexeev-prog.github.io/nadzoring/
+# latest → https://alexeev-prog.github.io/nadzoring/latest/
+if docs_type == "stable":
+    html_baseurl = "https://alexeev-prog.github.io/nadzoring/"
+else:
+    html_baseurl = "https://alexeev-prog.github.io/nadzoring/latest/"
+
 html_context = {
     "docs_type": docs_type,
     "version": version,
@@ -77,29 +85,33 @@ html_context = {
 }
 
 html_theme_options = {
-    "footer_content": f"Documentation version: {version} ({docs_type}) | "
-                     f"<a href='/'>Stable</a> | "
-                     f"<a href='/latest/'>Latest</a>",
+    "footer_icons": [],
 }
-
-
 
 todo_include_todos = True
 
 autosummary_generate = True
 
+# Sphinx ищет исходники в docs/source/
 source_suffix = ".rst"
 master_doc = "index"
+
+# Указываем Sphinx читать .rst из подпапки source/
+# (запускать make html нужно из папки docs/, тогда:
+#  confdir = docs/, sourcedir передаётся через Makefile → source/)
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+
 
 def skip(app, what, name, obj, would_skip, options):
     if name == "__init__":
         return False
     return would_skip
 
-def setup(app):
-    app.connect("autodoc-skip-member", skip)
-    app.connect("html-page-context", add_docs_type)
 
 def add_docs_type(app, pagename, templatename, context, doctree):
     context["docs_type"] = docs_type
+
+
+def setup(app):
+    app.connect("autodoc-skip-member", skip)
+    app.connect("html-page-context", add_docs_type)
