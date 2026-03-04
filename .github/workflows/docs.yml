@@ -38,7 +38,7 @@ jobs:
 
     - name: Build versioned docs
       run: |
-        sphinx-polyversion poly.py docs/_build/html
+        sphinx-polyversion docs/poly.py
 
         # Редирект с корня на main (latest)
         echo '<meta http-equiv="refresh" content="0; url=main/">' > docs/_build/html/index.html
