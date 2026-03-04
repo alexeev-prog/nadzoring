@@ -2,6 +2,8 @@ import os
 import sys
 from typing import Literal
 
+from sphinx_polyversion.api import load
+
 sys.path.insert(0, os.path.abspath("."))
 sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath(os.path.join("..", "..")))
@@ -10,7 +12,6 @@ sys.path.insert(0, os.path.abspath("src"))
 sys.path.insert(0, os.path.abspath("../src/nadzoring"))
 sys.path.insert(0, os.path.abspath("src/nadzoring"))
 
-from sphinx_polyversion.api import load
 
 load(globals())
 
