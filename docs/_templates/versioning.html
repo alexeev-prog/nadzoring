@@ -3,8 +3,8 @@
   <p class="caption" role="heading"><span>Versions</span></p>
   <ul>
     {%- for rev in revisions | sort(attribute="date") | reverse %}
-    <li class="toctree-l1 {%- if rev == current %} current{% endif %}">
-      <a class="reference" href="{{ rev | url }}">
+    <li class="toctree-l1 {%- if rev.name == current.name %} current{% endif %}">
+      <a class="reference" href="{{ pathto('index', 1) | replace(current.name + '/', '') }}{{ rev.name }}/">
         {{ rev.name }}
         {%- if loop.first %} <em>(latest)</em>{% endif %}
       </a>
