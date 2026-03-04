@@ -3,7 +3,7 @@
 
 import click
 
-from nadzoring.commands import dns_commands, network_commands
+from nadzoring.commands import arp_group, dns_group, network_group
 
 
 @click.group()
@@ -11,8 +11,9 @@ def cli() -> None:
     """FOSS tool for detecting website blocks, downdetecting and network analysis."""
 
 
-cli.add_command(dns_commands.dns)
-cli.add_command(network_commands.network_base)
+cli.add_command(network_group)
+cli.add_command(dns_group)
+cli.add_command(arp_group)
 
 
 def main() -> None:

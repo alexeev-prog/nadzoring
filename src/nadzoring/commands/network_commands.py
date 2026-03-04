@@ -37,11 +37,11 @@ logger: Logger = get_logger(__name__)
 
 
 @click.group(name="network-base")
-def network_base() -> None:
+def network_group() -> None:
     """Network base commands for analysis and diagnostics."""
 
 
-@network_base.command(name="port-scan")
+@network_group.command(name="port-scan")
 @common_cli_options(include_quiet=True)
 @click.argument("targets", nargs=-1, required=True)
 @click.option(
@@ -205,7 +205,7 @@ def _parse_port_specification(
     return custom_ports, None
 
 
-@network_base.command(name="ping")
+@network_group.command(name="ping")
 @common_cli_options(include_quiet=True)
 @click.argument("addresses", type=str, nargs=-1, required=True)
 def ping_command(
@@ -238,7 +238,7 @@ def ping_command(
     return results
 
 
-@network_base.command(name="geolocation")
+@network_group.command(name="geolocation")
 @common_cli_options(include_quiet=True)
 @click.argument("ips", type=str, nargs=-1, required=True)
 def geolocation_command(
@@ -273,7 +273,7 @@ def geolocation_command(
     return results
 
 
-@network_base.command(name="params")
+@network_group.command(name="params")
 @common_cli_options(include_quiet=True)
 def params_command(*, quiet: bool = False) -> list[dict]:
     """Get network parameters for the current system."""
@@ -282,7 +282,7 @@ def params_command(*, quiet: bool = False) -> list[dict]:
     return [data]
 
 
-@network_base.command(name="host-to-ip")
+@network_group.command(name="host-to-ip")
 @common_cli_options(include_quiet=True)
 @click.argument("hostnames", type=str, nargs=-1, required=True)
 def host_to_ip_command(
@@ -324,7 +324,7 @@ def host_to_ip_command(
     return results
 
 
-@network_base.command(name="port-service")
+@network_group.command(name="port-service")
 @common_cli_options(include_quiet=True)
 @click.argument("ports", type=int, nargs=-1, required=True)
 def port_service_command(
@@ -357,7 +357,7 @@ def port_service_command(
     return results
 
 
-@network_base.command(name="http-ping")
+@network_group.command(name="http-ping")
 @common_cli_options(include_quiet=True)
 @click.argument("urls", nargs=-1, required=True)
 @click.option(
@@ -449,7 +449,7 @@ def http_ping_command(
     return results
 
 
-@network_base.command(name="whois")
+@network_group.command(name="whois")
 @common_cli_options(include_quiet=True)
 @click.argument("targets", nargs=-1, required=True)
 def whois_command(
@@ -484,7 +484,7 @@ def whois_command(
     return results
 
 
-@network_base.command(name="connections")
+@network_group.command(name="connections")
 @common_cli_options(include_quiet=True)
 @click.option(
     "--protocol",
@@ -544,7 +544,7 @@ def connections_command(
     return results
 
 
-@network_base.command(name="traceroute")
+@network_group.command(name="traceroute")
 @common_cli_options(include_quiet=True)
 @click.argument("targets", nargs=-1, required=True)
 @click.option(
@@ -622,7 +622,7 @@ def traceroute_command(
     return results
 
 
-@network_base.command(name="route")
+@network_group.command(name="route")
 @common_cli_options(include_quiet=True)
 def route_command(*, quiet: bool = False) -> list[dict[str, Any]]:
     """
