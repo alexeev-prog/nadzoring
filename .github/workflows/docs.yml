@@ -1,121 +1,28 @@
-name: docs
-
 on:
   push:
-    branches: [main]  # для latest версии
-  release:
-    types: [published]  # для stable версии
-
-permissions:
-  contents: write
-  pages: write
-  id-token: write
+    branches: [main] # branch to trigger deployment
 
 jobs:
-  deploy-stable:
-    if: github.event_name == 'release'
+  pages:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '3.12'
 
     - name: Install dependencies
       run: |
-        pip install sphinx furo tomli
+        pip install sphinx furo
 
-    - name: Generate API docs
-      run: |
-        chmod +x genapidoc.sh
-        ./genapidoc.sh
-
-    - name: Build stable docs
-      run: |
-        cd docs
-        make clean
-        make html
-      env:
-        NADZORING_DOCS_TYPE: stable
-
-    - name: Deploy stable to root
-      uses: peaceiris/actions-gh-pages@v4
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./docs/_build/html
-        destination_dir: .
-        keep_files: true
-        publish_branch: gh-pages
-
-  deploy-latest:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
-
-    - name: Install dependencies
-      run: |
-        pip install sphinx furo tomli
-
-    - name: Generate API docs
-      run: |
-        chmod +x genapidoc.sh
-        ./genapidoc.sh
-
-    - name: Build latest docs
-      run: |
-        cd docs
-        make clean
-        make html
-      env:
-        NADZORING_DOCS_TYPE: latest
-
-    - name: Checkout gh-pages branch to check for stable
-      id: check-stable
-      run: |
-        git fetch origin gh-pages --depth=1 || true
-        if git ls-tree -r origin/gh-pages --name-only | grep -q "^index\.html$"; then
-          echo "stable_exists=true" >> $GITHUB_OUTPUT
-          echo "Stable version exists in root"
-        else
-          echo "stable_exists=false" >> $GITHUB_OUTPUT
-          echo "No stable version found in root"
-        fi
-
-    - name: Deploy latest to /latest directory
-      uses: peaceiris/actions-gh-pages@v4
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./docs/_build/html
-        destination_dir: latest
-        keep_files: true
-        publish_branch: gh-pages
-
-    - name: Deploy latest to root (if no stable exists)
-      if: steps.check-stable.outputs.stable_exists == 'false'
-      uses: peaceiris/actions-gh-pages@v4
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./docs/_build/html
-        destination_dir: .
-        keep_files: true
-        publish_branch: gh-pages
+    - id: deployment
+      uses: sphinx-notes/pages@v3
