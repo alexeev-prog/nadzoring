@@ -1,3 +1,21 @@
+commit 9b3ca77695966f06ceb0d8cae951621013be32bd
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Mar 4 14:32:44 2026 +0700
+
+    update docs (fix)
+
+commit 372c65a0be7b46d7395c537d1c0b91a212245ac6
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Mar 4 14:31:09 2026 +0700
+
+    update docs (fix)
+
+commit 764a9b07ba50d2e09c3143db0bd49390020ceffb
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Mar 4 14:27:56 2026 +0700
+
+    update docs (fix)
+
 commit 60f7d1d1fe6b8d0cd6def370e991637a9f70644c
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Wed Mar 4 14:13:21 2026 +0700
