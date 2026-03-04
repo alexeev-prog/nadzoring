@@ -4,7 +4,7 @@ from pathlib import Path
 from sphinx_polyversion.api import apply_overrides
 from sphinx_polyversion.driver import DefaultDriver
 from sphinx_polyversion.git import Git, GitRef, GitRefType, file_predicate
-from sphinx_polyversion.pyvenv import Pip
+from sphinx_polyversion.pyvenv import Pip, VenvWrapper
 from sphinx_polyversion.sphinx import SphinxBuilder
 
 #: Regex matching the branches to build docs for
@@ -51,7 +51,12 @@ DefaultDriver(
         predicate=file_predicate([src]),
     ),
     builder=SphinxBuilder(src, args=SPHINX_ARGS),
-    env=Pip.factory(args=PIP_ARGS),
+    env=Pip.factory(
+        venv=Path(".venv"),
+        args=PIP_ARGS,
+        creator=VenvWrapper(),
+        temporary=True,
+    ),
     template_dir=root / "docs/_templates",
     static_dir=root / "docs/_static",
     mock=MOCK_DATA,
