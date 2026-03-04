@@ -89,6 +89,15 @@ jobs:
       env:
         NADZORING_DOCS_TYPE: latest
 
+    - name: Check if stable exists
+      id: check-stable
+      run: |
+        if git ls-remote --heads origin gh-pages | grep -q "gh-pages"; then
+          echo "stable_exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "stable_exists=false" >> $GITHUB_OUTPUT
+        fi
+
     - name: Deploy to GitHub Pages (latest)
       uses: peaceiris/actions-gh-pages@v4
       with:
@@ -96,4 +105,12 @@ jobs:
         publish_dir: ./docs/_build/html
         destination_dir: latest
         keep_files: true
-        publish_branch: gh-pages
+
+    - name: Deploy to root if no stable exists
+      if: steps.check-stable.outputs.stable_exists == 'false'
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs/_build/html
+        destination_dir: .
+        keep_files: true
