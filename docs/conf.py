@@ -9,7 +9,6 @@ sys.path.insert(0, os.path.abspath("src"))
 sys.path.insert(0, os.path.abspath("../src/nadzoring"))
 sys.path.insert(0, os.path.abspath("src/nadzoring"))
 
-# sphinx-polyversion: загружает html_context с revisions и current
 from sphinx_polyversion.api import load
 
 load(globals())
@@ -36,7 +35,6 @@ extensions: list[str] = [
     "sphinx.ext.ifconfig",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
-    "sphinx.ext.githubpages",
 ]
 
 pygments_style = "gruvbox-dark"

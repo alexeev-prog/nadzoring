@@ -20,10 +20,10 @@ OUTPUT_DIR = "docs/_build/html"
 SOURCE_DIR = "docs"
 
 #: Arguments to pass to `sphinx-build`
-SPHINX_ARGS = "-a -v".split()
+SPHINX_ARGS = ["-a", "-v"]
 
 #: Pip packages to install in each version's venv
-PIP_ARGS = "-e . sphinx furo sphinx-polyversion".split()
+PIP_ARGS = ["-e", ".", "sphinx", "furo", "sphinx-polyversion"]
 
 #: Mock data used for building local version (for local testing)
 MOCK_DATA = {

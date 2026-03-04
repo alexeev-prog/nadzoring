@@ -41,8 +41,12 @@ jobs:
         sphinx-polyversion docs/poly.py
 
         touch docs/_build/html/.nojekyll
-
         echo '<meta http-equiv="refresh" content="0; url=main/">' > docs/_build/html/index.html
+
+    - name: Debug output structure
+      run: |
+        echo "=== docs/_build/html ==="
+        find docs/_build/html -maxdepth 3 | head -50
 
     - name: Upload pages artifact
       uses: actions/upload-pages-artifact@v3
