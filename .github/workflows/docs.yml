@@ -48,6 +48,8 @@ jobs:
         find docs/_build/html -maxdepth 2
         echo "=== main/ html files ==="
         find docs/_build/html/main -name "*.html" 2>/dev/null || echo "NO HTML FILES IN main/"
+        echo "=== sphinx error logs ==="
+        cat /tmp/sphinx-err-*.log 2>/dev/null || echo "no sphinx error logs found"
 
     - name: Upload pages artifact
       uses: actions/upload-pages-artifact@v3
