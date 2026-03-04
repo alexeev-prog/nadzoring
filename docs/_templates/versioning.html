@@ -1,11 +1,13 @@
 {%- if current %}
+{%- set current_name = current['name'] if current is mapping else current.name %}
 <div class="sidebar-tree">
   <p class="caption" role="heading"><span>Versions</span></p>
   <ul>
     {%- for rev in revisions | sort(attribute="date") | reverse %}
-    <li class="toctree-l1 {%- if rev.name == current.name %} current{% endif %}">
-      <a class="reference" href="{{ pathto('index', 1) | replace(current.name + '/', '') }}{{ rev.name }}/">
-        {{ rev.name }}
+    {%- set rev_name = rev['name'] if rev is mapping else rev.name %}
+    <li class="toctree-l1 {%- if rev_name == current_name %} current{% endif %}">
+      <a class="reference" href="{{ pathto('', 1) }}{{ rev_name }}/">
+        {{ rev_name }}
         {%- if loop.first %} <em>(latest)</em>{% endif %}
       </a>
     </li>
