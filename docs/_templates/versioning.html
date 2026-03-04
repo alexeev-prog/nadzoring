@@ -1,12 +1,15 @@
+{%- if current %}
 <div class="sidebar-tree">
-  <p class="caption"><span>Versions</span></p>
+  <p class="caption" role="heading"><span>Versions</span></p>
   <ul>
-    {% for version in versions %}
-    <li class="toctree-l1 {% if version.name == current_version.name %}current{% endif %}">
-      <a class="reference" href="{{ version.url }}">
-        {{ version.name }}{% if version.name == "main" %} (latest){% endif %}
+    {%- for rev in revisions | sort(attribute="date") | reverse %}
+    <li class="toctree-l1 {%- if rev == current %} current{% endif %}">
+      <a class="reference" href="{{ rev | url }}">
+        {{ rev.name }}
+        {%- if loop.first %} <em>(latest)</em>{% endif %}
       </a>
     </li>
-    {% endfor %}
+    {%- endfor %}
   </ul>
 </div>
+{%- endif %}

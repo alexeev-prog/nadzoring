@@ -9,6 +9,11 @@ sys.path.insert(0, os.path.abspath("src"))
 sys.path.insert(0, os.path.abspath("../src/nadzoring"))
 sys.path.insert(0, os.path.abspath("src/nadzoring"))
 
+# sphinx-polyversion: загружает html_context с revisions и current
+from sphinx_polyversion.api import load
+
+load(globals())
+
 project = "nadzoring"
 author = "Alexeev Bronislav"
 version = "0.1.4"
@@ -23,33 +28,27 @@ autodoc_default_options: dict[str, bool | str] = {
 }
 
 extensions: list[str] = [
-    "sphinx.ext.autodoc",  # autodoc from docstrings
-    "sphinx.ext.viewcode",  # links to source code
-    "sphinx.ext.napoleon",  # support google and numpy docs style
-    "sphinx.ext.todo",  # support TODO
-    "sphinx.ext.coverage",  # check docs coverage
-    "sphinx.ext.ifconfig",  # directives in docs
-    "sphinx.ext.autosummary",  # generating summary for code
+    "sphinx.ext.autodoc",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.todo",
+    "sphinx.ext.coverage",
+    "sphinx.ext.ifconfig",
+    "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx.ext.githubpages",
-    "sphinx-multiversion-2"
 ]
-
-smv_branch_whitelist = r"^main$"
-smv_tag_whitelist = r"^v\d+\.\d+.*$"
-smv_remote_whitelist = r"^origin$"
-smv_released_pattern = r"^refs/tags/.*$"
-smv_outputdir_format = "{ref.name}"
-smv_prefer_remote_refs = False
 
 pygments_style = "gruvbox-dark"
 
-html_theme = "furo"  # theme
-html_static_path: list[str] = ["_static"]  # static dir
-todo_include_todos = True  # include todo in docs
+html_theme = "furo"
+html_static_path: list[str] = ["_static"]
+todo_include_todos = True
 auto_doc_default_options: dict[str, bool] = {"autosummary": True}
 
 autodoc_mock_imports = []
+
+templates_path = ["_templates"]
 
 html_sidebars = {
     "**": [
@@ -61,8 +60,6 @@ html_sidebars = {
         "sidebar/scroll-end.html",
     ]
 }
-
-templates_path = ["_templates"]
 
 
 def skip(app, what, name, obj, would_skip, options):

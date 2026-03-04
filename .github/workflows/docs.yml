@@ -30,15 +30,18 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install sphinx furo sphinx-multiversion
+        pip install sphinx furo sphinx-polyversion
+
+    - name: Install project
+      run: |
+        pip install -e .
 
     - name: Build versioned docs
       run: |
-        cd docs
-        sphinx-multiversion . _build/html
+        sphinx-polyversion poly.py docs/_build/html
 
-        # Редирект с корня на latest (main)
-        echo '<meta http-equiv="refresh" content="0; url=main/">' > _build/html/index.html
+        # Редирект с корня на main (latest)
+        echo '<meta http-equiv="refresh" content="0; url=main/">' > docs/_build/html/index.html
 
     - name: Upload pages artifact
       uses: actions/upload-pages-artifact@v3
