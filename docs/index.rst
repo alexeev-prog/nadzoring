@@ -23,6 +23,9 @@ Versions
    * - `main </nadzoring/main/>`_
      - Latest development version from the main branch
      - **Latest**
+   * - `v0.1.4 </nadzoring/v0.1.4/>`_
+     - Stable release — improved network base, arp commands
+     - Stable
    * - `v0.1.3 </nadzoring/v0.1.3/>`_
      - Stable release — DNS lookup, network base, utils, commands
      - Stable
