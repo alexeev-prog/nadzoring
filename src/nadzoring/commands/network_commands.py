@@ -1,3 +1,5 @@
+"""Network base CLI commands."""
+
 from collections.abc import Callable
 from logging import Logger
 from typing import Any
@@ -6,7 +8,9 @@ import click
 from tqdm import tqdm
 
 from nadzoring.logger import get_logger
+from nadzoring.network_base.connections import ConnectionEntry, get_connections
 from nadzoring.network_base.geolocation_ip import geo_ip
+from nadzoring.network_base.http_ping import HttpPingResult, http_ping
 from nadzoring.network_base.ipv4_local_cli import get_local_ipv4
 from nadzoring.network_base.network_params import network_param
 from nadzoring.network_base.ping_address import ping_addr
@@ -16,6 +20,7 @@ from nadzoring.network_base.port_scanner import (
     get_ports_from_mode,
     scan_ports,
 )
+from nadzoring.network_base.route_table import RouteEntry, get_route_table
 from nadzoring.network_base.router_ip import (
     check_ipv4,
     check_ipv6,
@@ -23,6 +28,8 @@ from nadzoring.network_base.router_ip import (
     router_ip,
 )
 from nadzoring.network_base.service_on_port import get_service_on_port
+from nadzoring.network_base.traceroute import TraceHop, traceroute
+from nadzoring.network_base.whois_lookup import whois_lookup
 from nadzoring.utils.decorators import common_cli_options
 from nadzoring.utils.formatters import _format_scan_results
 
@@ -348,3 +355,298 @@ def port_service_command(
         pbar.close()
 
     return results
+
+
+@network_base.command(name="http-ping")
+@common_cli_options(include_quiet=True)
+@click.argument("urls", nargs=-1, required=True)
+@click.option(
+    "--timeout",
+    type=float,
+    default=10.0,
+    help="Request timeout in seconds",
+)
+@click.option(
+    "--no-ssl-verify",
+    is_flag=True,
+    help="Disable SSL certificate verification",
+)
+@click.option(
+    "--no-redirects",
+    is_flag=True,
+    help="Do not follow HTTP redirects",
+)
+@click.option(
+    "--show-headers",
+    is_flag=True,
+    help="Include response headers in output",
+)
+def http_ping_command(
+    urls: tuple[str, ...],
+    timeout: float,
+    *,
+    no_ssl_verify: bool,
+    no_redirects: bool,
+    show_headers: bool,
+    quiet: bool,
+) -> list[dict[str, Any]]:
+    """
+    Check HTTP/HTTPS response timing and headers for one or more URLs.
+
+    Measures DNS resolution time, time-to-first-byte (TTFB), total download
+    time, HTTP status code and optional response headers.
+    """
+    results: list[dict[str, Any]] = []
+    total = len(urls)
+
+    pbar = None if quiet else tqdm(total=total, desc="Probing URLs", unit="url")
+
+    for url in urls:
+        result: HttpPingResult = http_ping(
+            url,
+            timeout=timeout,
+            verify_ssl=not no_ssl_verify,
+            follow_redirects=not no_redirects,
+            include_headers=show_headers,
+        )
+
+        row: dict[str, Any] = {
+            "url": result.url,
+            "status": result.status_code or result.error or "error",
+            "dns_ms": result.dns_ms if result.dns_ms is not None else "n/a",
+            "ttfb_ms": result.ttfb_ms if result.ttfb_ms is not None else "n/a",
+            "total_ms": result.total_ms if result.total_ms is not None else "n/a",
+            "size_bytes": (
+                result.content_length if result.content_length is not None else "n/a"
+            ),
+        }
+
+        if result.final_url:
+            row["redirected_to"] = result.final_url
+
+        if show_headers and result.headers:
+            for header_key in (
+                "Content-Type",
+                "Server",
+                "Cache-Control",
+                "X-Powered-By",
+            ):
+                value = result.headers.get(header_key) or result.headers.get(
+                    header_key.lower()
+                )
+                if value:
+                    row[f"header_{header_key.lower().replace('-', '_')}"] = value
+
+        results.append(row)
+
+        if pbar:
+            pbar.set_description(f"Probing {url}")
+            pbar.update(1)
+
+    if pbar:
+        pbar.close()
+
+    return results
+
+
+@network_base.command(name="whois")
+@common_cli_options(include_quiet=True)
+@click.argument("targets", nargs=-1, required=True)
+def whois_command(
+    targets: tuple[str, ...],
+    *,
+    quiet: bool,
+) -> list[dict[str, Any]]:
+    """
+    Look up WHOIS registration info for one or more domains or IPs.
+
+    Requires the system 'whois' utility to be installed
+    (apt install whois / brew install whois).
+    """
+    results: list[dict[str, Any]] = []
+    total = len(targets)
+
+    pbar = None if quiet else tqdm(total=total, desc="Running WHOIS", unit="target")
+
+    for target in targets:
+        info = whois_lookup(target)
+        # Flatten to flat dict, drop None values for cleaner table output
+        row: dict[str, Any] = {k: v for k, v in info.items() if v is not None}
+        results.append(row)
+
+        if pbar:
+            pbar.set_description(f"WHOIS {target}")
+            pbar.update(1)
+
+    if pbar:
+        pbar.close()
+
+    return results
+
+
+@network_base.command(name="connections")
+@common_cli_options(include_quiet=True)
+@click.option(
+    "--protocol",
+    "-p",
+    type=click.Choice(["tcp", "udp", "all"], case_sensitive=False),
+    default="all",
+    help="Filter by protocol",
+)
+@click.option(
+    "--state",
+    "-s",
+    "state_filter",
+    default=None,
+    help="Filter by state substring, e.g. LISTEN or ESTABLISHED",
+)
+@click.option(
+    "--no-process",
+    is_flag=True,
+    help="Skip process/PID info (avoids permission errors)",
+)
+def connections_command(
+    protocol: str,
+    state_filter: str | None,
+    *,
+    no_process: bool,
+    quiet: bool,
+) -> list[dict[str, Any]]:
+    """
+    List active network connections (TCP/UDP).
+
+    Shows local/remote addresses, connection state and, where available,
+    the PID and process name. Analogous to 'ss' or 'netstat'.
+    """
+    entries: list[ConnectionEntry] = get_connections(
+        protocol=protocol,
+        state_filter=state_filter,
+        include_process=not no_process,
+    )
+
+    results: list[dict[str, Any]] = []
+    for entry in entries:
+        row: dict[str, Any] = {
+            "protocol": entry.protocol,
+            "local_address": entry.local_address,
+            "remote_address": entry.remote_address,
+            "state": entry.state or "—",
+        }
+        if entry.pid is not None:
+            row["pid"] = entry.pid
+        if entry.process is not None:
+            row["process"] = entry.process
+        results.append(row)
+
+    if not quiet and not results:
+        click.echo("No connections found matching the given filters.", err=True)
+
+    return results
+
+
+@network_base.command(name="traceroute")
+@common_cli_options(include_quiet=True)
+@click.argument("targets", nargs=-1, required=True)
+@click.option(
+    "--max-hops",
+    type=int,
+    default=30,
+    help="Maximum number of hops",
+)
+@click.option(
+    "--timeout",
+    type=float,
+    default=2.0,
+    help="Per-hop timeout in seconds (default: 2)",
+)
+@click.option(
+    "--sudo",
+    "use_sudo",
+    is_flag=True,
+    help="Run traceroute with sudo (required on some Linux systems)",
+)
+def traceroute_command(
+    targets: tuple[str, ...],
+    max_hops: int,
+    timeout: float,
+    *,
+    use_sudo: bool,
+    quiet: bool,
+) -> list[dict[str, Any]]:
+    """
+    Trace the network path to one or more hosts.
+
+    Uses 'traceroute' (Linux) or 'tracert' (Windows). On Linux, raw-socket
+    access is needed: run with --sudo, as root, or grant the capability with
+    'sudo setcap cap_net_raw+ep $(which traceroute)'.
+    tracepath is tried automatically as a root-free fallback.
+    """
+    results: list[dict[str, Any]] = []
+    total = len(targets)
+
+    pbar = None if quiet else tqdm(total=total, desc="Tracing routes", unit="target")
+
+    for target in targets:
+        if not quiet:
+            click.echo(f"\nTraceroute to {target}:", err=True)
+
+        hops: list[TraceHop] = traceroute(
+            target,
+            max_hops=max_hops,
+            per_hop_timeout=timeout,
+            use_sudo=use_sudo,
+        )
+
+        for hop in hops:
+            rtt_values = [f"{r:.1f} ms" if r is not None else "*" for r in hop.rtt_ms]
+            results.append(
+                {
+                    "target": target,
+                    "hop": hop.hop,
+                    "host": hop.host or "*",
+                    "ip": hop.ip or "*",
+                    "rtt": " / ".join(rtt_values),
+                }
+            )
+
+        if not hops and not quiet:
+            click.echo(f"No hops returned for {target}.", err=True)
+
+        if pbar:
+            pbar.set_description(f"Tracing {target}")
+            pbar.update(1)
+
+    if pbar:
+        pbar.close()
+
+    return results
+
+
+@network_base.command(name="route")
+@common_cli_options(include_quiet=True)
+def route_command(*, quiet: bool = False) -> list[dict[str, Any]]:
+    """
+    Display the system IP routing table.
+
+    Uses 'ip route' on Linux and 'route PRINT' on Windows.
+    """
+    entries: list[RouteEntry] = get_route_table()
+
+    if not entries and not quiet:
+        click.echo(
+            "Could not retrieve routing table. "
+            "Check that 'ip' (Linux) or 'route' (Windows) is available.",
+            err=True,
+        )
+        return []
+
+    return [
+        {
+            "destination": entry.destination,
+            "gateway": entry.gateway,
+            "netmask": entry.netmask or "—",
+            "interface": entry.interface or "—",
+            "metric": entry.metric or "—",
+        }
+        for entry in entries
+    ]

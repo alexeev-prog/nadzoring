@@ -13,7 +13,7 @@
     ·
     <a href="#-usage-examples">Basic Usage</a>
     ·
-    <a href="https://alexeev-prog.github.io/nadzoring/">Documentation</a>
+    <a href="https://alexeev-prog.github.io/nadzoring/v0.1.3">v0.1.3 Documentation</a>
     ·
     <a href="https://github.com/alexeev-prog/nadzoring/blob/main/LICENSE">License</a>
   </p>
@@ -41,7 +41,9 @@ Nadzoring (from Russian "надзор" - supervision/oversight + English "-ing" 
 ## 📋 Table of Contents
 - [Nadzoring](#nadzoring)
   - [📋 Table of Contents](#-table-of-contents)
-  - [🚀 Installation](#-installation)
+- [🚀 Getting Started](#-getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Installation](#installation)
   - [💻 Usage](#-usage)
     - [Global Options](#global-options)
     - [DNS Commands](#dns-commands)
@@ -73,13 +75,30 @@ Nadzoring (from Russian "надзор" - supervision/oversight + English "-ing" 
     - [Complete Network Diagnostics](#complete-network-diagnostics)
     - [Automated Monitoring Script](#automated-monitoring-script)
     - [Quick Website Block Check](#quick-website-block-check)
-  - [Contributing](#contributing)
-  - [License \& Support](#license--support)
+  - [🤝 Contributing](#-contributing)
+  - [📚 Documentation](#-documentation)
+  - [⚖️ License \& Support](#️-license--support)
 
-## 🚀 Installation
+# 🚀 Getting Started
+
+### Prerequisites
+
+- Python 3.8+
+- pip
+- traceroute
+- whois
+- ip tools
+
+### Installation
 
 ```bash
 pip install nadzoring
+```
+
+Verify the installation:
+
+```bash
+nadzoring --help
 ```
 
 ## 💻 Usage
@@ -677,22 +696,43 @@ nadzoring dns compare example.com
 nadzoring dns poisoning example.com  # Most comprehensive block detection
 ```
 
-## Contributing
+## 🤝 Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. Key areas for contribution include:
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request.
+
+**Areas we'd love help with:**
 - Additional DNS record type support
 - New validation rules for health checks
 - CDN network database expansion
-- Performance optimization
+- Performance optimizations
 - Additional output formats
-- IDE integration plugins
+- IDE/editor integration plugins
 
-## License & Support
+**Workflow:**
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-This project is licensed under **GNU GPL 3 License** - see [LICENSE](https://github.com/alexeev-prog/nadzoring/blob/main/LICENSE). For commercial support and enterprise features, contact [alexeev.dev@mail.ru](mailto:alexeev.dev@mail.ru).
+## 📚 Documentation
 
-[Explore Documentation](https://alexeev-prog.github.io/nadzoring) |
-[Report Issue](https://github.com/alexeev-prog/nadzoring/issues) |
+| Version | Link | Status |
+|---------|------|--------|
+| **main** | [Latest (development)](https://alexeev-prog.github.io/nadzoring/main) | 🟡 Development |
+| **v0.1.3** | [Stable release](https://alexeev-prog.github.io/nadzoring/v0.1.3) | 🟢 Stable |
+| v0.1.2 | [Previous stable](https://alexeev-prog.github.io/nadzoring/v0.1.2) | ⚪ Legacy |
+| v0.1.1 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.1) | ⚪ Legacy |
+| v0.1.0 | [Initial release](https://alexeev-prog.github.io/nadzoring/v0.1.0) | ⚪ Legacy |
+
+
+## ⚖️ License & Support
+
+This project is licensed under the **GNU GPL v3 License** — see [LICENSE](https://github.com/alexeev-prog/nadzoring/blob/main/LICENSE) for details.
+
+For commercial support or enterprise features, contact [alexeev.dev@mail.ru](mailto:alexeev.dev@mail.ru).
+
+[📖 Explore Docs](https://alexeev-prog.github.io/nadzoring) · [🐛 Report Issue](https://github.com/alexeev-prog/nadzoring/issues)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
