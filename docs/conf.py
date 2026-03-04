@@ -1,105 +1,68 @@
 import os
-import tomllib
 import sys
-from datetime import datetime
 
 sys.path.insert(0, os.path.abspath("."))
 sys.path.insert(0, os.path.abspath(".."))
+sys.path.insert(0, os.path.abspath(os.path.join("..", "..")))
 sys.path.insert(0, os.path.abspath("../src"))
 sys.path.insert(0, os.path.abspath("src"))
-
-docs_type = os.environ.get("NADZORING_DOCS_TYPE", "latest")
+sys.path.insert(0, os.path.abspath("../src/nadzoring"))
+sys.path.insert(0, os.path.abspath("src/nadzoring"))
 
 project = "nadzoring"
 author = "Alexeev Bronislav"
-copyright = f"{datetime.now().year}, Alexeev Bronislav"
+version = "0.1.4"
+release = "0.1"
+project_copyright = "2025, Alexeev Bronislaw"
 
-if docs_type == "stable":
-    try:
-        with open("../pyproject.toml", "rb") as f:
-            data = tomllib.load(f)
-            version = data["project"]["version"]
-    except Exception:
-        version = "unknown"
-else:
-    version = "latest (development)"
-
-release = version
-
-extensions = [
-    "sphinx.ext.autodoc",
-    "sphinx.ext.viewcode",
-    "sphinx.ext.napoleon",
-    "sphinx.ext.todo",
-    "sphinx.ext.coverage",
-    "sphinx.ext.ifconfig",
-    "sphinx.ext.autosummary",
-    "sphinx.ext.intersphinx",
-    "sphinx.ext.githubpages",
-    "sphinx.ext.extlinks",
-]
-
-autodoc_default_options = {
+autodoc_default_options: dict[str, bool | str] = {
     "members": True,
     "undoc-members": True,
     "private-members": True,
     "special-members": "__init__",
-    "show-inheritance": True,
 }
+
+extensions: list[str] = [
+    "sphinx.ext.autodoc",  # autodoc from docstrings
+    "sphinx.ext.viewcode",  # links to source code
+    "sphinx.ext.napoleon",  # support google and numpy docs style
+    "sphinx.ext.todo",  # support TODO
+    "sphinx.ext.coverage",  # check docs coverage
+    "sphinx.ext.ifconfig",  # directives in docs
+    "sphinx.ext.autosummary",  # generating summary for code
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.githubpages",
+    "sphinx_multiversion"
+]
+
+smv_branch_whitelist = r"^main$"
+smv_tag_whitelist = r"^v\d+\.\d+.*$"
+smv_remote_whitelist = r"^origin$"
+smv_released_pattern = r"^refs/tags/.*$"
+smv_outputdir_format = "{ref.name}"
+smv_prefer_remote_refs = False
+
+pygments_style = "gruvbox-dark"
+
+html_theme = "furo"  # theme
+html_static_path: list[str] = ["_static"]  # static dir
+todo_include_todos = True  # include todo in docs
+auto_doc_default_options: dict[str, bool] = {"autosummary": True}
 
 autodoc_mock_imports = []
 
-napoleon_google_docstring = True
-napoleon_numpy_docstring = False
-napoleon_include_init_with_doc = True
-napoleon_include_private_with_doc = True
-napoleon_include_special_with_doc = True
-napoleon_use_admonition_for_examples = True
-napoleon_use_admonition_for_notes = True
-napoleon_use_admonition_for_references = True
-napoleon_use_ivar = True
-napoleon_use_param = True
-napoleon_use_rtype = True
-napoleon_use_keyword = True
-
-html_theme = "furo"
-html_static_path = ["_static"]
-html_title = f"Nadzoring {version}"
-
-# Базовый URL зависит от типа сборки:
-# stable → https://alexeev-prog.github.io/nadzoring/
-# latest → https://alexeev-prog.github.io/nadzoring/latest/
-if docs_type == "stable":
-    html_baseurl = "https://alexeev-prog.github.io/nadzoring/"
-else:
-    html_baseurl = "https://alexeev-prog.github.io/nadzoring/latest/"
-
-html_context = {
-    "docs_type": docs_type,
-    "version": version,
-    "versions": [
-        ("stable", "/nadzoring/"),
-        ("latest", "/nadzoring/latest/"),
-    ],
-    "current_version": docs_type,
+html_sidebars = {
+    "**": [
+        "sidebar/brand.html",
+        "sidebar/search.html",
+        "sidebar/scroll-start.html",
+        "sidebar/navigation.html",
+        "versioning.html",
+        "sidebar/scroll-end.html",
+    ]
 }
 
-html_theme_options = {
-    "footer_icons": [],
-}
-
-todo_include_todos = True
-
-autosummary_generate = True
-
-# Sphinx ищет исходники в docs/source/
-source_suffix = ".rst"
-master_doc = "index"
-
-# Указываем Sphinx читать .rst из подпапки source/
-# (запускать make html нужно из папки docs/, тогда:
-#  confdir = docs/, sourcedir передаётся через Makefile → source/)
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+templates_path = ["_templates"]
 
 
 def skip(app, what, name, obj, would_skip, options):
@@ -108,10 +71,5 @@ def skip(app, what, name, obj, would_skip, options):
     return would_skip
 
 
-def add_docs_type(app, pagename, templatename, context, doctree):
-    context["docs_type"] = docs_type
-
-
-def setup(app):
+def setup(app) -> None:
     app.connect("autodoc-skip-member", skip)
-    app.connect("html-page-context", add_docs_type)
