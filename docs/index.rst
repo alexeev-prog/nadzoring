@@ -3,25 +3,44 @@
 Welcome to Nadzoring's documentation!
 ======================================
 
-**Nadzoring** (from Russian "надзор" - supervision/oversight + English "-ing" suffix) 
-is a FOSS (Free and Open Source Software) command-line tool for detecting website blocks, 
+**Nadzoring** (from Russian "надзор" - supervision/oversight + English "-ing" suffix)
+is a FOSS (Free and Open Source Software) command-line tool for detecting website blocks,
 monitoring service availability, and network analysis.
 
-Versions
--------------------
+.. note::
+   This documentation is for version |version|.
 
-* `Stable </nadzoring/>`_ - last stable release
-* `Latest </nadzoring/latest/>`_ - latest git-repo version
+Versions
+--------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 60 20
+
+   * - Version
+     - Description
+     - Status
+   * - `main </nadzoring/main/>`_
+     - Latest development version from the main branch
+     - **Latest**
+   * - `v0.1.3 </nadzoring/v0.1.3/>`_
+     - Stable release — DNS lookup, network base, utils, commands
+     - Stable
+   * - `v0.1.2 </nadzoring/v0.1.2/>`_
+     - Added DNS lookup and commands modules
+     - Stable
+   * - `v0.1.1 </nadzoring/v0.1.1/>`_
+     - Initial public release with network base
+     - Stable
+   * - `v0.1.0 </nadzoring/v0.1.0/>`_
+     - First release
+     - Stable
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
    source/index
-
-.. note::
-   This documentation is for version |version|.
-   You are viewing the **{{ docs_type }}** version.
 
 Indices and tables
 ==================

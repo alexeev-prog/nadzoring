@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from sphinx_polyversion.api import apply_overrides
@@ -13,15 +13,17 @@ TAG_REGEX = r"^v\d+\.\d+.*$"
 OUTPUT_DIR = "docs/_build/html"
 SOURCE_DIR = "docs"
 
-SPHINX_ARGS = "-a -v".split()
+SPHINX_ARGS: list[str] = ["-a", "-v"]
 
-PIP_ARGS = "-e .[dev] sphinx furo sphinx-polyversion".split()
+PIP_ARGS: list[str] = ["-e", ".[dev]", "sphinx", "furo", "sphinx-polyversion"]
 
-MOCK_DATA = {
+MOCK_DATA: dict[str, list[GitRef]] = {
     "revisions": [
-        GitRef("main", "", "", GitRefType.BRANCH, datetime.fromtimestamp(0)),
+        GitRef("main", "", "", GitRefType.BRANCH, datetime.fromtimestamp(0, tz=UTC)),
     ],
-    "current": GitRef("main", "", "", GitRefType.BRANCH, datetime.fromtimestamp(0)),
+    "current": GitRef(
+        "main", "", "", GitRefType.BRANCH, datetime.fromtimestamp(0, tz=UTC)
+    ),
 }
 
 MOCK = False

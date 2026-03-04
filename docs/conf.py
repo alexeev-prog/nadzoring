@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Literal
 
 sys.path.insert(0, os.path.abspath("."))
 sys.path.insert(0, os.path.abspath(".."))
@@ -44,11 +45,11 @@ html_static_path: list[str] = ["_static"]
 todo_include_todos = True
 auto_doc_default_options: dict[str, bool] = {"autosummary": True}
 
-autodoc_mock_imports = []
+autodoc_mock_imports: list = []
 
-templates_path = ["_templates"]
+templates_path: list[str] = ["_templates"]
 
-html_sidebars = {
+html_sidebars: dict[str, list[str]] = {
     "**": [
         "sidebar/brand.html",
         "sidebar/search.html",
@@ -60,7 +61,7 @@ html_sidebars = {
 }
 
 
-def skip(app, what, name, obj, would_skip, options):
+def skip(app, what, name, obj, would_skip, options) -> Literal[False] | bool:
     if name == "__init__":
         return False
     return would_skip
