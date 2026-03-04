@@ -32,7 +32,7 @@ extensions: list[str] = [
     "sphinx.ext.autosummary",  # generating summary for code
     "sphinx.ext.intersphinx",
     "sphinx.ext.githubpages",
-    "sphinx_multiversion"
+    "sphinx-multiversion-2"
 ]
 
 smv_branch_whitelist = r"^main$"
