@@ -40,7 +40,8 @@ jobs:
       run: |
         sphinx-polyversion docs/poly.py
 
-        # Редирект с корня на main (latest)
+        touch docs/_build/html/.nojekyll
+
         echo '<meta http-equiv="refresh" content="0; url=main/">' > docs/_build/html/index.html
 
     - name: Upload pages artifact
