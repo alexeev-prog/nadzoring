@@ -1,3 +1,9 @@
+commit 65fda52a35ad57afec64be1fa9d08ce99dfe7b33
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Mar 4 13:51:15 2026 +0700
+
+    update docs (fix)
+
 commit a8da6e08eef4c76ab75af02cd257dfa4678f0cea
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Wed Mar 4 07:52:28 2026 +0700
