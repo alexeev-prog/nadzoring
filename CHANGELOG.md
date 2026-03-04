@@ -1,3 +1,22 @@
+commit 60bc7b0d138a331c483f6d4fe7bdb2c3519d153e
+Merge: bf29a83 573fbe3
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Mar 4 17:25:09 2026 +0700
+
+    Merge pull request #10 from alexeev-prog/feature/more-network-base-commands
+
+commit 573fbe3d3bfb170bf82c86640c38436823264df5
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Mar 4 17:17:40 2026 +0700
+
+    add http-ping, whois, connections, traceroute, route commands and update docs&readme
+
+commit bf29a835523cc5d91dd7a2850cdef18ddce97330
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Mar 4 16:00:51 2026 +0700
+
+    update docs (finally
+
 commit cd0362ba1b5ca4994d24d9607b252985a9e706bf
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Wed Mar 4 15:54:32 2026 +0700
