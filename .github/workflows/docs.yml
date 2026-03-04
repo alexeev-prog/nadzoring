@@ -104,7 +104,7 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./docs/_build/html
         destination_dir: latest
-        keep_files: true
+        keep_files: false
 
     - name: Deploy to root if no stable exists
       if: steps.check-stable.outputs.stable_exists == 'false'
@@ -113,4 +113,4 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./docs/_build/html
         destination_dir: .
-        keep_files: true
+        keep_files: false
