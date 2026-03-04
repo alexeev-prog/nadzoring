@@ -34,11 +34,11 @@ logger: Logger = get_logger(__name__)
 
 
 @click.group(name="dns")
-def dns() -> None:
+def dns_group() -> None:
     """DNS lookup and analysis commands."""
 
 
-@dns.command(name="resolve")
+@dns_group.command(name="resolve")
 @common_cli_options(include_quiet=True)
 @click.argument("domains", nargs=-1, required=True)
 @click.option(
@@ -109,7 +109,7 @@ def resolve_command(
     return format_dns_record(results, style=format_style, show_ttl=show_ttl)
 
 
-@dns.command(name="reverse")
+@dns_group.command(name="reverse")
 @common_cli_options(include_quiet=True)
 @click.argument("ip_addresses", nargs=-1, required=True)
 @click.option("--nameserver", "-n", help="Specific nameserver to use")
@@ -148,7 +148,7 @@ def reverse_command(
     return results
 
 
-@dns.command(name="check")
+@dns_group.command(name="check")
 @common_cli_options(include_quiet=True)
 @click.argument("domains", nargs=-1, required=True)
 @click.option("--nameserver", "-n", help="Specific nameserver to use")
@@ -219,7 +219,7 @@ def check_command(
     return results
 
 
-@dns.command(name="trace")
+@dns_group.command(name="trace")
 @common_cli_options(include_quiet=True)
 @click.argument("domain", required=True)
 @click.option("--nameserver", "-n", help="Starting nameserver to use")
@@ -237,7 +237,7 @@ def trace_command(
     return format_dns_trace(result)
 
 
-@dns.command(name="compare")
+@dns_group.command(name="compare")
 @common_cli_options(include_quiet=True)
 @click.argument("domain", required=True)
 @click.option(
@@ -287,7 +287,7 @@ def compare_command(
     return format_dns_comparison(result)
 
 
-@dns.command(name="health")
+@dns_group.command(name="health")
 @common_cli_options(include_quiet=True)
 @click.argument("domain", required=True)
 @click.option("--nameserver", "-n", help="Nameserver to use for checks")
@@ -305,7 +305,7 @@ def health_command(
     return format_dns_health(result)
 
 
-@dns.command(name="benchmark")
+@dns_group.command(name="benchmark")
 @common_cli_options(include_quiet=True)
 @click.option(
     "--domain",
@@ -390,7 +390,7 @@ def benchmark_command(
     ]
 
 
-@dns.command(name="poisoning")
+@dns_group.command(name="poisoning")
 @common_cli_options(include_quiet=True)
 @click.argument("domain", required=True)
 @click.option(
