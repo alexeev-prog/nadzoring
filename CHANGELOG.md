@@ -1,3 +1,16 @@
+commit bcd6d9ef9175c6c09a7a6978f8e8cfe6fdf93420
+Merge: e206893 f297d91
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Mar 7 01:35:22 2026 +0700
+
+    Merge pull request #15 from alexeev-prog/feature/dns-monitoring
+
+commit f297d91437e75e3bba4fd190f6187b417f1f169d
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Mar 7 01:33:38 2026 +0700
+
+    feat: add monitor and monitor-report commands
+
 commit e206893ea04a6c19255479fa6192bdf5bff576f4
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Fri Mar 6 23:41:48 2026 +0700
