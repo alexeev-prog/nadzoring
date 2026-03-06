@@ -1,3 +1,9 @@
+commit 82c0c81ce8c9e1da52aeff60c8053dc5bf14d09b
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 6 15:34:33 2026 +0700
+
+    update docs templates
+
 commit 1083449f88fbf0a164f6f945112a33910eba07ca
 Merge: 13c8dbd 0b1763b
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
