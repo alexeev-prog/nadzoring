@@ -20,6 +20,7 @@ from nadzoring.dns_lookup import (
 )
 from nadzoring.dns_lookup.compare import ServerComparisonResult
 from nadzoring.dns_lookup.health import DetailedCheckResult, HealthCheckResult
+from nadzoring.dns_lookup.monitor import AlertEvent, DNSMonitor, MonitorConfig, load_log
 from nadzoring.dns_lookup.types import BenchmarkResult, DNSResult, PoisoningCheckResult
 from nadzoring.logger import get_logger
 from nadzoring.utils.decorators import common_cli_options
@@ -34,6 +35,8 @@ from nadzoring.utils.formatters import (
 logger: Logger = get_logger(__name__)
 
 _QUERYABLE_RECORD_TYPES: list[str] = [t for t in RECORD_TYPES if t != "PTR"]
+
+_DEFAULT_NAMESERVERS: tuple[str, str] = ("8.8.8.8", "1.1.1.1")
 
 _RECORD_TYPE_CHOICE: Choice[str] = click.Choice(
     ["A", "AAAA", "CNAME", "MX", "NS", "TXT", "ALL"],
@@ -88,6 +91,259 @@ def _make_pbar(
 @click.group(name="dns")
 def dns_group() -> None:
     """DNS lookup and analysis commands."""
+
+
+@dns_group.command(name="monitor")
+@common_cli_options(include_quiet=True)
+@click.argument("domain", required=True)
+@click.option(
+    "--nameservers",
+    "-n",
+    multiple=True,
+    help="DNS server IP to monitor (repeatable).",
+)
+@click.option(
+    "--interval",
+    "-i",
+    type=float,
+    default=60.0,
+    show_default=True,
+    help="Seconds between monitoring cycles.",
+)
+@click.option(
+    "--type",
+    "-t",
+    "record_type",
+    default="A",
+    show_default=True,
+    type=click.Choice(["A", "AAAA", "MX", "NS", "TXT"]),
+    help="DNS record type to query each cycle.",
+)
+@click.option(
+    "--queries",
+    "-q",
+    type=int,
+    default=3,
+    show_default=True,
+    help="Queries sent to each server per cycle.",
+)
+@click.option(
+    "--max-rt",
+    type=float,
+    default=500.0,
+    show_default=True,
+    help="Alert threshold: max average response time (ms).",
+)
+@click.option(
+    "--min-success",
+    type=float,
+    default=0.95,
+    show_default=True,
+    help="Alert threshold: minimum success rate (0-1).",
+)
+@click.option(
+    "--no-health",
+    is_flag=True,
+    help="Skip DNS health check each cycle (faster for high-frequency use).",
+)
+@click.option(
+    "--log-file",
+    "-l",
+    default=None,
+    help="JSONL file to append all cycle results to.",
+)
+@click.option(
+    "--cycles",
+    "-c",
+    type=int,
+    default=0,
+    show_default=True,
+    help="Stop after N cycles (0 = run indefinitely).",
+)
+def monitor_command(
+    domain: str,
+    nameservers: tuple[str, ...],
+    interval: float,
+    record_type: str,
+    queries: int,
+    max_rt: float,
+    min_success: float,
+    log_file: str | None,
+    cycles: int,
+    *,
+    no_health: bool,
+    quiet: bool,
+) -> list[dict[str, Any]]:
+    r"""
+    Continuously monitor DNS server health and performance over time.
+
+    Runs periodic check cycles against one or more DNS servers, tracking
+    response times, success rates, and DNS health scores. Fires alerts
+    when thresholds are breached and optionally persists all results to a
+    JSONL log file.
+
+    Args:
+        domain: Domain name to query on every cycle.
+        nameservers: DNS server IPs to monitor.
+        interval: Seconds between monitoring cycles.
+        record_type: DNS record type to query.
+        queries: Queries sent to each server per cycle.
+        max_rt: Alert threshold for average response time in ms.
+        min_success: Alert threshold for success rate (0-1).
+        log_file: Path to JSONL log file, or ``None``.
+        cycles: Number of cycles to run (0 = indefinite).
+        no_health: When ``True``, skip the DNS health check each cycle.
+        quiet: When ``True``, suppress all console output.
+
+    Returns:
+        List of cycle-result dictionaries for ``--output`` formatting.
+
+    Example:
+        .. code-block:: bash
+
+            nadzoring dns monitor example.com \\
+                -n 8.8.8.8 -n 1.1.1.1 \\
+                --interval 30 \\
+                --log-file dns_monitor.jsonl
+
+    """
+    servers = list(nameservers) if nameservers else list(_DEFAULT_NAMESERVERS)
+
+    def _alert_cb(alert: AlertEvent) -> None:
+        if not quiet:
+            click.secho(
+                f"  ⚠  [{alert.alert_type.upper()}] {alert.message}",
+                fg="red",
+                err=True,
+            )
+
+    config = MonitorConfig(
+        domain=domain,
+        nameservers=servers,
+        record_type=record_type,  # type: ignore[arg-type]
+        interval=interval,
+        queries_per_sample=queries,
+        max_response_time_ms=max_rt,
+        min_success_rate=min_success,
+        run_health_check=not no_health,
+        log_file=log_file,
+        alert_callback=_alert_cb,
+    )
+    monitor = DNSMonitor(config)
+
+    if cycles > 0:
+        results = monitor.run_cycles(cycles)
+    else:
+        monitor.run()
+        results = monitor.history()
+
+    if not quiet:
+        click.echo("\n" + monitor.report(), err=True)
+
+    return [c.to_dict() for c in results]
+
+
+@dns_group.command(name="monitor-report")
+@common_cli_options()
+@click.argument("log_file", required=True)
+@click.option(
+    "--server",
+    "-s",
+    default=None,
+    help="Filter statistics to a specific server IP.",
+)
+def monitor_report_command(
+    log_file: str,
+    server: str | None,
+) -> list[dict[str, Any]]:
+    r"""
+    Analyse a JSONL monitoring log and return aggregated statistics.
+
+    Args:
+        log_file: Path to the JSONL file produced by ``dns monitor``.
+        server: Optional server IP to filter statistics to.
+
+    Returns:
+        List of per-server statistic rows for ``--output`` formatting.
+
+    Raises:
+        click.ClickException: If the log file is missing or empty.
+
+    Example:
+        .. code-block:: bash
+
+            nadzoring dns monitor-report dns_monitor.jsonl
+            nadzoring dns monitor-report dns_monitor.jsonl -s 8.8.8.8
+            nadzoring dns monitor-report dns_monitor.jsonl \\
+                -o json --save report.json
+
+    """
+    try:
+        cycles = load_log(log_file)
+    except FileNotFoundError:
+        raise click.ClickException(f"Log file not found: {log_file}") from None
+
+    if not cycles:
+        raise click.ClickException("Log file is empty.")
+
+    return _aggregate_log(cycles, server)
+
+
+def _aggregate_log(
+    cycles: list[dict[str, Any]],
+    server_filter: str | None,
+) -> list[dict[str, Any]]:
+    """
+    Aggregate per-server statistics from raw cycle dictionaries.
+
+    Args:
+        cycles: List of cycle-result dictionaries from :func:`load_log`.
+        server_filter: When set, only include data for this server IP.
+
+    Returns:
+        List of aggregated per-server statistic rows.
+
+    """
+    rts: dict[str, list[float]] = {}
+    successes: dict[str, list[float]] = {}
+    alert_counts: dict[str, int] = {}
+
+    for cycle in cycles:
+        for s in cycle.get("samples", []):
+            srv: str = s.get("server", "unknown")
+            if server_filter and srv != server_filter:
+                continue
+            rts.setdefault(srv, [])
+            successes.setdefault(srv, [])
+            alert_counts.setdefault(srv, 0)
+            rt: float | None = s.get("avg_response_time_ms")
+            if rt is not None:
+                rts[srv].append(rt)
+            successes[srv].append(s.get("success_rate", 0.0))
+
+        for alert in cycle.get("alerts", []):
+            srv = alert.get("server", "unknown")
+            if server_filter and srv != server_filter:
+                continue
+            alert_counts[srv] = alert_counts.get(srv, 0) + 1
+
+    rows: list[dict[str, Any]] = []
+    for srv, rt_list in rts.items():
+        ok_list = successes.get(srv, [])
+        rows.append(
+            {
+                "server": srv,
+                "samples": len(rt_list),
+                "avg_rt_ms": f"{sum(rt_list) / len(rt_list):.2f}" if rt_list else "N/A",
+                "min_rt_ms": f"{min(rt_list):.2f}" if rt_list else "N/A",
+                "max_rt_ms": f"{max(rt_list):.2f}" if rt_list else "N/A",
+                "avg_success_pct": (
+                    f"{sum(ok_list) / len(ok_list) * 100:.1f}" if ok_list else "N/A"
+                ),
+                "total_alerts": alert_counts.get(srv, 0),
+            }
+        )
+    return rows
 
 
 @dns_group.command(name="resolve")

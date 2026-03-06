@@ -37,6 +37,7 @@ Key Features
 
    installation
    quickstart
+   monitoring_dns
 
 .. toctree::
    :maxdepth: 3

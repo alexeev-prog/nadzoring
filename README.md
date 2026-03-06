@@ -91,7 +91,11 @@ Nadzoring (from Russian "надзор" — supervision/oversight + English "-ing
     - [ARP Spoofing Detection](#arp-spoofing-detection)
     - [Network Path Analysis](#network-path-analysis)
     - [Complete Network Diagnostics](#complete-network-diagnostics)
-    - [Automated Monitoring Script](#automated-monitoring-script)
+    - [Automated DNS Server Monitoring](#automated-dns-server-monitoring)
+      - [Shell script with alerting thresholds](#shell-script-with-alerting-thresholds)
+      - [Scheduling with cron (Linux/macOS)](#scheduling-with-cron-linuxmacos)
+      - [Scheduling with systemd timer (Linux, recommended)](#scheduling-with-systemd-timer-linux-recommended)
+      - [Python continuous monitoring loop (in-process)](#python-continuous-monitoring-loop-in-process)
     - [Quick Website Block Check](#quick-website-block-check)
   - [Contributing](#contributing)
   - [Documentation](#documentation)
@@ -1158,23 +1162,263 @@ nadzoring network-base traceroute cloudflare.com
 nadzoring arp cache
 ```
 
-### Automated Monitoring Script
+### Automated DNS Server Monitoring
+
+This section covers three integration approaches for continuous monitoring:
+a **shell script** for use with cron/systemd, a **Python script** for
+in-process loops with alerting, and **scheduling setup** for both Linux and Windows.
+
+#### Shell script with alerting thresholds
+
+Save as `dns_monitor.sh` and make executable (`chmod +x dns_monitor.sh`):
 
 ```bash
 #!/bin/bash
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+# dns_monitor.sh — continuous DNS health and performance monitor
+# Designed to be called by cron or systemd timer.
 
-nadzoring dns health     -o json --save "dns_health_${TIMESTAMP}.json"     example.com
-nadzoring dns poisoning  -o html --save "poisoning_${TIMESTAMP}.html"       example.com
-nadzoring dns trace      -o html --save "dns_trace_${TIMESTAMP}.html"       example.com
-nadzoring dns reverse    -o json --save "reverse_${TIMESTAMP}.json"         8.8.8.8 1.1.1.1
-nadzoring network-base params    -o csv  --save "network_${TIMESTAMP}.csv"
-nadzoring dns benchmark  -o table --save "benchmark_${TIMESTAMP}.txt"
-nadzoring network-base port-scan -o json --save "port_scan_${TIMESTAMP}.json" example.com
-nadzoring network-base http-ping --show-headers -o html --save "http_${TIMESTAMP}.html" https://example.com
-nadzoring arp cache      -o csv  --save "arp_${TIMESTAMP}.csv"
+set -euo pipefail
+
+# ── Configuration ────────────────────────────────────────────────────────────
+TARGET_DOMAIN="${1:-example.com}"
+DNS_SERVER="${2:-8.8.8.8}"
+REPORT_DIR="${DNS_MONITOR_DIR:-/var/log/nadzoring}"
+ALERT_EMAIL="${DNS_ALERT_EMAIL:-}"        # leave empty to disable email alerts
+HEALTH_THRESHOLD=70                       # score below this triggers an alert
+BENCHMARK_QUERIES=5                       # queries per server for each run
+
+# ── Setup ────────────────────────────────────────────────────────────────────
+mkdir -p "$REPORT_DIR"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+LOG_FILE="$REPORT_DIR/monitor_${TIMESTAMP}.log"
+SUMMARY_FILE="$REPORT_DIR/summary.jsonl"  # append-only JSONL for trend analysis
+
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"; }
+alert() {
+    log "ALERT: $*"
+    if [[ -n "$ALERT_EMAIL" ]]; then
+        echo "$*" | mail -s "[nadzoring] DNS alert: $TARGET_DOMAIN" "$ALERT_EMAIL" || true
+    fi
+}
+
+# ── DNS Health Check ─────────────────────────────────────────────────────────
+log "Starting DNS health check for $TARGET_DOMAIN via $DNS_SERVER"
+
+HEALTH_JSON="$REPORT_DIR/health_${TIMESTAMP}.json"
+if nadzoring dns health -n "$DNS_SERVER" -o json --quiet \
+        --save "$HEALTH_JSON" "$TARGET_DOMAIN"; then
+    SCORE=$(python3 -c "import json,sys; d=json.load(open('$HEALTH_JSON')); print(d.get('score',0))" 2>/dev/null || echo 0)
+    STATUS=$(python3 -c "import json,sys; d=json.load(open('$HEALTH_JSON')); print(d.get('status','unknown'))" 2>/dev/null || echo unknown)
+    log "Health score: $SCORE ($STATUS)"
+
+    if [[ "$SCORE" -lt "$HEALTH_THRESHOLD" ]]; then
+        alert "Health score $SCORE is below threshold $HEALTH_THRESHOLD (status: $STATUS) for $TARGET_DOMAIN"
+    fi
+else
+    alert "dns health check command failed for $TARGET_DOMAIN"
+    SCORE=0; STATUS="error"
+fi
+
+# ── DNS Benchmark ────────────────────────────────────────────────────────────
+BENCH_JSON="$REPORT_DIR/benchmark_${TIMESTAMP}.json"
+if nadzoring dns benchmark -s "$DNS_SERVER" -s 8.8.8.8 -s 1.1.1.1 \
+        -d "$TARGET_DOMAIN" -q "$BENCHMARK_QUERIES" \
+        -o json --quiet --save "$BENCH_JSON"; then
+    AVG_MS=$(python3 -c "
+import json
+data = json.load(open('$BENCH_JSON'))
+target = next((r for r in data if r['server'] == '$DNS_SERVER'), None)
+print(round(target['avg_response_time'], 1) if target else 'N/A')
+" 2>/dev/null || echo "N/A")
+    log "Benchmark avg response time for $DNS_SERVER: ${AVG_MS}ms"
+else
+    log "WARNING: benchmark failed"
+    AVG_MS="N/A"
+fi
+
+# ── DNS Compare (discrepancy detection) ─────────────────────────────────────
+COMPARE_JSON="$REPORT_DIR/compare_${TIMESTAMP}.json"
+nadzoring dns compare -t A -t MX \
+    -s "$DNS_SERVER" -s 8.8.8.8 -s 1.1.1.1 \
+    -o json --quiet --save "$COMPARE_JSON" "$TARGET_DOMAIN" || true
+
+DIFFS=$(python3 -c "
+import json
+data = json.load(open('$COMPARE_JSON'))
+diffs = data.get('differences', [])
+print(len(diffs))
+" 2>/dev/null || echo 0)
+
+if [[ "$DIFFS" -gt 0 ]]; then
+    alert "$DIFFS DNS discrepancies detected for $TARGET_DOMAIN — possible poisoning or misconfiguration"
+fi
+log "DNS compare: $DIFFS discrepancies found"
+
+# ── Reverse DNS Spot-check ───────────────────────────────────────────────────
+RESOLVED_IP=$(nadzoring network-base host-to-ip --quiet -o json "$TARGET_DOMAIN" 2>/dev/null \
+    | python3 -c "import json,sys; d=json.load(sys.stdin); print(d[0].get('ip','') if d else '')" 2>/dev/null || echo "")
+
+REVERSE_HOST="N/A"
+if [[ -n "$RESOLVED_IP" ]]; then
+    REVERSE_JSON="$REPORT_DIR/reverse_${TIMESTAMP}.json"
+    nadzoring dns reverse -n "$DNS_SERVER" -o json --quiet \
+        --save "$REVERSE_JSON" "$RESOLVED_IP" || true
+    REVERSE_HOST=$(python3 -c "
+import json
+data = json.load(open('$REVERSE_JSON'))
+print(data[0].get('hostname','N/A') if data else 'N/A')
+" 2>/dev/null || echo "N/A")
+    log "Reverse DNS for $RESOLVED_IP → $REVERSE_HOST"
+fi
+
+# ── Append to JSONL summary for trend analysis ───────────────────────────────
+python3 - <<EOF >> "$SUMMARY_FILE"
+import json, datetime
+print(json.dumps({
+    "timestamp": "$TIMESTAMP",
+    "domain": "$TARGET_DOMAIN",
+    "dns_server": "$DNS_SERVER",
+    "health_score": $SCORE,
+    "health_status": "$STATUS",
+    "avg_response_ms": "$AVG_MS",
+    "discrepancies": $DIFFS,
+    "resolved_ip": "$RESOLVED_IP",
+    "reverse_host": "$REVERSE_HOST",
+}))
+EOF
+
+log "Run complete. Reports saved to $REPORT_DIR"
 ```
 
+#### Scheduling with cron (Linux/macOS)
+
+```bash
+# Edit crontab
+crontab -e
+
+# Run every 5 minutes
+*/5 * * * * /path/to/dns_monitor.sh example.com 8.8.8.8
+
+# Run every hour with email alerts
+0 * * * * DNS_ALERT_EMAIL=ops@example.com /path/to/dns_monitor.sh example.com 8.8.8.8
+
+# Run every 15 minutes, logging cron output
+*/15 * * * * /path/to/dns_monitor.sh example.com 8.8.8.8 >> /var/log/nadzoring/cron.log 2>&1
+```
+
+#### Scheduling with systemd timer (Linux, recommended)
+
+Create `/etc/systemd/system/nadzoring-dns-monitor.service`:
+
+```ini
+[Unit]
+Description=Nadzoring DNS health monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/path/to/dns_monitor.sh example.com 8.8.8.8
+Environment=DNS_MONITOR_DIR=/var/log/nadzoring
+Environment=DNS_ALERT_EMAIL=ops@example.com
+StandardOutput=journal
+StandardError=journal
+```
+
+Create `/etc/systemd/system/nadzoring-dns-monitor.timer`:
+
+```ini
+[Unit]
+Description=Run Nadzoring DNS monitor every 5 minutes
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+Enable and start:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now nadzoring-dns-monitor.timer
+sudo systemctl status nadzoring-dns-monitor.timer
+journalctl -u nadzoring-dns-monitor.service -f   # follow live logs
+```
+
+#### Python continuous monitoring loop (in-process)
+
+Use `DNSMonitor` directly for in-process monitoring with custom alerting:
+
+**Infinite loop (blocks until Ctrl-C or SIGTERM):**
+
+```python
+from nadzoring.dns_lookup.monitor import AlertEvent, DNSMonitor, MonitorConfig
+
+
+def send_alert(alert: AlertEvent) -> None:
+    print(f"ALERT [{alert.alert_type}]: {alert.message}")
+
+
+config = MonitorConfig(
+    domain="example.com",
+    nameservers=["8.8.8.8", "1.1.1.1"],
+    interval=60.0,
+    max_response_time_ms=500.0,
+    min_success_rate=0.95,
+    log_file="dns_monitor.jsonl",
+    alert_callback=send_alert,
+)
+
+monitor = DNSMonitor(config)
+monitor.run()
+print(monitor.report())
+```
+
+**Finite cycles (CI pipelines, cron scripts):**
+
+```python
+from nadzoring.dns_lookup.monitor import DNSMonitor, MonitorConfig
+from statistics import mean
+
+config = MonitorConfig(
+    domain="example.com",
+    nameservers=["8.8.8.8", "1.1.1.1"],
+    interval=10.0,
+    run_health_check=False,
+)
+monitor = DNSMonitor(config)
+history = monitor.run_cycles(6)
+
+rts = [
+    s.avg_response_time_ms
+    for c in history
+    for s in c.samples
+    if s.avg_response_time_ms is not None
+]
+print(f"Mean RT: {mean(rts):.1f}ms")
+print(monitor.report())
+```
+
+**Analyse saved log:**
+
+```python
+from nadzoring.dns_lookup.monitor import load_log
+from statistics import mean
+
+cycles = load_log("dns_monitor.jsonl")
+rts = [
+    s["avg_response_time_ms"]
+    for c in cycles
+    for s in c["samples"]
+    if s["avg_response_time_ms"] is not None
+]
+alerts = [a for c in cycles for a in c.get("alerts", [])]
+print(f"Cycles: {len(cycles)}  Mean RT: {mean(rts):.1f}ms  Alerts: {len(alerts)}")
+```
 ### Quick Website Block Check
 
 ```bash

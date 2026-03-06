@@ -52,7 +52,7 @@ def _run_whois_command(target: str) -> str | None:
         Raw WHOIS output string, or None if the command failed.
 
     """
-    os_name = system()
+    os_name: str = system()
     encoding: Literal["cp866", "utf-8"] = "cp866" if os_name == "Windows" else "utf-8"
 
     try:
@@ -121,7 +121,7 @@ def whois_lookup(target: str) -> dict[str, str | None]:
         'RESERVED-Internet Assigned Numbers Authority'
 
     """
-    raw = _run_whois_command(target)
+    raw: str | None = _run_whois_command(target)
     if raw is None:
         return {
             "target": target,
@@ -129,7 +129,7 @@ def whois_lookup(target: str) -> dict[str, str | None]:
             "error": "WHOIS lookup failed. Ensure 'whois' is installed.",
         }
 
-    parsed = _parse_whois_output(raw)
+    parsed: dict[str, str | None] = _parse_whois_output(raw)
     parsed["target"] = target
     parsed["type"] = "ip" if _is_ip(target) else "domain"
     return parsed
