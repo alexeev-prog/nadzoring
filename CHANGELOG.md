@@ -1,3 +1,9 @@
+commit 0d1d4535570b01eb54054857f9e44aa1296b6c6a
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Mar 7 01:37:49 2026 +0700
+
+    refactor: improve typing annotations
+
 commit 103ad4b9975a4885b9969976bc30c54d7d9049c0
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Sat Mar 7 01:35:48 2026 +0700
