@@ -649,7 +649,7 @@ def format_dns_health(health_result: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = [summary]
 
     for record_type, record_score in health_result.get("record_scores", {}).items():
-        status: Literal['BAD', 'GOOD', 'WARN'] = (
+        status: Literal["BAD", "GOOD", "WARN"] = (
             "GOOD" if record_score >= 80 else "WARN" if record_score >= 50 else "BAD"
         )
         rows.append(
@@ -706,7 +706,9 @@ def format_dns_poisoning(  # noqa: C901
     cdn_owner = poisoning_result.get("cdn_owner", "Unknown")
     cdn_percentage = poisoning_result.get("cdn_percentage", 0)
 
-    status_text: Literal['CDN DETECTED', 'POISONING CHECK'] = "CDN DETECTED" if cdn_detected else "POISONING CHECK"
+    status_text: Literal["CDN DETECTED", "POISONING CHECK"] = (
+        "CDN DETECTED" if cdn_detected else "POISONING CHECK"
+    )
     formatted.append(
         {
             "section": "DNS ANALYSIS",
