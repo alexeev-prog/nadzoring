@@ -1282,11 +1282,11 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 | Version | Link | Status |
 |---------|------|--------|
 | **main** | [Latest (development)](https://alexeev-prog.github.io/nadzoring/main) | 🟡 Development |
-| **v0.1.4** | [Stable release](https://alexeev-prog.github.io/nadzoring/v0.1.4) | 🟢 Stable |
-| v0.1.3 | [Stable release](https://alexeev-prog.github.io/nadzoring/v0.1.3) | ⚪ Legacy |
-| v0.1.2 | [Previous stable](https://alexeev-prog.github.io/nadzoring/v0.1.2) | ⚪ Legacy |
-| v0.1.1 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.1) | ⚪ Legacy |
-| v0.1.0 | [Initial release](https://alexeev-prog.github.io/nadzoring/v0.1.0) | ⚪ Legacy |
+| **v0.1.5** | [Stable release](https://alexeev-prog.github.io/nadzoring/v0.1.5) | 🟢 Stable |
+| v0.1.4 | [Previous release](https://alexeev-prog.github.io/nadzoring/v0.1.4) | ⚪ Legacy |
+| v0.1.3 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.3) | ⚪ Legacy |
+| v0.1.2 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.2) | ⚪ Legacy |
+| v0.1.1 | [First version](https://alexeev-prog.github.io/nadzoring/v0.1.1) | ⚪ Legacy |
 
 ## License & Support
 
