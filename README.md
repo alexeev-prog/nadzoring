@@ -13,7 +13,9 @@
     ·
     <a href="#-usage-examples">Basic Usage</a>
     ·
-    <a href="https://alexeev-prog.github.io/nadzoring/v0.1.4">v0.1.4 Documentation</a>
+    <a href="https://alexeev-prog.github.io/nadzoring/v0.1.5">Stable Documentation</a>
+    ·
+    <a href="https://alexeev-prog.github.io/nadzoring/main">Latest Documentation</a>
     ·
     <a href="https://github.com/alexeev-prog/nadzoring/blob/main/LICENSE">License</a>
   </p>
