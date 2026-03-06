@@ -43,10 +43,17 @@ pygments_style = "gruvbox-dark"
 
 html_theme = "furo"
 html_static_path: list[str] = ["_static"]
-html_js_files: list[tuple[str, dict]] = [
+
+html_js_files: list[tuple[str, dict[str, str]]] = [
     (
         "https://context7.com/widget.js",
-        {"data-library": "/alexeev-prog/nadzoring"},
+        {
+            "data-library": "/alexeev-prog/nadzoring",
+            "data-color": "#059669",
+            "data-position": "bottom-right",
+            "data-placeholder": "Ask about nadzoring...",
+            "async": "async",
+        },
     ),
 ]
 todo_include_todos = True
