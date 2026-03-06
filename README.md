@@ -37,7 +37,7 @@
     <img src="https://raw.githubusercontent.com/alexeev-prog/nadzoring/refs/heads/main/docs/pallet-0.png">
 </p>
 
-Nadzoring (from Russian "надзор" - supervision/oversight + English "-ing" suffix) is a FOSS (Free and Open Source Software) command-line tool for detecting website blocks, monitoring service availability, and network analysis. It helps you investigate network connectivity issues, check if websites are accessible, and analyze network configurations with comprehensive DNS diagnostics, including advanced DNS poisoning detection.
+Nadzoring (from Russian "надзор" — supervision/oversight + English "-ing" suffix) is a free and open-source command-line tool for detecting website blocks, monitoring service availability, and network analysis. It helps you investigate network connectivity issues, check if websites are accessible, analyze network configurations with comprehensive DNS diagnostics — including reverse DNS, DNS poisoning detection, ARP spoofing monitoring, and much more.
 
 ## Table of Contents
 
@@ -59,12 +59,12 @@ Nadzoring (from Russian "надзор" - supervision/oversight + English "-ing" 
       - [dns poisoning](#dns-poisoning)
     - [Network Base Commands](#network-base-commands)
       - [ping](#ping)
+      - [http-ping](#http-ping)
+      - [host-to-ip](#host-to-ip)
       - [geolocation](#geolocation)
       - [params](#params)
-      - [host-to-ip](#host-to-ip)
-      - [port-service](#port-service)
       - [port-scan](#port-scan)
-      - [http-ping](#http-ping)
+      - [port-service](#port-service)
       - [whois](#whois)
       - [connections](#connections)
       - [traceroute](#traceroute)
@@ -74,14 +74,16 @@ Nadzoring (from Russian "надзор" - supervision/oversight + English "-ing" 
       - [arp detect-spoofing](#arp-detect-spoofing)
       - [arp monitor-spoofing](#arp-monitor-spoofing)
   - [Output Formats](#output-formats)
-    - [Table Format (default)](#table-format-default)
-    - [JSON Format](#json-format)
-    - [CSV Format](#csv-format)
-    - [HTML Format](#html-format)
   - [Saving Results](#saving-results)
   - [Logging Levels](#logging-levels)
+  - [Python API](#python-api)
+    - [DNS Lookup API](#dns-lookup-api)
+    - [Reverse DNS API](#reverse-dns-api)
+    - [Network Base API](#network-base-api)
+    - [ARP API](#arp-api)
   - [Examples](#examples)
     - [DNS Diagnostics](#dns-diagnostics)
+    - [Reverse DNS Batch Lookup](#reverse-dns-batch-lookup)
     - [DNS Poisoning Detection](#dns-poisoning-detection)
     - [DNS Performance Benchmarking](#dns-performance-benchmarking)
     - [Port Scanning](#port-scanning)
@@ -95,15 +97,24 @@ Nadzoring (from Russian "надзор" - supervision/oversight + English "-ing" 
   - [Documentation](#documentation)
   - [License \& Support](#license--support)
 
+---
+
 # Getting Started
 
 ### Prerequisites
 
 - Python 3.12+
 - pip
-- traceroute
-- whois
-- ip tools (Linux) or route (Windows)
+
+Optional system utilities:
+
+| Utility | Required by |
+|---------|-------------|
+| `traceroute` / `tracepath` | `network-base traceroute` (Linux) |
+| `whois` | `network-base whois` |
+| `ip` / `route` | `network-base params`, `network-base route` |
+| `net-tools` | `network-base params` on some Linux distros (`sudo apt install net-tools`) |
+| `ss` | `network-base connections` (Linux) |
 
 ### Installation
 
@@ -111,218 +122,237 @@ Nadzoring (from Russian "надзор" - supervision/oversight + English "-ing" 
 pip install nadzoring
 ```
 
-Verify the installation:
+Verify:
 
 ```bash
 nadzoring --help
 ```
 
+**Development version:**
+
+```bash
+pip install git+https://github.com/alexeev-prog/nadzoring.git
+```
+
+---
+
 ## Usage
 
-Nadzoring uses a hierarchical command structure with three main command groups: `dns`, `network-base`, and `arp`. All commands support common global options for output formatting and logging.
+Nadzoring uses a hierarchical command structure: `nadzoring <group> <command> [OPTIONS]`.
+The three main groups are `dns`, `network-base`, and `arp`.
 
 ### Global Options
 
-These options are available for all commands:
+These options work with every command:
 
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
-| `--verbose` | `-v` | Enable verbose output with execution timing | `False` |
-| `--quiet` | `-q` | Suppress non-error output (progress bars, logs) | `False` |
-| `--no-color` | - | Disable colored output | `False` |
-| `--output` | `-o` | Output format (`table`, `json`, `csv`, `html`, `html_table`) | `table` |
-| `--save` | - | Save results to file (provide filename) | None |
+| `--verbose` | | Enable debug output with execution timing | `False` |
+| `--quiet` | | Suppress non-error output | `False` |
+| `--no-color` | | Disable colored output | `False` |
+| `--output` | `-o` | Output format: `table`, `json`, `csv`, `html`, `html_table` | `table` |
+| `--save` | | Save results to file | None |
+
+---
 
 ### DNS Commands
 
-The `dns` command group provides comprehensive DNS analysis and troubleshooting capabilities.
-
 #### dns resolve
 
-Resolve DNS records for one or more domains with support for multiple record types.
-
-**Syntax:**
+Resolve DNS records for one or more domains.
 
 ```bash
 nadzoring dns resolve [OPTIONS] DOMAINS...
 ```
 
-**Arguments:**
-
-- `DOMAINS...` - One or more domain names to resolve (required)
-
-**Options:**
-
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
-| `--type` | `-t` | DNS record type (A, AAAA, CNAME, MX, NS, TXT, ALL) | `A` |
-| `--nameserver` | `-n` | Specific nameserver to use | System default |
-| `--short` | - | Compact output like host command style | `False` |
-| `--show-ttl` | - | Show TTL for each record | `False` |
-| `--format-style` | - | Output style (standard, bind, host, dig) | `standard` |
-
-**Examples:**
+| `--type` | `-t` | Record type: A, AAAA, CNAME, MX, NS, TXT, ALL | `A` |
+| `--nameserver` | `-n` | Nameserver IP to use | System default |
+| `--short` | | Compact output | `False` |
+| `--show-ttl` | | Show TTL value | `False` |
+| `--format-style` | | Output style: standard, bind, host, dig | `standard` |
 
 ```bash
-# Basic A record lookup
+# A record lookup
 nadzoring dns resolve google.com
 
 # Multiple record types
-nadzoring dns resolve -t A -t MX -t TXT example.com
+nadzoring dns resolve -t MX -t TXT -t A example.com
 
-# ALL record types with specific nameserver
+# All record types with a specific nameserver
 nadzoring dns resolve -t ALL -n 8.8.8.8 github.com
 
-# Multiple domains with TTL display
-nadzoring dns resolve --show-ttl google.com cloudflare.com
-
-# Short format like host command
-nadzoring dns resolve --short --type ALL example.com
+# Show TTL values
+nadzoring dns resolve --show-ttl --type A cloudflare.com
 ```
+
+**Python API:**
+
+```python
+from nadzoring.dns_lookup.utils import resolve_with_timer
+
+result = resolve_with_timer("example.com", "A")
+if not result["error"]:
+    print(result["records"])       # ['93.184.216.34']
+    print(result["response_time"]) # milliseconds
+
+# With TTL
+result = resolve_with_timer("example.com", "MX", include_ttl=True)
+print(result["ttl"])  # e.g. 3600
+```
+
+---
 
 #### dns reverse
 
-Perform reverse DNS lookup (PTR records) for IP addresses.
-
-**Syntax:**
+Perform reverse DNS lookups (PTR records) to find the hostname for an IP address.
 
 ```bash
 nadzoring dns reverse [OPTIONS] IP_ADDRESSES...
 ```
 
-**Arguments:**
-
-- `IP_ADDRESSES...` - One or more IP addresses to look up (required)
-
-**Options:**
-
 | Option | Short | Description |
 |--------|-------|-------------|
-| `--nameserver` | `-n` | Specific nameserver to use |
-
-**Examples:**
+| `--nameserver` | `-n` | Nameserver IP to use |
 
 ```bash
-# Basic reverse lookup
+# Single IP
 nadzoring dns reverse 8.8.8.8
 
 # Multiple IPs
 nadzoring dns reverse 1.1.1.1 8.8.8.8 9.9.9.9
 
-# Using specific nameserver
+# Use a specific nameserver
 nadzoring dns reverse -n 208.67.222.222 8.8.4.4
+
+# Save as JSON
+nadzoring dns reverse -o json --save reverse_lookup.json 8.8.8.8 1.1.1.1
 ```
+
+**Python API:**
+
+```python
+from nadzoring.dns_lookup.reverse import reverse_dns
+
+# IPv4 reverse lookup
+result = reverse_dns("8.8.8.8")
+print(result["hostname"])       # 'dns.google'
+print(result["response_time"])  # milliseconds
+print(result["error"])          # None on success
+
+# IPv6 reverse lookup
+result = reverse_dns("2001:4860:4860::8888")
+print(result["hostname"])  # 'dns.google'
+
+# Handle lookup failure
+result = reverse_dns("192.168.1.1")
+if result["error"]:
+    print(result["error"])  # 'No PTR record' or 'No reverse DNS'
+
+# Custom nameserver
+result = reverse_dns("8.8.8.8", nameserver="1.1.1.1")
+print(result["hostname"])
+```
+
+---
 
 #### dns check
 
-Perform comprehensive DNS check including validation of MX priorities and TXT records (SPF/DKIM).
-
-**Syntax:**
+Perform a comprehensive DNS check including MX priority validation and SPF/DKIM analysis.
 
 ```bash
 nadzoring dns check [OPTIONS] DOMAINS...
 ```
 
-**Arguments:**
-
-- `DOMAINS...` - One or more domain names to check (required)
-
-**Options:**
-
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
-| `--nameserver` | `-n` | Specific nameserver to use | System default |
-| `--types` | `-t` | Record types to check (A, AAAA, CNAME, MX, NS, TXT, ALL) | `ALL` |
-
-**Features:**
-
-- MX record validation (duplicate priority detection)
-- TXT record validation (SPF policy checks, DKIM key presence)
-- Comprehensive error reporting
-
-**Examples:**
+| `--nameserver` | `-n` | Nameserver IP | System default |
+| `--types` | `-t` | Record types to check | ALL |
 
 ```bash
-# Complete DNS check
+# Full DNS check
 nadzoring dns check example.com
 
-# Check specific record types
+# Check MX and TXT only
 nadzoring dns check -t MX -t TXT gmail.com
 
-# Multiple domains with custom nameserver
+# Multiple domains
 nadzoring dns check -n 9.9.9.9 google.com cloudflare.com
 ```
 
+**Python API:**
+
+```python
+from nadzoring.dns_lookup.health import check_dns
+
+result = check_dns(
+    "example.com",
+    record_types=["MX", "TXT"],
+    validate_mx=True,
+    validate_txt=True,
+)
+print(result["records"])      # {'MX': ['10 mail.example.com']}
+print(result["errors"])       # {'AAAA': 'No AAAA records'} if any
+print(result["response_times"]) # per-type timing in ms
+print(result["validations"])  # {'mx': {'valid': True, 'issues': []}}
+```
+
+---
+
 #### dns trace
 
-Trace the DNS resolution path from root servers to authoritative nameservers.
-
-**Syntax:**
+Trace the complete DNS resolution delegation chain from root to authoritative nameserver.
 
 ```bash
 nadzoring dns trace [OPTIONS] DOMAIN
 ```
 
-**Arguments:**
-
-- `DOMAIN` - Domain name to trace (required)
-
-**Options:**
-
 | Option | Short | Description |
 |--------|-------|-------------|
-| `--nameserver` | `-n` | Starting nameserver (default: a.root-servers.net - 198.41.0.4) |
-
-**Output shows:**
-
-- Each hop with nameserver IP
-- Response time per nameserver
-- Records returned at each level
-- Delegation information
-- Final authoritative answer
-
-**Examples:**
+| `--nameserver` | `-n` | Starting nameserver (default: root `198.41.0.4`) |
 
 ```bash
 # Trace from root servers
 nadzoring dns trace example.com
 
-# Trace starting from specific nameserver
+# Start trace from a specific nameserver
 nadzoring dns trace -n 8.8.8.8 google.com
 
-# Verbose trace with timing
+# Verbose with timing
 nadzoring dns trace -v github.com
 ```
 
+**Python API:**
+
+```python
+from nadzoring.dns_lookup.trace import trace_dns
+
+result = trace_dns("example.com")
+for hop in result["hops"]:
+    print(f"Hop: {hop['nameserver']}  time: {hop['response_time']}ms")
+    if hop.get("records"):
+        print(f"  Records: {hop['records']}")
+    if hop.get("error"):
+        print(f"  Error: {hop['error']}")
+
+print("Final answer:", result["final_answer"])
+```
+
+---
+
 #### dns compare
 
-Compare DNS responses from different nameservers to detect discrepancies.
-
-**Syntax:**
+Compare DNS responses from multiple servers and detect discrepancies.
 
 ```bash
 nadzoring dns compare [OPTIONS] DOMAIN
 ```
 
-**Arguments:**
-
-- `DOMAIN` - Domain name to compare (required)
-
-**Options:**
-
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
 | `--servers` | `-s` | DNS servers to compare | `8.8.8.8`, `1.1.1.1`, `9.9.9.9` |
 | `--type` | `-t` | Record types to compare | `A` |
-
-**Features:**
-
-- Response time comparison
-- Record consistency checking
-- Automatic discrepancy detection
-- Progress indicator for multiple queries
-
-**Examples:**
 
 ```bash
 # Compare A records across default servers
@@ -335,871 +365,790 @@ nadzoring dns compare -t MX -s 8.8.8.8 -s 208.67.222.222 -s 9.9.9.9 gmail.com
 nadzoring dns compare -t A -t AAAA -t NS cloudflare.com
 ```
 
+**Python API:**
+
+```python
+from nadzoring.dns_lookup.compare import compare_dns_servers
+
+result = compare_dns_servers(
+    "example.com",
+    servers=["8.8.8.8", "1.1.1.1", "9.9.9.9"],
+    record_types=["A", "MX"],
+)
+if result["differences"]:
+    for diff in result["differences"]:
+        print(f"Server {diff['server']} — {diff['type']} mismatch")
+        print(f"  Expected: {diff['expected']}")
+        print(f"  Got:      {diff['got']}")
+else:
+    print("All servers agree.")
+```
+
+---
+
 #### dns health
 
-Perform comprehensive DNS health check with scoring system.
-
-**Syntax:**
+Perform a scored DNS health check across all standard record types.
 
 ```bash
 nadzoring dns health [OPTIONS] DOMAIN
 ```
 
-**Arguments:**
-
-- `DOMAIN` - Domain name to check (required)
-
-**Options:**
-
 | Option | Short | Description |
 |--------|-------|-------------|
-| `--nameserver` | `-n` | Nameserver to use for checks |
+| `--nameserver` | `-n` | Nameserver IP |
 
-**Health Scoring:**
-
-- **80-100**: Healthy - All records properly configured
-- **50-79**: Degraded - Some issues detected
-- **0-49**: Unhealthy - Critical configuration problems
-
-**Validation includes:**
-
-- Record presence for all standard types
-- MX priority uniqueness
-- SPF policy completeness
-- DKIM key presence
-- CNAME configuration rules
-- Subdomain-specific checks
-
-**Examples:**
+Health score: **80–100** = Healthy · **50–79** = Degraded · **0–49** = Unhealthy
 
 ```bash
-# Basic health check
 nadzoring dns health example.com
-
-# Health check with custom nameserver
 nadzoring dns health -n 1.1.1.1 google.com
-
-# Verbose health report
-nadzoring dns health -v github.com
 ```
+
+**Python API:**
+
+```python
+from nadzoring.dns_lookup.health import health_check_dns
+
+result = health_check_dns("example.com")
+print(result["score"])   # 0–100
+print(result["status"])  # 'healthy' | 'degraded' | 'unhealthy'
+print(result["issues"])  # critical problems
+print(result["warnings"]) # non-critical issues
+for rtype, score in result["record_scores"].items():
+    print(f"  {rtype}: {score}")
+```
+
+---
 
 #### dns benchmark
 
-Benchmark DNS server performance with configurable queries.
-
-**Syntax:**
+Benchmark DNS server response times across multiple servers.
 
 ```bash
 nadzoring dns benchmark [OPTIONS]
 ```
 
-**Options:**
-
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
-| `--domain` | `-d` | Domain to use for benchmarking | `google.com` |
-| `--servers` | `-s` | DNS servers to benchmark (can be used multiple times) | Public DNS servers |
-| `--type` | `-t` | Record type to query (A, AAAA, MX, NS, TXT) | `A` |
-| `--queries` | `-q` | Number of queries per server | `10` |
-| `--parallel/--sequential` | - | Run benchmarks in parallel or sequentially | `parallel` |
-
-**Output includes:**
-
-- Average response time
-- Minimum/maximum response time
-- Success rate percentage
-- Failed queries count
-
-**Examples:**
+| `--domain` | `-d` | Domain to query | `google.com` |
+| `--servers` | `-s` | Servers to benchmark | All public servers |
+| `--type` | `-t` | Record type | `A` |
+| `--queries` | `-q` | Queries per server | `10` |
+| `--parallel/--sequential` | | Run concurrently or one by one | `parallel` |
 
 ```bash
-# Benchmark default servers
 nadzoring dns benchmark
-
-# Benchmark specific servers with 20 queries each
 nadzoring dns benchmark -s 8.8.8.8 -s 1.1.1.1 -s 9.9.9.9 --queries 20
-
-# Benchmark MX records sequentially
-nadzoring dns benchmark -t MX --sequential
-
-# Save results as JSON
-nadzoring dns benchmark -o json --save dns_benchmark.json
+nadzoring dns benchmark -t MX -d gmail.com --sequential
+nadzoring dns benchmark -o json --save benchmark.json
 ```
+
+**Python API:**
+
+```python
+from nadzoring.dns_lookup.benchmark import benchmark_dns_servers, benchmark_single_server
+
+# Single server
+result = benchmark_single_server("8.8.8.8", queries=10)
+print(f"avg={result['avg_response_time']:.1f}ms  success={result['success_rate']}%")
+
+# Multiple servers — returned sorted fastest-first
+results = benchmark_dns_servers(
+    servers=["8.8.8.8", "1.1.1.1", "9.9.9.9"],
+    queries=10,
+    parallel=True,
+)
+fastest = results[0]
+print(f"Fastest: {fastest['server']} at {fastest['avg_response_time']:.1f}ms")
+```
+
+---
 
 #### dns poisoning
 
-Detect DNS poisoning, censorship, or CDN-based routing variations.
-
-**Syntax:**
+Detect DNS poisoning, censorship, or unusual CDN routing for a domain.
 
 ```bash
 nadzoring dns poisoning [OPTIONS] DOMAIN
 ```
 
-**Arguments:**
-
-- `DOMAIN` - Domain name to check for poisoning (required)
-
-**Options:**
-
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
-| `--control-server` | `-c` | Control server to compare against | `8.8.8.8` |
-| `--test-servers` | `-t` | Test servers to check (can be used multiple times) | All public DNS servers |
-| `--type` | `-T` | Record type to check | `A` |
-| `--additional-types` | `-a` | Additional record types to check on control server | None |
+| `--control-server` | `-c` | Trusted control resolver | `8.8.8.8` |
+| `--test-servers` | `-t` | Servers to test against control | All public servers |
+| `--type` | `-T` | Record type | `A` |
+| `--additional-types` | `-a` | Extra record types from control server | None |
 
-**Detection Capabilities:**
-
-- **CDN Detection**: Identifies legitimate CDN networks (Cloudflare, Google, Akamai, AWS, etc.)
-- **Anycast/GeoDNS**: Recognizes normal anycast routing behavior
-- **IP Pattern Analysis**: Analyzes IP ownership, geographic diversity, and network ranges
-- **Consensus Checking**: Determines most common response across servers
-- **Severity Classification**: Categorizes issues as INFO, LOW, MEDIUM, HIGH, or CRITICAL
-
-**Output includes:**
-
-- Poisoning level (NONE, LOW, MEDIUM, HIGH, CRITICAL, SUSPICIOUS)
-- Confidence percentage
-- Control server analysis
-- IP ownership detection
-- CDN detection with provider identification
-- Inconsistency details per server
-- Geo-diversity metrics
-- Final verdict with explanation
-
-**Examples:**
+Severity levels: `NONE` → `LOW` → `MEDIUM` → `HIGH` → `CRITICAL` / `SUSPICIOUS`
 
 ```bash
-# Basic poisoning check
 nadzoring dns poisoning example.com
-
-# Check with custom control server and additional record types
 nadzoring dns poisoning -c 1.1.1.1 -a MX -a TXT google.com
-
-# Verbose poisoning analysis
-nadzoring dns poisoning -v github.com
-
-# Save detailed HTML report
-nadzoring dns poisoning -o html --save poisoning_report.html example.com
+nadzoring dns poisoning -o html --save poisoning_report.html twitter.com
 ```
+
+---
 
 ### Network Base Commands
 
-The `network-base` command group provides basic and advanced network operations and diagnostics.
-
 #### ping
 
-Ping one or more addresses to check reachability.
-
-**Syntax:**
+Check reachability using ICMP ping.
 
 ```bash
-nadzoring network-base ping [OPTIONS] ADDRESSES...
+nadzoring network-base ping ADDRESSES...
 ```
 
-**Arguments:**
-
-- `ADDRESSES...` - One or more IP addresses or hostnames (required)
-
-**Examples:**
-
 ```bash
-# Ping single address
 nadzoring network-base ping 8.8.8.8
-
-# Multiple addresses
 nadzoring network-base ping google.com cloudflare.com 1.1.1.1
-
-# JSON output
 nadzoring network-base ping -o json github.com
 ```
 
-#### geolocation
+**Python API:**
 
-Get geolocation information for IP addresses.
+```python
+from nadzoring.network_base.ping_address import ping_addr
 
-**Syntax:**
-
-```bash
-nadzoring network-base geolocation [OPTIONS] IPS...
+print(ping_addr("8.8.8.8"))            # True
+print(ping_addr("https://google.com")) # True — URLs are normalised automatically
+print(ping_addr("192.0.2.1"))          # False — unreachable
 ```
 
-**Arguments:**
-
-- `IPS...` - One or more IP addresses (required)
-
-**Output includes:**
-
-- Latitude/Longitude
-- Country
-- City
-
-**Examples:**
-
-```bash
-# Geolocate IPs
-nadzoring network-base geolocation 8.8.8.8 1.1.1.1
-
-# Save results
-nadzoring network-base geolocation --save locations.json 8.8.8.8
-```
-
-#### params
-
-Display detailed network configuration parameters of your system.
-
-**Syntax:**
-
-```bash
-nadzoring network-base params [OPTIONS]
-```
-
-**Output includes:**
-
-- Default interface name
-- IPv4 address
-- IPv6 address
-- Router (gateway) IP
-- MAC address
-- Public IP address
-
-**Examples:**
-
-```bash
-# Basic network info
-nadzoring network-base params
-
-# JSON output for scripting
-nadzoring network-base params -o json
-
-# Save configuration
-nadzoring network-base params --save network_config.json
-```
-
-#### host-to-ip
-
-Resolve hostnames to IP addresses with IPv4/IPv6 availability checking.
-
-**Syntax:**
-
-```bash
-nadzoring network-base host-to-ip [OPTIONS] HOSTNAMES...
-```
-
-**Arguments:**
-
-- `HOSTNAMES...` - One or more domain names (required)
-
-**Output includes:**
-
-- Resolved IP address
-- IPv4 connectivity check
-- IPv6 connectivity check
-- Router IPv4/IPv6 addresses
-
-**Examples:**
-
-```bash
-# Resolve multiple domains
-nadzoring network-base host-to-ip google.com github.com cloudflare.com
-
-# CSV output for analysis
-nadzoring network-base host-to-ip -o csv --save resolutions.csv example.com
-```
-
-#### port-service
-
-Identify which service typically runs on specified ports.
-
-**Syntax:**
-
-```bash
-nadzoring network-base port-service [OPTIONS] PORTS...
-```
-
-**Arguments:**
-
-- `PORTS...` - One or more port numbers (required)
-
-**Examples:**
-
-```bash
-# Check common ports
-nadzoring network-base port-service 80 443 22 53 3306
-
-# JSON output for integration
-nadzoring network-base port-service -o json 8080 5432 27017
-```
-
-#### port-scan
-
-Scan for open ports on one or more targets with configurable scanning modes.
-
-**Syntax:**
-
-```bash
-nadzoring network-base port-scan [OPTIONS] TARGETS...
-```
-
-**Arguments:**
-
-- `TARGETS...` - One or more IP addresses or hostnames to scan (required)
-
-**Options:**
-
-| Option | Short | Description | Default |
-|--------|-------|-------------|---------|
-| `--mode` | - | Scan mode: fast, full, or custom | `fast` |
-| `--ports` | - | Custom ports or range (e.g., '22,80,443' or '1-1024') | None |
-| `--protocol` | - | Protocol to scan (tcp, udp) | `tcp` |
-| `--timeout` | - | Socket timeout in seconds | `2.0` |
-| `--workers` | - | Maximum number of concurrent workers per target | `50` |
-| `--show-closed` | - | Show closed ports in results | `False` |
-| `--no-banner` | - | Disable banner grabbing | `False` |
-
-**Scan Modes:**
-
-- **fast**: Scans 20 most common ports
-- **full**: Scans all ports (1-65535)
-- **custom**: Uses --ports specification
-
-**Features:**
-
-- Concurrent scanning with worker pool
-- Banner grabbing for service identification
-- Progress bar with real-time updates
-- Support for TCP and UDP protocols
-- Custom port ranges and lists
-
-**Examples:**
-
-```bash
-# Fast scan of common ports
-nadzoring network-base port-scan example.com
-
-# Full port scan
-nadzoring network-base port-scan --mode full 192.168.1.1
-
-# Custom port range with UDP
-nadzoring network-base port-scan --mode custom --ports 1-1024 --protocol udp example.com
-
-# Multiple targets with banner grabbing
-nadzoring network-base port-scan --show-closed 192.168.1.1 192.168.1.2
-
-# Save results as JSON
-nadzoring network-base port-scan -o json --save scan_results.json example.com
-```
+---
 
 #### http-ping
 
-Check HTTP/HTTPS response timing and headers for one or more URLs.
-
-**Syntax:**
+Measure HTTP/HTTPS response timing and inspect headers.
 
 ```bash
 nadzoring network-base http-ping [OPTIONS] URLS...
 ```
 
-**Arguments:**
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--timeout` | Request timeout (seconds) | `10.0` |
+| `--no-ssl-verify` | Disable SSL certificate check | `False` |
+| `--no-redirects` | Do not follow redirects | `False` |
+| `--show-headers` | Include response headers | `False` |
 
-- `URLS...` - One or more URLs to probe (required)
-
-**Options:**
-
-| Option | Short | Description | Default |
-|--------|-------|-------------|---------|
-| `--timeout` | - | Request timeout in seconds | `10.0` |
-| `--no-ssl-verify` | - | Disable SSL certificate verification | `False` |
-| `--no-redirects` | - | Do not follow HTTP redirects | `False` |
-| `--show-headers` | - | Include response headers in output | `False` |
-
-**Output includes:**
-
-- DNS resolution time (ms)
-- Time to first byte (TTFB) (ms)
-- Total download time (ms)
-- HTTP status code
-- Content size (bytes)
-- Redirect target (if any)
-- Response headers (if requested)
-
-**Examples:**
+Output includes: DNS time, TTFB, total download time, status code, content size, redirects.
 
 ```bash
-# Basic HTTP ping
 nadzoring network-base http-ping https://example.com
-
-# Multiple URLs with header inspection
-nadzoring network-base http-ping --show-headers https://google.com https://github.com
-
-# Custom timeout with SSL verification disabled
+nadzoring network-base http-ping --show-headers https://github.com https://google.com
 nadzoring network-base http-ping --timeout 5 --no-ssl-verify https://self-signed.badssl.com
-
-# CSV output for analysis
-nadzoring network-base http-ping -o csv --save http_times.csv https://api.github.com
+nadzoring network-base http-ping -o csv --save http_metrics.csv https://api.github.com
 ```
+
+**Python API:**
+
+```python
+from nadzoring.network_base.http_ping import http_ping
+
+result = http_ping("https://example.com", timeout=10.0, include_headers=True)
+print(result.status_code)    # 200
+print(result.dns_ms)         # DNS resolution time in ms
+print(result.ttfb_ms)        # time-to-first-byte in ms
+print(result.total_ms)       # total download time in ms
+print(result.content_length) # bytes
+if result.error:
+    print("Error:", result.error)
+```
+
+---
+
+#### host-to-ip
+
+Resolve hostnames to IP addresses with IPv4/IPv6 availability checks.
+
+```bash
+nadzoring network-base host-to-ip HOSTNAMES...
+```
+
+```bash
+nadzoring network-base host-to-ip google.com github.com cloudflare.com
+nadzoring network-base host-to-ip -o csv --save resolutions.csv example.com
+```
+
+**Python API:**
+
+```python
+from nadzoring.network_base.router_ip import check_ipv4, check_ipv6
+
+ipv4 = check_ipv4("google.com")  # '142.250.x.x'
+ipv6 = check_ipv6("google.com")  # '2607:f8b0:...' or hostname unchanged on failure
+
+# Get router/gateway IP
+from nadzoring.network_base.router_ip import router_ip
+gateway = router_ip()        # '192.168.1.1' on most home networks
+gateway6 = router_ip(ipv6=True)
+```
+
+---
+
+#### geolocation
+
+Get geographic location for IP addresses.
+
+```bash
+nadzoring network-base geolocation IPS...
+```
+
+Output: latitude, longitude, country, city.
+
+```bash
+nadzoring network-base geolocation 8.8.8.8 1.1.1.1
+nadzoring network-base geolocation --save locations.json 8.8.8.8
+```
+
+**Python API:**
+
+```python
+from nadzoring.network_base.geolocation_ip import geo_ip
+
+result = geo_ip("8.8.8.8")
+print(result["country"])  # 'United States'
+print(result["city"])     # 'Mountain View'
+print(result["lat"])      # '37.386'
+print(result["lon"])      # '-122.0838'
+```
+
+---
+
+#### params
+
+Show local network interface configuration.
+
+```bash
+nadzoring network-base params [OPTIONS]
+```
+
+Output: interface name, IPv4, IPv6, gateway IP, MAC address, public IP.
+
+```bash
+nadzoring network-base params
+nadzoring network-base params -o json --save net_params.json
+```
+
+**Python API:**
+
+```python
+from nadzoring.network_base.network_params import network_param
+
+info = network_param()
+print(info["IPv4 address"])        # '192.168.1.42'
+print(info["Router ip-address"])   # '192.168.1.1'
+print(info["MAC-address"])         # '00:11:22:33:44:55'
+print(info["Public IP address"])   # your external IP
+```
+
+---
+
+#### port-scan
+
+Scan for open TCP/UDP ports on one or more targets.
+
+```bash
+nadzoring network-base port-scan [OPTIONS] TARGETS...
+```
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--mode` | `fast`, `full`, or `custom` | `fast` |
+| `--ports` | Port list or range, e.g. `22,80,443` or `1-1024` | None |
+| `--protocol` | `tcp` or `udp` | `tcp` |
+| `--timeout` | Socket timeout (seconds) | `2.0` |
+| `--workers` | Concurrent workers | `50` |
+| `--no-banner` | Disable banner grabbing | `False` |
+| `--show-closed` | Show closed ports | `False` |
+
+Scan modes: **fast** = common ports · **full** = all 1–65535 · **custom** = your list or range.
+
+```bash
+nadzoring network-base port-scan example.com
+nadzoring network-base port-scan --mode full 192.168.1.1
+nadzoring network-base port-scan --mode custom --ports 22,80,443,8080 example.com
+nadzoring network-base port-scan --protocol udp --mode fast example.com
+nadzoring network-base port-scan -o json --save scan.json example.com
+```
+
+---
+
+#### port-service
+
+Identify the service typically running on a port number.
+
+```bash
+nadzoring network-base port-service PORTS...
+```
+
+```bash
+nadzoring network-base port-service 80 443 22 53 3306
+nadzoring network-base port-service -o json 8080 5432 27017
+```
+
+**Python API:**
+
+```python
+from nadzoring.network_base.service_on_port import get_service_on_port
+
+print(get_service_on_port(80))    # 'http'
+print(get_service_on_port(443))   # 'https'
+print(get_service_on_port(22))    # 'ssh'
+print(get_service_on_port(9999))  # 'unknown'
+```
+
+---
 
 #### whois
 
-Look up WHOIS registration information for one or more domains or IPs.
+Look up WHOIS registration data for domains or IP addresses.
 
-**Syntax:**
+> **Requires** the system `whois` utility:
+> - Debian/Ubuntu: `sudo apt install whois`
+> - macOS: `brew install whois`
+> - RHEL/Fedora: `sudo dnf install whois`
 
 ```bash
 nadzoring network-base whois [OPTIONS] TARGETS...
 ```
 
-**Arguments:**
-
-- `TARGETS...` - One or more domain names or IP addresses (required)
-
-**Requirements:**
-
-- System 'whois' utility must be installed
-  - Debian/Ubuntu: `apt install whois`
-  - macOS: `brew install whois`
-  - RHEL/CentOS: `yum install whois`
-
-**Output includes:**
-
-- Registrar information
-- Creation and expiration dates
-- Name servers
-- Registrant contact (if available)
-- Domain status codes
-
-**Examples:**
-
 ```bash
-# WHOIS lookup for domain
 nadzoring network-base whois example.com
-
-# Multiple targets
 nadzoring network-base whois google.com cloudflare.com 8.8.8.8
-
-# JSON output for automation
 nadzoring network-base whois -o json --save whois_data.json github.com
 ```
 
+**Python API:**
+
+```python
+from nadzoring.network_base.whois_lookup import whois_lookup
+
+result = whois_lookup("example.com")
+print(result["registrar"])      # 'RESERVED-Internet Assigned Numbers Authority'
+print(result["creation_date"])  # '1995-08-14T04:00:00Z'
+print(result["expiry_date"])
+print(result["name_servers"])
+if result.get("error"):
+    print("Error:", result["error"])  # whois not installed, etc.
+```
+
+---
+
 #### connections
 
-List active network connections (TCP/UDP) with process information.
-
-**Syntax:**
+List active TCP/UDP network connections.
 
 ```bash
 nadzoring network-base connections [OPTIONS]
 ```
 
-**Options:**
-
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
-| `--protocol` | `-p` | Filter by protocol (tcp, udp, all) | `all` |
-| `--state` | `-s` | Filter by state substring (e.g., LISTEN, ESTABLISHED) | None |
-| `--no-process` | - | Skip process/PID info (avoids permission errors) | `False` |
-
-**Output includes:**
-
-- Protocol (TCP/UDP)
-- Local address and port
-- Remote address and port
-- Connection state
-- PID and process name (if available)
-
-**Examples:**
+| `--protocol` | `-p` | Filter: `tcp`, `udp`, `all` | `all` |
+| `--state` | `-s` | State filter substring, e.g. `LISTEN` | None |
+| `--no-process` | | Skip PID/process info | `False` |
 
 ```bash
-# List all connections
 nadzoring network-base connections
-
-# Show only listening TCP ports
 nadzoring network-base connections --protocol tcp --state LISTEN
-
-# UDP connections without process info
 nadzoring network-base connections --protocol udp --no-process
-
-# Save as CSV for analysis
 nadzoring network-base connections -o csv --save connections.csv
 ```
 
+**Python API:**
+
+```python
+from nadzoring.network_base.connections import get_connections
+
+# All connections
+connections = get_connections()
+
+# Listening TCP sockets only
+listening = get_connections(protocol="tcp", state_filter="LISTEN")
+for conn in listening:
+    print(conn.protocol, conn.local_address, conn.state, conn.process)
+```
+
+---
+
 #### traceroute
 
-Trace the network path to one or more hosts.
-
-**Syntax:**
+Trace the network path to a host.
 
 ```bash
 nadzoring network-base traceroute [OPTIONS] TARGETS...
 ```
 
-**Arguments:**
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--max-hops` | Maximum hops | `30` |
+| `--timeout` | Per-hop timeout (seconds) | `2.0` |
+| `--sudo` | Run with sudo (Linux) | `False` |
 
-- `TARGETS...` - One or more hostnames or IP addresses (required)
-
-**Options:**
-
-| Option | Short | Description | Default |
-|--------|-------|-------------|---------|
-| `--max-hops` | - | Maximum number of hops | `30` |
-| `--timeout` | - | Per-hop timeout in seconds | `2.0` |
-| `--sudo` | - | Run traceroute with sudo (required on some Linux systems) | `False` |
-
-**Requirements:**
-
-- On Linux, raw-socket access needed: run with --sudo, as root, or grant capability:
-
-  ```
-  sudo setcap cap_net_raw+ep $(which traceroute)
-  ```
-
-- tracepath is tried automatically as a root-free fallback
-
-**Output includes:**
-
-- Hop number
-- Hostname (if resolvable)
-- IP address
-- Round-trip times (three probes)
-
-**Examples:**
+> **Linux privilege note:** `traceroute` needs raw-socket access.
+> Either use `--sudo`, run as root, or: `sudo setcap cap_net_raw+ep $(which traceroute)`
+> Nadzoring automatically falls back to `tracepath` (no root required) if traceroute fails.
 
 ```bash
-# Basic traceroute
 nadzoring network-base traceroute google.com
-
-# Multiple targets with custom max hops
 nadzoring network-base traceroute --max-hops 20 github.com cloudflare.com
-
-# With sudo on Linux
 nadzoring network-base traceroute --sudo example.com
-
-# HTML report generation
-nadzoring network-base traceroute -o html --save trace_report.html 8.8.8.8
+nadzoring network-base traceroute -o html --save trace.html 8.8.8.8
 ```
+
+**Python API:**
+
+```python
+from nadzoring.network_base.traceroute import traceroute
+
+hops = traceroute("8.8.8.8", max_hops=15)
+for hop in hops:
+    rtts = [f"{r}ms" if r else "*" for r in hop.rtt_ms]
+    print(f"{hop.hop:2}  {hop.ip or '*':16}  {' '.join(rtts)}")
+```
+
+---
 
 #### route
 
 Display the system IP routing table.
 
-**Syntax:**
-
 ```bash
 nadzoring network-base route [OPTIONS]
 ```
 
-**Requirements:**
-
-- Linux: 'ip' utility
-- Windows: 'route' utility
-
-**Output includes:**
-
-- Destination network
-- Gateway address
-- Netmask
-- Interface
-- Metric
-
-**Examples:**
-
 ```bash
-# Display routing table
 nadzoring network-base route
-
-# JSON output for scripting
 nadzoring network-base route -o json
-
-# Save routing table
 nadzoring network-base route --save routing_table.json
 ```
 
-### ARP Commands
+**Python API:**
 
-The `arp` command group provides ARP cache management and spoofing detection capabilities.
+```python
+from nadzoring.network_base.route_table import get_route_table
+
+routes = get_route_table()
+for route in routes:
+    print(route.destination, "via", route.gateway, "dev", route.interface)
+```
+
+---
+
+### ARP Commands
 
 #### arp cache
 
-Show current ARP cache table.
-
-**Syntax:**
+Show the current ARP cache table (IP-to-MAC mappings).
 
 ```bash
 nadzoring arp cache [OPTIONS]
 ```
 
-**Output includes:**
-
-- IP address
-- MAC address
-- Network interface
-- ARP state (PERMANENT, STALE, REACHABLE, INCOMPLETE)
-
-**Examples:**
-
 ```bash
-# Display ARP cache
 nadzoring arp cache
-
-# Save as CSV
 nadzoring arp cache -o csv --save arp_cache.csv
-
-# JSON output for automation
 nadzoring arp cache -o json
 ```
 
+**Python API:**
+
+```python
+from nadzoring.arp.cache import ARPCache
+
+cache = ARPCache()
+entries = cache.get_cache()
+for entry in entries:
+    print(f"{entry.ip_address} -> {entry.mac_address}  [{entry.interface}]  {entry.state.value}")
+```
+
+---
+
 #### arp detect-spoofing
 
-Detect potential ARP spoofing attacks on one or more interfaces.
-
-**Syntax:**
+Statically detect ARP spoofing by analysing the current ARP cache.
 
 ```bash
 nadzoring arp detect-spoofing [OPTIONS] [INTERFACES]...
 ```
 
-**Arguments:**
-
-- `INTERFACES...` - Network interfaces to check (optional, checks all interfaces if none specified)
-
-**Detection capabilities:**
-
-- Multiple IPs mapping to the same MAC address
-- Duplicate MAC addresses on the same interface
-- Invalid MAC addresses (broadcast, multicast, null)
-- MAC address changes over time
-
-**Output includes:**
-
-- Alert type (DUPLICATE_IP, DUPLICATE_MAC, INVALID_MAC, CHANGED_MAC)
-- IP address involved
-- MAC address involved
-- Network interface
-- Description of the issue
-
-**Examples:**
+Detects: duplicate MAC across IPs (`duplicate_mac`) and duplicate IP with multiple MACs (`duplicate_ip`).
 
 ```bash
-# Check all interfaces
 nadzoring arp detect-spoofing
-
-# Check specific interfaces
 nadzoring arp detect-spoofing eth0 wlan0
-
-# Save detection results
 nadzoring arp detect-spoofing -o json --save spoofing_alerts.json
 ```
 
+**Python API:**
+
+```python
+from nadzoring.arp.cache import ARPCache
+from nadzoring.arp.detector import ARPSpoofingDetector
+
+cache = ARPCache()
+detector = ARPSpoofingDetector(cache)
+alerts = detector.detect()
+for alert in alerts:
+    print(f"[{alert.alert_type}] {alert.description}")
+```
+
+---
+
 #### arp monitor-spoofing
 
-Monitor network for ARP spoofing attacks in real-time.
-
-**Syntax:**
+Monitor live network traffic for ARP spoofing in real time (requires root/admin).
 
 ```bash
 nadzoring arp monitor-spoofing [OPTIONS]
 ```
 
-**Options:**
-
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
-| `--interface` | `-i` | Network interface to monitor | All interfaces |
-| `--count` | `-c` | Number of packets to capture | `10` |
-| `--timeout` | `-t` | Timeout in seconds | `30` |
-
-**Features:**
-
-- Real-time ARP packet capture
-- IP-to-MAC mapping tracking
-- Duplicate IP detection
-- MAC address change detection
-- Real-time alerts with colorized output
-
-**Examples:**
+| `--interface` | `-i` | Interface to monitor | All |
+| `--count` | `-c` | Packets to capture | `10` |
+| `--timeout` | `-t` | Capture timeout (seconds) | `30` |
 
 ```bash
-# Monitor all interfaces
 nadzoring arp monitor-spoofing
-
-# Monitor specific interface for 100 packets
-nadzoring arp monitor-spoofing --interface eth0 --count 100
-
-# Monitor with 60 second timeout
-nadzoring arp monitor-spoofing --timeout 60
-
-# Save captured alerts
+nadzoring arp monitor-spoofing --interface eth0 --count 200 --timeout 60
 nadzoring arp monitor-spoofing -o json --save arp_alerts.json
 ```
 
+**Python API:**
+
+```python
+from nadzoring.arp.realtime import ARPRealtimeDetector
+
+detector = ARPRealtimeDetector()
+alerts = detector.monitor(interface="eth0", count=100, timeout=30)
+for alert in alerts:
+    print(f"{alert['timestamp']}  {alert['message']}")
+    print(f"  src_ip={alert['src_ip']}  src_mac={alert['src_mac']}")
+
+# Get monitoring stats
+stats = detector.get_stats()
+print(f"Processed: {stats['packets_processed']}  Alerts: {stats['alerts_generated']}")
+```
+
+---
+
 ## Output Formats
 
-Nadzoring supports four output formats controlled by the `-o/--output` flag:
+Use `-o` / `--output` to change the output format:
 
-### Table Format (default)
+| Format | Description |
+|--------|-------------|
+| `table` | Rich terminal table (default) |
+| `json` | JSON array, suitable for scripting |
+| `csv` | Comma-separated values |
+| `html` | Complete HTML page with CSS |
+| `html_table` | HTML table fragment only |
 
+```bash
+nadzoring dns resolve -o json example.com
+nadzoring dns health -o html --save health.html example.com
+nadzoring network-base connections -o csv --save conns.csv
 ```
-┌─────────────┬────────┬─────────────┐
-│ domain      │ type   │ value       │
-├─────────────┼────────┼─────────────┤
-│ example.com │ A      │ 93.184.216.34│
-│ example.com │ MX     │ 10 mail.example.com│
-└─────────────┴────────┴─────────────┘
-```
-
-### JSON Format
-
-```json
-[
-  {
-    "domain": "example.com",
-    "type": "A",
-    "value": "93.184.216.34"
-  }
-]
-```
-
-### CSV Format
-
-```csv
-domain,type,value
-example.com,A,93.184.216.34
-```
-
-### HTML Format
-
-Generates styled HTML tables or complete web pages with CSS styling.
 
 ## Saving Results
 
-Use the `--save` option to save command output to a file. The format is determined by the `-o/--output` flag:
-
 ```bash
-# Save DNS check as HTML report
 nadzoring dns check -o html --save dns_report.html example.com
-
-# Save comparison as CSV
 nadzoring dns compare -o csv --save comparison.csv google.com
-
-# Save poisoning detection as JSON
-nadzoring dns poisoning -o json --save poisoning_results.json example.com
-
-# Save trace as HTML
-nadzoring dns trace -o html --save trace.html cloudflare.com
-
-# Save port scan results
+nadzoring dns poisoning -o json --save poisoning.json example.com
 nadzoring network-base port-scan -o json --save scan.json example.com
-
-# Save ARP cache
 nadzoring arp cache -o csv --save arp.csv
 ```
 
 ## Logging Levels
 
-Nadzoring provides three logging modes:
+| Mode | Flag | Behaviour |
+|------|------|-----------|
+| Normal | (none) | Warnings + progress bars |
+| Verbose | `--verbose` | Debug logs + execution timing |
+| Quiet | `--quiet` | Results only — ideal for scripting |
 
-- **Normal mode** (no flags): Shows command output and warnings with progress bars
-- **Verbose mode** (`-v/--verbose`): Shows detailed execution information, timing, and debug logs
-- **Quiet mode** (`-q/--quiet`): Suppresses progress bars and non-error output, ideal for scripting
+---
+
+## Python API
+
+Nadzoring can be used as a Python library — all functionality is accessible programmatically without invoking the CLI.
+
+### DNS Lookup API
+
+```python
+from nadzoring.dns_lookup.utils import resolve_with_timer, get_public_dns_servers
+
+# Resolve any record type
+result = resolve_with_timer("example.com", "MX", include_ttl=True)
+print(result["records"])       # ['10 mail.example.com']
+print(result["ttl"])           # 3600
+print(result["response_time"]) # 45.2
+
+# List built-in public servers
+servers = get_public_dns_servers()  # ['8.8.8.8', '1.1.1.1', ...]
+```
+
+### Reverse DNS API
+
+```python
+from nadzoring.dns_lookup.reverse import reverse_dns
+
+# Standard reverse lookup
+result = reverse_dns("8.8.8.8")
+print(result["hostname"])  # 'dns.google'
+
+# With a custom nameserver
+result = reverse_dns("1.1.1.1", nameserver="8.8.8.8")
+print(result["hostname"])  # 'one.one.one.one'
+
+# Error handling
+result = reverse_dns("192.168.0.1")
+if result["error"]:
+    # possible values: 'No PTR record', 'No reverse DNS',
+    # 'Query timeout', 'Invalid IP address: ...'
+    print(result["error"])
+```
+
+### Network Base API
+
+```python
+from nadzoring.network_base.ping_address import ping_addr
+from nadzoring.network_base.http_ping import http_ping
+from nadzoring.network_base.geolocation_ip import geo_ip
+from nadzoring.network_base.traceroute import traceroute
+from nadzoring.network_base.connections import get_connections
+from nadzoring.network_base.route_table import get_route_table
+from nadzoring.network_base.network_params import network_param
+from nadzoring.network_base.whois_lookup import whois_lookup
+from nadzoring.network_base.port_scanner import ScanConfig, scan_ports
+
+# Ping
+alive = ping_addr("8.8.8.8")  # bool
+
+# HTTP probe
+r = http_ping("https://example.com")
+print(r.ttfb_ms, r.status_code)
+
+# Geolocation
+loc = geo_ip("8.8.8.8")
+print(loc["country"], loc["city"])
+
+# Traceroute
+for hop in traceroute("8.8.8.8", max_hops=10):
+    print(hop.hop, hop.ip, hop.rtt_ms)
+
+# Active connections
+for conn in get_connections(protocol="tcp", state_filter="ESTABLISHED"):
+    print(conn.local_address, "->", conn.remote_address)
+
+# Port scan
+config = ScanConfig(targets=["example.com"], mode="fast", timeout=2.0)
+for result in scan_ports(config):
+    print("Open ports:", result.open_ports)
+```
+
+### ARP API
+
+```python
+from nadzoring.arp.cache import ARPCache
+from nadzoring.arp.detector import ARPSpoofingDetector
+from nadzoring.arp.realtime import ARPRealtimeDetector
+
+# ARP cache
+cache = ARPCache()
+for entry in cache.get_cache():
+    print(entry.ip_address, entry.mac_address, entry.state.value)
+
+# Static spoofing detection
+detector = ARPSpoofingDetector(cache)
+for alert in detector.detect():
+    print(alert.alert_type, alert.description)
+
+# Real-time monitoring
+rt = ARPRealtimeDetector()
+alerts = rt.monitor(interface="eth0", count=50, timeout=30)
+```
+
+---
 
 ## Examples
 
 ### DNS Diagnostics
 
 ```bash
-# Complete DNS investigation workflow
 nadzoring dns health example.com
 nadzoring dns trace example.com
 nadzoring dns compare -t A -t MX example.com
 nadzoring dns check -t ALL -v example.com
 ```
 
+### Reverse DNS Batch Lookup
+
+```bash
+# Look up multiple IPs at once
+nadzoring dns reverse 8.8.8.8 1.1.1.1 9.9.9.9 208.67.222.222
+
+# Save results
+nadzoring dns reverse -o json --save ptr_records.json 8.8.8.8 1.1.1.1
+```
+
 ### DNS Poisoning Detection
 
 ```bash
-# Check if a domain might be censored or poisoned
 nadzoring dns poisoning -v twitter.com
-
-# Compare with multiple control servers
-nadzoring dns poisoning -c 8.8.8.8 -c 1.1.1.1 -c 9.9.9.9 example.com
-
-# Generate detailed HTML report
+nadzoring dns poisoning -c 8.8.8.8 -c 1.1.1.1 example.com
 nadzoring dns poisoning -o html --save poisoning_report.html github.com
 ```
 
 ### DNS Performance Benchmarking
 
 ```bash
-# Find fastest DNS server for your location
 nadzoring dns benchmark --queries 20 --parallel
-
-# Compare specific servers
 nadzoring dns benchmark -s 8.8.8.8 -s 1.1.1.1 -s 208.67.222.222 -s 9.9.9.9
-
-# Benchmark different record types
 nadzoring dns benchmark -t MX -d gmail.com --queries 15
 ```
 
 ### Port Scanning
 
 ```bash
-# Comprehensive port scan
 nadzoring network-base port-scan --mode full --protocol tcp example.com
-
-# Service identification with banner grabbing
-nadzoring network-base port-scan --mode custom --ports 20-1024 --no-banner example.com
-
-# Multiple target scan with CSV export
-nadzoring network-base port-scan -o csv --save network_scan.csv 192.168.1.0/24
+nadzoring network-base port-scan --mode custom --ports 20-1024 example.com
+nadzoring network-base port-scan -o csv --save network_scan.csv 192.168.1.1
 ```
 
 ### HTTP Service Probing
 
 ```bash
-# Monitor web service performance
 nadzoring network-base http-ping --show-headers https://api.example.com/health
-
-# Check multiple endpoints
 nadzoring network-base http-ping https://google.com https://cloudflare.com https://github.com
-
-# Save timing metrics
 nadzoring network-base http-ping -o csv --save http_metrics.csv https://example.com
 ```
 
 ### ARP Spoofing Detection
 
 ```bash
-# Detect existing spoofing
 nadzoring arp detect-spoofing eth0
-
-# Real-time monitoring
 nadzoring arp monitor-spoofing --interface eth0 --timeout 60
-
-# Save alerts for forensic analysis
 nadzoring arp monitor-spoofing -o json --save arp_alerts.json
 ```
 
 ### Network Path Analysis
 
 ```bash
-# Trace route with timing
 nadzoring network-base traceroute --max-hops 30 github.com
-
-# Compare routes to multiple destinations
 nadzoring network-base traceroute google.com cloudflare.com amazon.com
-
-# Display routing table
 nadzoring network-base route
-
-# Check active connections
 nadzoring network-base connections --state LISTEN
 ```
 
 ### Complete Network Diagnostics
 
 ```bash
-# Run comprehensive network diagnostics
 nadzoring network-base params -v
 nadzoring network-base host-to-ip google.com cloudflare.com github.com
 nadzoring network-base ping 8.8.8.8 1.1.1.1 google.com
@@ -1213,39 +1162,24 @@ nadzoring arp cache
 
 ```bash
 #!/bin/bash
-# Check DNS health and network status with timestamp
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
-# DNS health check
-nadzoring dns health -o json --save "dns_health_${TIMESTAMP}.json" example.com
-
-# DNS poisoning check
-nadzoring dns poisoning -o html --save "poisoning_${TIMESTAMP}.html" example.com
-
-# DNS trace
-nadzoring dns trace -o html --save "dns_trace_${TIMESTAMP}.html" example.com
-
-# Network parameters
-nadzoring network-base params -o csv --save "network_${TIMESTAMP}.csv"
-
-# DNS benchmark summary
-nadzoring dns benchmark -o table --save "benchmark_${TIMESTAMP}.txt"
-
-# Port scan of critical services
+nadzoring dns health     -o json --save "dns_health_${TIMESTAMP}.json"     example.com
+nadzoring dns poisoning  -o html --save "poisoning_${TIMESTAMP}.html"       example.com
+nadzoring dns trace      -o html --save "dns_trace_${TIMESTAMP}.html"       example.com
+nadzoring dns reverse    -o json --save "reverse_${TIMESTAMP}.json"         8.8.8.8 1.1.1.1
+nadzoring network-base params    -o csv  --save "network_${TIMESTAMP}.csv"
+nadzoring dns benchmark  -o table --save "benchmark_${TIMESTAMP}.txt"
 nadzoring network-base port-scan -o json --save "port_scan_${TIMESTAMP}.json" example.com
-
-# HTTP service check
 nadzoring network-base http-ping --show-headers -o html --save "http_${TIMESTAMP}.html" https://example.com
-
-# ARP cache snapshot
-nadzoring arp cache -o csv --save "arp_${TIMESTAMP}.csv"
+nadzoring arp cache      -o csv  --save "arp_${TIMESTAMP}.csv"
 ```
 
 ### Quick Website Block Check
 
 ```bash
-# Check if a website might be blocked
 nadzoring dns resolve -t ALL example.com
+nadzoring dns reverse 93.184.216.34
 nadzoring dns trace example.com
 nadzoring network-base ping example.com
 nadzoring dns compare example.com
@@ -1254,20 +1188,11 @@ nadzoring network-base http-ping https://example.com
 nadzoring network-base traceroute example.com
 ```
 
+---
+
 ## Contributing
 
 Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request.
-
-**Areas we'd love help with:**
-
-- Additional DNS record type support
-- New validation rules for health checks
-- CDN network database expansion
-- Performance optimizations
-- Additional output formats
-- IDE/editor integration plugins
-- Additional ARP detection heuristics
-- New network diagnostic commands
 
 **Workflow:**
 
@@ -1276,6 +1201,18 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+**Areas we'd love help with:**
+
+- Additional DNS record type support
+- New health check validation rules
+- CDN network database expansion
+- Performance optimisations
+- Additional output formats
+- ARP detection heuristics
+- New network diagnostic commands
+
+---
 
 ## Documentation
 
@@ -1287,6 +1224,8 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 | v0.1.3 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.3) | ⚪ Legacy |
 | v0.1.2 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.2) | ⚪ Legacy |
 | v0.1.1 | [First version](https://alexeev-prog.github.io/nadzoring/v0.1.1) | ⚪ Legacy |
+
+---
 
 ## License & Support
 
