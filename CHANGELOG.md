@@ -1,3 +1,21 @@
+commit b1b078990f10512ddc4bef8de3c2d9f886f5ed1d
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 6 08:50:36 2026 +0700
+
+    update docs templates
+
+commit 2044b89526ea17f9448bc43a3106cfb1b6ef73c8
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 6 08:44:56 2026 +0700
+
+    fix docs workflow error
+
+commit 7a89167b6b7ebfa3d7145ab3107785ca4f924552
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 6 08:40:36 2026 +0700
+
+    update docs (versioning and context7 widget)
+
 commit 396e873aaf98d07a8710019b0554495834cf123e
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Fri Mar 6 00:07:19 2026 +0700

@@ -61,11 +61,6 @@ html_sidebars: dict[str, list[str]] = {
     ]
 }
 
-html_context = {
-    "default_template": "page.html"
-}
-
-
 def skip(app, what, name, obj, would_skip, options) -> Literal[False] | bool:
     if name == "__init__":
         return False
