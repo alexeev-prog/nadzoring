@@ -1,3 +1,15 @@
+commit 8df04afeea0c21d3e03ee4351fb243c0b94cb4ca
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 6 16:53:05 2026 +0700
+
+    fix lint errors
+
+commit b49de8ac513ca68bd8d156f55fab8277dcb6b8d0
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 6 16:51:43 2026 +0700
+
+    fix lint errors
+
 commit 63caf0d1d6fde6022cafb111cc80ebf590ca5ebc
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Fri Mar 6 16:46:34 2026 +0700
