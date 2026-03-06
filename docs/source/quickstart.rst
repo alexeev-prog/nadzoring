@@ -176,8 +176,8 @@ Check basic network reachability:
    from nadzoring.network_base.ping_address import ping_addr
 
    # Works with IPs, hostnames, and full URLs
-   reachable = ping_addr("8.8.8.8")          # True
-   reachable = ping_addr("https://google.com") # True — URL is normalised automatically
+   reachable = ping_addr("8.8.8.8")
+   reachable = ping_addr("https://google.com")
 
 ----
 
@@ -374,7 +374,7 @@ Find the fastest DNS resolver for your location:
        servers=["8.8.8.8", "1.1.1.1", "9.9.9.9"],
        queries=10,
    )
-   for r in results:  # sorted fastest-first
+   for r in results:
        print(f"{r['server']}: avg={r['avg_response_time']:.1f}ms  ok={r['success_rate']}%")
 
 ----
@@ -461,3 +461,116 @@ Getting Help
    nadzoring dns reverse --help
    nadzoring network-base port-scan --help
    nadzoring arp monitor-spoofing --help
+
+----
+
+14. Continuous DNS Monitoring
+-------------------------------
+
+The ``dns monitor`` command runs a persistent loop that tracks health and
+performance over time, fires alerts when thresholds are breached, and logs
+everything to a structured JSONL file.
+
+.. code-block:: bash
+
+   # Monitor with default servers (Google + Cloudflare), save log
+   nadzoring dns monitor example.com \
+       --interval 60 \
+       --log-file dns_monitor.jsonl
+
+   # Strict thresholds — alert above 150 ms or below 99 % success
+   nadzoring dns monitor example.com \
+       -n 8.8.8.8 -n 1.1.1.1 -n 9.9.9.9 \
+       --interval 30 \
+       --max-rt 150 --min-success 0.99 \
+       --log-file dns_monitor.jsonl
+
+   # Run exactly 10 cycles and save a JSON report (great for CI)
+   nadzoring dns monitor example.com --cycles 10 -o json --save report.json
+
+   # Quiet mode for cron / systemd
+   nadzoring dns monitor example.com \
+       --quiet --log-file /var/log/nadzoring/dns_monitor.jsonl
+
+After Ctrl-C (or after ``--cycles`` completes), a statistical summary is
+printed automatically.
+
+**Analyse the log later:**
+
+.. code-block:: bash
+
+   nadzoring dns monitor-report dns_monitor.jsonl
+   nadzoring dns monitor-report dns_monitor.jsonl --server 8.8.8.8 -o json
+
+**Python API — embed in your own script:**
+
+.. code-block:: python
+
+   from nadzoring.dns_lookup.monitor import AlertEvent, DNSMonitor, MonitorConfig
+
+
+   def my_alert_handler(alert: AlertEvent) -> None:
+       print(f"ALERT [{alert.alert_type}]: {alert.message}")
+
+
+   config = MonitorConfig(
+       domain="example.com",
+       nameservers=["8.8.8.8", "1.1.1.1"],
+       interval=60.0,
+       queries_per_sample=3,
+       max_response_time_ms=300.0,
+       min_success_rate=0.95,
+       log_file="dns_monitor.jsonl",
+       alert_callback=my_alert_handler,
+   )
+
+   monitor = DNSMonitor(config)
+   monitor.run()
+   print(monitor.report())
+
+**Scheduling with systemd (recommended for production):**
+
+.. code-block:: bash
+
+   # Create /etc/systemd/system/nadzoring-dns-monitor.service
+   # then:
+   sudo systemctl enable --now nadzoring-dns-monitor
+   sudo journalctl -u nadzoring-dns-monitor -f
+
+See :doc:`monitoring` for the full systemd unit file, cron setup, trend
+analysis examples, and alert integration patterns.
+
+----
+
+15. Error Handling Patterns
+-----------------------------
+
+Every public Python API function returns structured errors rather than
+raising exceptions, making it safe to use in automation scripts:
+
+.. code-block:: python
+
+   from nadzoring.dns_lookup.utils import resolve_with_timer
+   from nadzoring.dns_lookup.reverse import reverse_dns
+   from nadzoring.dns_lookup.health import health_check_dns
+
+   # resolve_with_timer never raises — check the "error" field
+   result = resolve_with_timer("example.com", "A", timeout=3.0)
+   if result["error"]:
+       # possible: 'Domain does not exist', 'Query timeout', 'No A records'
+       print("DNS error:", result["error"])
+   else:
+       print("Records:", result["records"])
+       print("Response time:", result["response_time"], "ms")
+
+   # reverse_dns — same pattern
+   r = reverse_dns("8.8.8.8")
+   hostname = r["hostname"] or f"[{r['error']}]"
+
+   # health_check_dns always returns a complete dict
+   health = health_check_dns("example.com")
+   if health["status"] == "unhealthy":
+       for issue in health["issues"]:
+           print("CRITICAL:", issue)
+   for warning in health["warnings"]:
+       print("WARN:", warning)

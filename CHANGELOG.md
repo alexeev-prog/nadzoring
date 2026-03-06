@@ -1,3 +1,9 @@
+commit e206893ea04a6c19255479fa6192bdf5bff576f4
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 6 23:41:48 2026 +0700
+
+    docs: update readme and improve docs
+
 commit 3aae4d42a0069781e49ae3c60fd61b43f863e9c6
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Fri Mar 6 23:24:55 2026 +0700
