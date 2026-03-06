@@ -151,7 +151,7 @@ def resolve_with_timer(
     }
 
     try:
-        resolver = create_resolver(nameserver, timeout, lifetime)
+        resolver: Resolver = create_resolver(nameserver, timeout, lifetime)
         start_time: float = time()
         answers: Answer = resolver.resolve(domain, record_type)
         result["response_time"] = round((time() - start_time) * 1000, 2)

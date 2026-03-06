@@ -121,11 +121,11 @@ def benchmark_dns_servers(
         servers = get_public_dns_servers()
 
     if parallel:
-        results = _benchmark_parallel(
+        results: list[BenchmarkResult] = _benchmark_parallel(
             servers, domain, record_type, queries, max_workers, progress_callback
         )
     else:
-        results = _benchmark_sequential(
+        results: list[BenchmarkResult] = _benchmark_sequential(
             servers, domain, record_type, queries, progress_callback
         )
 
@@ -167,7 +167,7 @@ def _benchmark_parallel(
         }
 
         for i, future in enumerate(as_completed(future_to_server)):
-            server = future_to_server[future]
+            server: str = future_to_server[future]
             try:
                 results.append(future.result())
             except Exception:

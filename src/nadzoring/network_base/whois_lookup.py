@@ -4,6 +4,7 @@ from ipaddress import ip_address
 from logging import Logger
 from platform import system
 from subprocess import PIPE, CalledProcessError, check_output
+from typing import Literal
 
 from nadzoring.logger import get_logger
 
@@ -52,7 +53,7 @@ def _run_whois_command(target: str) -> str | None:
 
     """
     os_name = system()
-    encoding = "cp866" if os_name == "Windows" else "utf-8"
+    encoding: Literal["cp866", "utf-8"] = "cp866" if os_name == "Windows" else "utf-8"
 
     try:
         return check_output(  # noqa: S602
@@ -84,7 +85,7 @@ def _parse_whois_output(raw: str) -> dict[str, str | None]:
     result: dict[str, str | None] = dict.fromkeys(_WHOIS_FIELD_MAP)
 
     for line in raw.splitlines():
-        stripped = line.strip()
+        stripped: str = line.strip()
         if not stripped or stripped.startswith(("%", "#")):
             continue
         for field_key, prefixes in _WHOIS_FIELD_MAP.items():
@@ -92,7 +93,7 @@ def _parse_whois_output(raw: str) -> dict[str, str | None]:
                 continue
             for prefix in prefixes:
                 if stripped.lower().startswith(prefix.lower()):
-                    value = stripped[len(prefix) :].strip()
+                    value: str = stripped[len(prefix) :].strip()
                     if value:
                         result[field_key] = value
                         break

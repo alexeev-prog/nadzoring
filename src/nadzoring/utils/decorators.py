@@ -65,7 +65,7 @@ def common_cli_options(
 
     def decorator(func: F) -> F:
         """Apply common CLI options decorators to the function."""
-        decorated_func = func
+        decorated_func: F = func
         decorated_func = click.option(
             "--verbose", is_flag=True, help="Verbose output (DEBUG level)"
         )(decorated_func)

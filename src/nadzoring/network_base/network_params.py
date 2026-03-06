@@ -198,7 +198,7 @@ def _extract_interface_details(interface_parts: list[str]) -> dict[str, str | No
         elif key == "MACAddress":
             details["MAC-address"] = value
         elif key == "IPAddress":
-            ip_list = value.replace("{", "").replace("}", "").split(",")
+            ip_list: list[str] = value.replace("{", "").replace("}", "").split(",")
             if len(ip_list) > 0:
                 details["IPv4 address"] = ip_list[0].replace('"', "")
             if len(ip_list) > 1:

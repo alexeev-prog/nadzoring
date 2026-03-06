@@ -162,11 +162,11 @@ class ARPCache:
         """
         entries: list[ARPEntry] = []
         for line in output.splitlines():
-            line = line.strip()  # noqa: PLW2901
+            line: str = line.strip()  # noqa: PLW2901
             if not line:
                 continue
 
-            parts = line.split()
+            parts: list[str] = line.split()
             if len(parts) < 3:
                 continue
 
@@ -179,7 +179,7 @@ class ARPCache:
                 if part == "dev" and i + 1 < len(parts):
                     interface = parts[i + 1]
                 elif part == "lladdr" and i + 1 < len(parts):
-                    mac = parts[i + 1]
+                    mac: str = parts[i + 1]
                 elif part in {
                     "REACHABLE",
                     "STALE",

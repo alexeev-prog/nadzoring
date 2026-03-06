@@ -168,7 +168,7 @@ def trace_dns(domain: str, nameserver: str | None = None) -> dict[str, Any]:
 
     for _ in range(_MAX_HOPS):
         if current_ns in visited:
-            loop_hop = _create_hop(current_ns)
+            loop_hop: dict[str, Any] = _create_hop(current_ns)
             loop_hop["error"] = "Loop detected"
             loop_hop["next"] = "Loop detected"
             result["hops"].append(loop_hop)

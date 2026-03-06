@@ -140,7 +140,7 @@ def router_ip(*, ipv6: bool = False) -> str | None:
         determined or the operating system is not supported.
 
     """
-    os_name = system()
+    os_name: str = system()
 
     if os_name == "Linux":
         return _get_linux_router_ip(ipv6=ipv6)

@@ -1,4 +1,3 @@
-# nadzoring/dns_lookup/__init__.py
 """DNS lookup module for domain name resolution and DNS record checking."""
 
 from nadzoring.dns_lookup.benchmark import benchmark_dns_servers

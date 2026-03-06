@@ -1,8 +1,10 @@
 """DNS-related CLI commands."""
 
+from logging import Logger
 from typing import Any
 
 import click
+from click import Choice
 from tqdm import tqdm
 
 from nadzoring.dns_lookup import (
@@ -29,11 +31,11 @@ from nadzoring.utils.formatters import (
     format_dns_trace,
 )
 
-logger = get_logger(__name__)
+logger: Logger = get_logger(__name__)
 
-_QUERYABLE_RECORD_TYPES = [t for t in RECORD_TYPES if t != "PTR"]
+_QUERYABLE_RECORD_TYPES: list[str] = [t for t in RECORD_TYPES if t != "PTR"]
 
-_RECORD_TYPE_CHOICE = click.Choice(
+_RECORD_TYPE_CHOICE: Choice[str] = click.Choice(
     ["A", "AAAA", "CNAME", "MX", "NS", "TXT", "ALL"],
     case_sensitive=False,
 )
@@ -120,10 +122,10 @@ def resolve_command(
     show_ttl: bool,
 ) -> list[dict[str, Any]]:
     """Resolve DNS records for one or more domains."""
-    types_to_query = _expand_record_types(record_types)
-    total = len(domains) * len(types_to_query)
+    types_to_query: list[str] = _expand_record_types(record_types)
+    total: int = len(domains) * len(types_to_query)
 
-    pbar = _make_pbar(total, "Resolving DNS records", "query", quiet=quiet)
+    pbar: tqdm | None = _make_pbar(total, "Resolving DNS records", "query", quiet=quiet)
 
     results: list[dict[str, Any]] = []
 
@@ -148,7 +150,7 @@ def resolve_command(
     if pbar:
         pbar.close()
 
-    style = "short" if short else format_style
+    style: str = "short" if short else format_style
     return format_dns_record(results, style=style, show_ttl=show_ttl)
 
 
@@ -179,7 +181,7 @@ def reverse_command(
         ``response_time_ms`` for each queried address.
 
     """
-    pbar = _make_pbar(
+    pbar: tqdm | None = _make_pbar(
         len(ip_addresses), "Performing reverse lookups", "lookup", quiet=quiet
     )
 
@@ -244,9 +246,11 @@ def check_command(
         or an error string.
 
     """
-    types_to_check = _expand_record_types(record_types)
+    types_to_check: list[str] = _expand_record_types(record_types)
 
-    pbar = _make_pbar(len(domains), "Performing DNS checks", "domain", quiet=quiet)
+    pbar: tqdm | None = _make_pbar(
+        len(domains), "Performing DNS checks", "domain", quiet=quiet
+    )
 
     results: list[dict[str, Any]] = []
 
@@ -363,10 +367,10 @@ def compare_command(
         ``differs`` flag.
 
     """
-    types_to_query = list(record_types) if record_types else ["A"]
-    total = len(servers) * len(types_to_query)
+    types_to_query: list[str] = list(record_types) if record_types else ["A"]
+    total: int = len(servers) * len(types_to_query)
 
-    pbar = _make_pbar(total, "Comparing DNS servers", "query", quiet=quiet)
+    pbar: tqdm | None = _make_pbar(total, "Comparing DNS servers", "query", quiet=quiet)
 
     def progress_callback() -> None:
         if pbar:
@@ -490,9 +494,11 @@ def benchmark_command(
         click.echo(f"Benchmarking DNS servers for {domain}...", err=True)
 
     servers_list: list[str] | None = list(servers) if servers else None
-    total_servers = len(servers_list) if servers_list else 10
+    total_servers: int = len(servers_list) if servers_list else 10
 
-    pbar = _make_pbar(total_servers, "Benchmarking servers", "server", quiet=quiet)
+    pbar: tqdm | None = _make_pbar(
+        total_servers, "Benchmarking servers", "server", quiet=quiet
+    )
 
     def progress_callback(server: str, _index: int) -> None:
         if pbar:
