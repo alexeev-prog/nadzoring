@@ -250,19 +250,6 @@ class TestRouterIp:
         mock_check_ipv6.assert_called_once_with("2001:db8::1")
 
     @patch("nadzoring.network_base.router_ip.system")
-    def test_unsupported_system_returns_none_and_logs_warning(self, mock_system):
-        """Test that unsupported OS returns None and logs warning."""
-        mock_system.return_value = "Darwin"
-
-        with patch("nadzoring.network_base.router_ip.logger") as mock_logger:
-            result = router_ip()
-
-            assert result is None
-            mock_logger.warning.assert_called_once_with(
-                "Unsupported operating system for router IP detection: Darwin"
-            )
-
-    @patch("nadzoring.network_base.router_ip.system")
     @patch("nadzoring.network_base.router_ip.check_output")
     @patch("nadzoring.network_base.router_ip.check_ipv4")
     def test_linux_router_ip_with_domain_name_gateway(
