@@ -1,9 +1,4 @@
-"""
-ARP module for cache retrieval and spoofing detection.
-
-This module provides functionality to retrieve and parse ARP cache entries
-across different platforms and detect potential ARP spoofing attacks.
-"""
+"""ARP module for cache retrieval and spoofing detection."""
 
 from nadzoring.arp.cache import ARPCache, ARPCacheRetrievalError
 from nadzoring.arp.detector import ARPSpoofingDetector

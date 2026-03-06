@@ -38,6 +38,7 @@
 Nadzoring (from Russian "надзор" - supervision/oversight + English "-ing" suffix) is a FOSS (Free and Open Source Software) command-line tool for detecting website blocks, monitoring service availability, and network analysis. It helps you investigate network connectivity issues, check if websites are accessible, and analyze network configurations with comprehensive DNS diagnostics, including advanced DNS poisoning detection.
 
 ## Table of Contents
+
 - [Nadzoring](#nadzoring)
   - [Table of Contents](#table-of-contents)
 - [Getting Started](#getting-started)
@@ -139,14 +140,17 @@ The `dns` command group provides comprehensive DNS analysis and troubleshooting 
 Resolve DNS records for one or more domains with support for multiple record types.
 
 **Syntax:**
+
 ```bash
 nadzoring dns resolve [OPTIONS] DOMAINS...
 ```
 
 **Arguments:**
+
 - `DOMAINS...` - One or more domain names to resolve (required)
 
 **Options:**
+
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
 | `--type` | `-t` | DNS record type (A, AAAA, CNAME, MX, NS, TXT, ALL) | `A` |
@@ -156,6 +160,7 @@ nadzoring dns resolve [OPTIONS] DOMAINS...
 | `--format-style` | - | Output style (standard, bind, host, dig) | `standard` |
 
 **Examples:**
+
 ```bash
 # Basic A record lookup
 nadzoring dns resolve google.com
@@ -178,19 +183,23 @@ nadzoring dns resolve --short --type ALL example.com
 Perform reverse DNS lookup (PTR records) for IP addresses.
 
 **Syntax:**
+
 ```bash
 nadzoring dns reverse [OPTIONS] IP_ADDRESSES...
 ```
 
 **Arguments:**
+
 - `IP_ADDRESSES...` - One or more IP addresses to look up (required)
 
 **Options:**
+
 | Option | Short | Description |
 |--------|-------|-------------|
 | `--nameserver` | `-n` | Specific nameserver to use |
 
 **Examples:**
+
 ```bash
 # Basic reverse lookup
 nadzoring dns reverse 8.8.8.8
@@ -207,25 +216,30 @@ nadzoring dns reverse -n 208.67.222.222 8.8.4.4
 Perform comprehensive DNS check including validation of MX priorities and TXT records (SPF/DKIM).
 
 **Syntax:**
+
 ```bash
 nadzoring dns check [OPTIONS] DOMAINS...
 ```
 
 **Arguments:**
+
 - `DOMAINS...` - One or more domain names to check (required)
 
 **Options:**
+
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
 | `--nameserver` | `-n` | Specific nameserver to use | System default |
 | `--types` | `-t` | Record types to check (A, AAAA, CNAME, MX, NS, TXT, ALL) | `ALL` |
 
 **Features:**
+
 - MX record validation (duplicate priority detection)
 - TXT record validation (SPF policy checks, DKIM key presence)
 - Comprehensive error reporting
 
 **Examples:**
+
 ```bash
 # Complete DNS check
 nadzoring dns check example.com
@@ -242,19 +256,23 @@ nadzoring dns check -n 9.9.9.9 google.com cloudflare.com
 Trace the DNS resolution path from root servers to authoritative nameservers.
 
 **Syntax:**
+
 ```bash
 nadzoring dns trace [OPTIONS] DOMAIN
 ```
 
 **Arguments:**
+
 - `DOMAIN` - Domain name to trace (required)
 
 **Options:**
+
 | Option | Short | Description |
 |--------|-------|-------------|
 | `--nameserver` | `-n` | Starting nameserver (default: a.root-servers.net - 198.41.0.4) |
 
 **Output shows:**
+
 - Each hop with nameserver IP
 - Response time per nameserver
 - Records returned at each level
@@ -262,6 +280,7 @@ nadzoring dns trace [OPTIONS] DOMAIN
 - Final authoritative answer
 
 **Examples:**
+
 ```bash
 # Trace from root servers
 nadzoring dns trace example.com
@@ -278,26 +297,31 @@ nadzoring dns trace -v github.com
 Compare DNS responses from different nameservers to detect discrepancies.
 
 **Syntax:**
+
 ```bash
 nadzoring dns compare [OPTIONS] DOMAIN
 ```
 
 **Arguments:**
+
 - `DOMAIN` - Domain name to compare (required)
 
 **Options:**
+
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
 | `--servers` | `-s` | DNS servers to compare | `8.8.8.8`, `1.1.1.1`, `9.9.9.9` |
 | `--type` | `-t` | Record types to compare | `A` |
 
 **Features:**
+
 - Response time comparison
 - Record consistency checking
 - Automatic discrepancy detection
 - Progress indicator for multiple queries
 
 **Examples:**
+
 ```bash
 # Compare A records across default servers
 nadzoring dns compare example.com
@@ -314,24 +338,29 @@ nadzoring dns compare -t A -t AAAA -t NS cloudflare.com
 Perform comprehensive DNS health check with scoring system.
 
 **Syntax:**
+
 ```bash
 nadzoring dns health [OPTIONS] DOMAIN
 ```
 
 **Arguments:**
+
 - `DOMAIN` - Domain name to check (required)
 
 **Options:**
+
 | Option | Short | Description |
 |--------|-------|-------------|
 | `--nameserver` | `-n` | Nameserver to use for checks |
 
 **Health Scoring:**
+
 - **80-100**: Healthy - All records properly configured
 - **50-79**: Degraded - Some issues detected
 - **0-49**: Unhealthy - Critical configuration problems
 
 **Validation includes:**
+
 - Record presence for all standard types
 - MX priority uniqueness
 - SPF policy completeness
@@ -340,6 +369,7 @@ nadzoring dns health [OPTIONS] DOMAIN
 - Subdomain-specific checks
 
 **Examples:**
+
 ```bash
 # Basic health check
 nadzoring dns health example.com
@@ -356,11 +386,13 @@ nadzoring dns health -v github.com
 Benchmark DNS server performance with configurable queries.
 
 **Syntax:**
+
 ```bash
 nadzoring dns benchmark [OPTIONS]
 ```
 
 **Options:**
+
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
 | `--domain` | `-d` | Domain to use for benchmarking | `google.com` |
@@ -370,12 +402,14 @@ nadzoring dns benchmark [OPTIONS]
 | `--parallel/--sequential` | - | Run benchmarks in parallel or sequentially | `parallel` |
 
 **Output includes:**
+
 - Average response time
 - Minimum/maximum response time
 - Success rate percentage
 - Failed queries count
 
 **Examples:**
+
 ```bash
 # Benchmark default servers
 nadzoring dns benchmark
@@ -395,14 +429,17 @@ nadzoring dns benchmark -o json --save dns_benchmark.json
 Detect DNS poisoning, censorship, or CDN-based routing variations.
 
 **Syntax:**
+
 ```bash
 nadzoring dns poisoning [OPTIONS] DOMAIN
 ```
 
 **Arguments:**
+
 - `DOMAIN` - Domain name to check for poisoning (required)
 
 **Options:**
+
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
 | `--control-server` | `-c` | Control server to compare against | `8.8.8.8` |
@@ -411,6 +448,7 @@ nadzoring dns poisoning [OPTIONS] DOMAIN
 | `--additional-types` | `-a` | Additional record types to check on control server | None |
 
 **Detection Capabilities:**
+
 - **CDN Detection**: Identifies legitimate CDN networks (Cloudflare, Google, Akamai, AWS, etc.)
 - **Anycast/GeoDNS**: Recognizes normal anycast routing behavior
 - **IP Pattern Analysis**: Analyzes IP ownership, geographic diversity, and network ranges
@@ -418,6 +456,7 @@ nadzoring dns poisoning [OPTIONS] DOMAIN
 - **Severity Classification**: Categorizes issues as INFO, LOW, MEDIUM, HIGH, or CRITICAL
 
 **Output includes:**
+
 - Poisoning level (NONE, LOW, MEDIUM, HIGH, CRITICAL, SUSPICIOUS)
 - Confidence percentage
 - Control server analysis
@@ -428,6 +467,7 @@ nadzoring dns poisoning [OPTIONS] DOMAIN
 - Final verdict with explanation
 
 **Examples:**
+
 ```bash
 # Basic poisoning check
 nadzoring dns poisoning example.com
@@ -451,14 +491,17 @@ The `network-base` command group provides basic and advanced network operations 
 Ping one or more addresses to check reachability.
 
 **Syntax:**
+
 ```bash
 nadzoring network-base ping [OPTIONS] ADDRESSES...
 ```
 
 **Arguments:**
+
 - `ADDRESSES...` - One or more IP addresses or hostnames (required)
 
 **Examples:**
+
 ```bash
 # Ping single address
 nadzoring network-base ping 8.8.8.8
@@ -475,19 +518,23 @@ nadzoring network-base ping -o json github.com
 Get geolocation information for IP addresses.
 
 **Syntax:**
+
 ```bash
 nadzoring network-base geolocation [OPTIONS] IPS...
 ```
 
 **Arguments:**
+
 - `IPS...` - One or more IP addresses (required)
 
 **Output includes:**
+
 - Latitude/Longitude
 - Country
 - City
 
 **Examples:**
+
 ```bash
 # Geolocate IPs
 nadzoring network-base geolocation 8.8.8.8 1.1.1.1
@@ -501,11 +548,13 @@ nadzoring network-base geolocation --save locations.json 8.8.8.8
 Display detailed network configuration parameters of your system.
 
 **Syntax:**
+
 ```bash
 nadzoring network-base params [OPTIONS]
 ```
 
 **Output includes:**
+
 - Default interface name
 - IPv4 address
 - IPv6 address
@@ -514,6 +563,7 @@ nadzoring network-base params [OPTIONS]
 - Public IP address
 
 **Examples:**
+
 ```bash
 # Basic network info
 nadzoring network-base params
@@ -530,20 +580,24 @@ nadzoring network-base params --save network_config.json
 Resolve hostnames to IP addresses with IPv4/IPv6 availability checking.
 
 **Syntax:**
+
 ```bash
 nadzoring network-base host-to-ip [OPTIONS] HOSTNAMES...
 ```
 
 **Arguments:**
+
 - `HOSTNAMES...` - One or more domain names (required)
 
 **Output includes:**
+
 - Resolved IP address
 - IPv4 connectivity check
 - IPv6 connectivity check
 - Router IPv4/IPv6 addresses
 
 **Examples:**
+
 ```bash
 # Resolve multiple domains
 nadzoring network-base host-to-ip google.com github.com cloudflare.com
@@ -557,14 +611,17 @@ nadzoring network-base host-to-ip -o csv --save resolutions.csv example.com
 Identify which service typically runs on specified ports.
 
 **Syntax:**
+
 ```bash
 nadzoring network-base port-service [OPTIONS] PORTS...
 ```
 
 **Arguments:**
+
 - `PORTS...` - One or more port numbers (required)
 
 **Examples:**
+
 ```bash
 # Check common ports
 nadzoring network-base port-service 80 443 22 53 3306
@@ -578,14 +635,17 @@ nadzoring network-base port-service -o json 8080 5432 27017
 Scan for open ports on one or more targets with configurable scanning modes.
 
 **Syntax:**
+
 ```bash
 nadzoring network-base port-scan [OPTIONS] TARGETS...
 ```
 
 **Arguments:**
+
 - `TARGETS...` - One or more IP addresses or hostnames to scan (required)
 
 **Options:**
+
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
 | `--mode` | - | Scan mode: fast, full, or custom | `fast` |
@@ -597,11 +657,13 @@ nadzoring network-base port-scan [OPTIONS] TARGETS...
 | `--no-banner` | - | Disable banner grabbing | `False` |
 
 **Scan Modes:**
+
 - **fast**: Scans 20 most common ports
 - **full**: Scans all ports (1-65535)
 - **custom**: Uses --ports specification
 
 **Features:**
+
 - Concurrent scanning with worker pool
 - Banner grabbing for service identification
 - Progress bar with real-time updates
@@ -609,6 +671,7 @@ nadzoring network-base port-scan [OPTIONS] TARGETS...
 - Custom port ranges and lists
 
 **Examples:**
+
 ```bash
 # Fast scan of common ports
 nadzoring network-base port-scan example.com
@@ -631,14 +694,17 @@ nadzoring network-base port-scan -o json --save scan_results.json example.com
 Check HTTP/HTTPS response timing and headers for one or more URLs.
 
 **Syntax:**
+
 ```bash
 nadzoring network-base http-ping [OPTIONS] URLS...
 ```
 
 **Arguments:**
+
 - `URLS...` - One or more URLs to probe (required)
 
 **Options:**
+
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
 | `--timeout` | - | Request timeout in seconds | `10.0` |
@@ -647,6 +713,7 @@ nadzoring network-base http-ping [OPTIONS] URLS...
 | `--show-headers` | - | Include response headers in output | `False` |
 
 **Output includes:**
+
 - DNS resolution time (ms)
 - Time to first byte (TTFB) (ms)
 - Total download time (ms)
@@ -656,6 +723,7 @@ nadzoring network-base http-ping [OPTIONS] URLS...
 - Response headers (if requested)
 
 **Examples:**
+
 ```bash
 # Basic HTTP ping
 nadzoring network-base http-ping https://example.com
@@ -675,20 +743,24 @@ nadzoring network-base http-ping -o csv --save http_times.csv https://api.github
 Look up WHOIS registration information for one or more domains or IPs.
 
 **Syntax:**
+
 ```bash
 nadzoring network-base whois [OPTIONS] TARGETS...
 ```
 
 **Arguments:**
+
 - `TARGETS...` - One or more domain names or IP addresses (required)
 
 **Requirements:**
+
 - System 'whois' utility must be installed
   - Debian/Ubuntu: `apt install whois`
   - macOS: `brew install whois`
   - RHEL/CentOS: `yum install whois`
 
 **Output includes:**
+
 - Registrar information
 - Creation and expiration dates
 - Name servers
@@ -696,6 +768,7 @@ nadzoring network-base whois [OPTIONS] TARGETS...
 - Domain status codes
 
 **Examples:**
+
 ```bash
 # WHOIS lookup for domain
 nadzoring network-base whois example.com
@@ -712,11 +785,13 @@ nadzoring network-base whois -o json --save whois_data.json github.com
 List active network connections (TCP/UDP) with process information.
 
 **Syntax:**
+
 ```bash
 nadzoring network-base connections [OPTIONS]
 ```
 
 **Options:**
+
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
 | `--protocol` | `-p` | Filter by protocol (tcp, udp, all) | `all` |
@@ -724,6 +799,7 @@ nadzoring network-base connections [OPTIONS]
 | `--no-process` | - | Skip process/PID info (avoids permission errors) | `False` |
 
 **Output includes:**
+
 - Protocol (TCP/UDP)
 - Local address and port
 - Remote address and port
@@ -731,6 +807,7 @@ nadzoring network-base connections [OPTIONS]
 - PID and process name (if available)
 
 **Examples:**
+
 ```bash
 # List all connections
 nadzoring network-base connections
@@ -750,14 +827,17 @@ nadzoring network-base connections -o csv --save connections.csv
 Trace the network path to one or more hosts.
 
 **Syntax:**
+
 ```bash
 nadzoring network-base traceroute [OPTIONS] TARGETS...
 ```
 
 **Arguments:**
+
 - `TARGETS...` - One or more hostnames or IP addresses (required)
 
 **Options:**
+
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
 | `--max-hops` | - | Maximum number of hops | `30` |
@@ -765,19 +845,24 @@ nadzoring network-base traceroute [OPTIONS] TARGETS...
 | `--sudo` | - | Run traceroute with sudo (required on some Linux systems) | `False` |
 
 **Requirements:**
+
 - On Linux, raw-socket access needed: run with --sudo, as root, or grant capability:
+
   ```
   sudo setcap cap_net_raw+ep $(which traceroute)
   ```
+
 - tracepath is tried automatically as a root-free fallback
 
 **Output includes:**
+
 - Hop number
 - Hostname (if resolvable)
 - IP address
 - Round-trip times (three probes)
 
 **Examples:**
+
 ```bash
 # Basic traceroute
 nadzoring network-base traceroute google.com
@@ -797,15 +882,18 @@ nadzoring network-base traceroute -o html --save trace_report.html 8.8.8.8
 Display the system IP routing table.
 
 **Syntax:**
+
 ```bash
 nadzoring network-base route [OPTIONS]
 ```
 
 **Requirements:**
+
 - Linux: 'ip' utility
 - Windows: 'route' utility
 
 **Output includes:**
+
 - Destination network
 - Gateway address
 - Netmask
@@ -813,6 +901,7 @@ nadzoring network-base route [OPTIONS]
 - Metric
 
 **Examples:**
+
 ```bash
 # Display routing table
 nadzoring network-base route
@@ -833,17 +922,20 @@ The `arp` command group provides ARP cache management and spoofing detection cap
 Show current ARP cache table.
 
 **Syntax:**
+
 ```bash
 nadzoring arp cache [OPTIONS]
 ```
 
 **Output includes:**
+
 - IP address
 - MAC address
 - Network interface
 - ARP state (PERMANENT, STALE, REACHABLE, INCOMPLETE)
 
 **Examples:**
+
 ```bash
 # Display ARP cache
 nadzoring arp cache
@@ -860,20 +952,24 @@ nadzoring arp cache -o json
 Detect potential ARP spoofing attacks on one or more interfaces.
 
 **Syntax:**
+
 ```bash
 nadzoring arp detect-spoofing [OPTIONS] [INTERFACES]...
 ```
 
 **Arguments:**
+
 - `INTERFACES...` - Network interfaces to check (optional, checks all interfaces if none specified)
 
 **Detection capabilities:**
+
 - Multiple IPs mapping to the same MAC address
 - Duplicate MAC addresses on the same interface
 - Invalid MAC addresses (broadcast, multicast, null)
 - MAC address changes over time
 
 **Output includes:**
+
 - Alert type (DUPLICATE_IP, DUPLICATE_MAC, INVALID_MAC, CHANGED_MAC)
 - IP address involved
 - MAC address involved
@@ -881,6 +977,7 @@ nadzoring arp detect-spoofing [OPTIONS] [INTERFACES]...
 - Description of the issue
 
 **Examples:**
+
 ```bash
 # Check all interfaces
 nadzoring arp detect-spoofing
@@ -897,11 +994,13 @@ nadzoring arp detect-spoofing -o json --save spoofing_alerts.json
 Monitor network for ARP spoofing attacks in real-time.
 
 **Syntax:**
+
 ```bash
 nadzoring arp monitor-spoofing [OPTIONS]
 ```
 
 **Options:**
+
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
 | `--interface` | `-i` | Network interface to monitor | All interfaces |
@@ -909,6 +1008,7 @@ nadzoring arp monitor-spoofing [OPTIONS]
 | `--timeout` | `-t` | Timeout in seconds | `30` |
 
 **Features:**
+
 - Real-time ARP packet capture
 - IP-to-MAC mapping tracking
 - Duplicate IP detection
@@ -916,6 +1016,7 @@ nadzoring arp monitor-spoofing [OPTIONS]
 - Real-time alerts with colorized output
 
 **Examples:**
+
 ```bash
 # Monitor all interfaces
 nadzoring arp monitor-spoofing
@@ -935,6 +1036,7 @@ nadzoring arp monitor-spoofing -o json --save arp_alerts.json
 Nadzoring supports four output formats controlled by the `-o/--output` flag:
 
 ### Table Format (default)
+
 ```
 ┌─────────────┬────────┬─────────────┐
 │ domain      │ type   │ value       │
@@ -945,6 +1047,7 @@ Nadzoring supports four output formats controlled by the `-o/--output` flag:
 ```
 
 ### JSON Format
+
 ```json
 [
   {
@@ -956,12 +1059,14 @@ Nadzoring supports four output formats controlled by the `-o/--output` flag:
 ```
 
 ### CSV Format
+
 ```csv
 domain,type,value
 example.com,A,93.184.216.34
 ```
 
 ### HTML Format
+
 Generates styled HTML tables or complete web pages with CSS styling.
 
 ## Saving Results
@@ -999,6 +1104,7 @@ Nadzoring provides three logging modes:
 ## Examples
 
 ### DNS Diagnostics
+
 ```bash
 # Complete DNS investigation workflow
 nadzoring dns health example.com
@@ -1008,6 +1114,7 @@ nadzoring dns check -t ALL -v example.com
 ```
 
 ### DNS Poisoning Detection
+
 ```bash
 # Check if a domain might be censored or poisoned
 nadzoring dns poisoning -v twitter.com
@@ -1020,6 +1127,7 @@ nadzoring dns poisoning -o html --save poisoning_report.html github.com
 ```
 
 ### DNS Performance Benchmarking
+
 ```bash
 # Find fastest DNS server for your location
 nadzoring dns benchmark --queries 20 --parallel
@@ -1032,6 +1140,7 @@ nadzoring dns benchmark -t MX -d gmail.com --queries 15
 ```
 
 ### Port Scanning
+
 ```bash
 # Comprehensive port scan
 nadzoring network-base port-scan --mode full --protocol tcp example.com
@@ -1044,6 +1153,7 @@ nadzoring network-base port-scan -o csv --save network_scan.csv 192.168.1.0/24
 ```
 
 ### HTTP Service Probing
+
 ```bash
 # Monitor web service performance
 nadzoring network-base http-ping --show-headers https://api.example.com/health
@@ -1056,6 +1166,7 @@ nadzoring network-base http-ping -o csv --save http_metrics.csv https://example.
 ```
 
 ### ARP Spoofing Detection
+
 ```bash
 # Detect existing spoofing
 nadzoring arp detect-spoofing eth0
@@ -1068,6 +1179,7 @@ nadzoring arp monitor-spoofing -o json --save arp_alerts.json
 ```
 
 ### Network Path Analysis
+
 ```bash
 # Trace route with timing
 nadzoring network-base traceroute --max-hops 30 github.com
@@ -1083,6 +1195,7 @@ nadzoring network-base connections --state LISTEN
 ```
 
 ### Complete Network Diagnostics
+
 ```bash
 # Run comprehensive network diagnostics
 nadzoring network-base params -v
@@ -1095,6 +1208,7 @@ nadzoring arp cache
 ```
 
 ### Automated Monitoring Script
+
 ```bash
 #!/bin/bash
 # Check DNS health and network status with timestamp
@@ -1126,6 +1240,7 @@ nadzoring arp cache -o csv --save "arp_${TIMESTAMP}.csv"
 ```
 
 ### Quick Website Block Check
+
 ```bash
 # Check if a website might be blocked
 nadzoring dns resolve -t ALL example.com
@@ -1142,6 +1257,7 @@ nadzoring network-base traceroute example.com
 Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request.
 
 **Areas we'd love help with:**
+
 - Additional DNS record type support
 - New validation rules for health checks
 - CDN network database expansion
@@ -1152,6 +1268,7 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 - New network diagnostic commands
 
 **Workflow:**
+
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit your changes (`git commit -m 'Add amazing feature'`)

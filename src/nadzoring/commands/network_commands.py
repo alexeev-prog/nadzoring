@@ -31,7 +31,7 @@ from nadzoring.network_base.service_on_port import get_service_on_port
 from nadzoring.network_base.traceroute import TraceHop, traceroute
 from nadzoring.network_base.whois_lookup import whois_lookup
 from nadzoring.utils.decorators import common_cli_options
-from nadzoring.utils.formatters import _format_scan_results
+from nadzoring.utils.formatters import format_scan_results
 
 logger: Logger = get_logger(__name__)
 
@@ -178,7 +178,7 @@ def port_scan_command(
             if result:
                 scan_results.extend(result)
 
-    return _format_scan_results(scan_results, show_closed=show_closed)
+    return format_scan_results(scan_results, show_closed=show_closed)
 
 
 def _parse_port_specification(
@@ -276,7 +276,7 @@ def geolocation_command(
 @network_group.command(name="params")
 @common_cli_options(include_quiet=True)
 def params_command(*, quiet: bool = False) -> list[dict]:
-    """Get network parameters for the current system."""
+    """Display network configuration parameters for the current system."""
     data = network_param() or {}
     data["local_ipv4"] = get_local_ipv4()
     return [data]

@@ -1,4 +1,4 @@
-"""Reverse DNS lookup functionality for IP address to hostname resolution."""
+"""Reverse DNS lookup functionality for IP-address-to-hostname resolution."""
 
 from logging import Logger
 from time import time
@@ -22,51 +22,32 @@ def reverse_dns(
     """
     Perform a reverse DNS lookup to resolve an IP address to a hostname.
 
-    Queries the PTR (Pointer) record for a given IP address to find the
-    associated domain name. This is the reverse of a forward DNS lookup.
+    Queries the PTR record for *ip_address* using
+    :func:`dns.reversename.from_address` for automatic in-addr.arpa /
+    ip6.arpa name construction.
 
     Args:
-        ip_address: IPv4 or IPv6 address to look up (e.g., "8.8.8.8" or
-                   "2001:4860:4860::8888").
-        nameserver: Optional specific nameserver IP address to use for the
-                   query. If None, uses the system default resolvers.
+        ip_address: IPv4 or IPv6 address to look up (e.g. ``"8.8.8.8"``).
+        nameserver: Optional nameserver IP. ``None`` uses the system default.
 
     Returns:
-        Dict[str, Union[str, float, None]]: A dictionary containing:
-            - ip_address (str): The original IP address that was queried.
-            - hostname (Optional[str]): The resolved hostname if found,
-              with trailing dot removed. None if resolution failed.
-            - error (Optional[str]): Error message if lookup failed,
-              None for successful lookups.
-            - response_time (Optional[float]): Query response time in
-              milliseconds, rounded to 2 decimal places. None if the
-              query failed before timing could be recorded.
+        Dict with the following keys:
+
+        * ``ip_address`` — the original address queried
+        * ``hostname`` — resolved hostname (trailing dot stripped), or
+          ``None`` if lookup failed
+        * ``error`` — error message string on failure, ``None`` on success
+        * ``response_time`` — query time in milliseconds (2 d.p.), or
+          ``None`` when the query timed out
 
     Examples:
-        >>> # Successful reverse lookup
         >>> result = reverse_dns("8.8.8.8")
-        >>> print(result["hostname"])
+        >>> result["hostname"]
         'dns.google'
-        >>> print(f"Resolved in {result['response_time']}ms")
 
-        >>> # Failed reverse lookup
         >>> result = reverse_dns("192.168.1.1")
-        >>> print(result["error"])
+        >>> result["error"]
         'No PTR record'
-
-        >>> # Using specific nameserver
-        >>> result = reverse_dns("1.1.1.1", nameserver="9.9.9.9")
-
-    Notes:
-        - The function handles both IPv4 and IPv6 addresses automatically
-          using dns.reversename.from_address().
-        - Common errors include:
-            - "No PTR record": IP exists but has no reverse DNS configured
-            - "No reverse DNS": IP range has no reverse delegation
-            - "Query timeout": DNS server didn't respond in time
-        - Trailing dots are automatically removed from hostnames for
-          consistency with forward lookup formats.
-        - Debug logs are generated for failed lookups to aid troubleshooting.
 
     """
     result: dict[str, str | float | None] = {
@@ -90,8 +71,14 @@ def reverse_dns(
         result["error"] = "No PTR record"
     except dns.resolver.NXDOMAIN:
         result["error"] = "No reverse DNS"
-    except Exception as e:
-        result["error"] = str(e)
-        logger.debug("Reverse DNS failed for %s: %s", ip_address, e)
+    except dns.exception.Timeout:
+        result["error"] = "Query timeout"
+        logger.debug("Reverse DNS timeout for %s", ip_address)
+    except ValueError as exc:
+        result["error"] = f"Invalid IP address: {exc}"
+        logger.debug("Invalid IP for reverse lookup: %s", ip_address)
+    except Exception as exc:
+        result["error"] = str(exc)
+        logger.debug("Reverse DNS failed for %s: %s", ip_address, exc)
 
     return result

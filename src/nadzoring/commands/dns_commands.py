@@ -1,7 +1,6 @@
 """DNS-related CLI commands."""
 
-from logging import Logger
-from typing import Any, NoReturn
+from typing import Any
 
 import click
 from tqdm import tqdm
@@ -30,7 +29,58 @@ from nadzoring.utils.formatters import (
     format_dns_trace,
 )
 
-logger: Logger = get_logger(__name__)
+logger = get_logger(__name__)
+
+_QUERYABLE_RECORD_TYPES = [t for t in RECORD_TYPES if t != "PTR"]
+
+_RECORD_TYPE_CHOICE = click.Choice(
+    ["A", "AAAA", "CNAME", "MX", "NS", "TXT", "ALL"],
+    case_sensitive=False,
+)
+
+
+def _expand_record_types(record_types: tuple[str, ...]) -> list[str]:
+    """
+    Expand a tuple of CLI record type tokens into a concrete list.
+
+    Replaces the special ``ALL`` token with every queryable record type
+    (i.e. all types except ``PTR``).
+
+    Args:
+        record_types: Tuple of record type strings as received from Click.
+
+    Returns:
+        Flat list of concrete DNS record type strings.
+
+    """
+    if "ALL" in record_types:
+        return _QUERYABLE_RECORD_TYPES
+    return list(record_types)
+
+
+def _make_pbar(
+    total: int,
+    desc: str,
+    unit: str,
+    *,
+    quiet: bool,
+) -> tqdm | None:
+    """
+    Create a tqdm progress bar or return ``None`` when in quiet mode.
+
+    Args:
+        total: Total number of steps.
+        desc: Initial description label.
+        unit: Unit label for the progress bar.
+        quiet: When ``True``, no progress bar is created.
+
+    Returns:
+        A :class:`tqdm` instance, or ``None`` if *quiet* is ``True``.
+
+    """
+    if quiet:
+        return None
+    return tqdm(total=total, desc=desc, unit=unit)
 
 
 @click.group(name="dns")
@@ -46,20 +96,18 @@ def dns_group() -> None:
     "-t",
     "record_types",
     multiple=True,
-    type=click.Choice(
-        ["A", "AAAA", "CNAME", "MX", "NS", "TXT", "ALL"], case_sensitive=False
-    ),
+    type=_RECORD_TYPE_CHOICE,
     default=["A"],
-    help="DNS record type to query (can be used multiple times, use ALL for all types)",
+    help="DNS record type to query (repeatable; use ALL for every type).",
 )
-@click.option("--nameserver", "-n", help="Specific nameserver to use")
-@click.option("--short", is_flag=True, help="Compact output (like host command style)")
-@click.option("--show-ttl", is_flag=True, help="Show TTL for each record")
+@click.option("--nameserver", "-n", help="Specific nameserver to use.")
+@click.option("--short", is_flag=True, help="Compact output (like host command style).")
+@click.option("--show-ttl", is_flag=True, help="Include TTL value for each record.")
 @click.option(
     "--format-style",
     type=click.Choice(["standard", "bind", "host", "dig"]),
     default="standard",
-    help="Output format style",
+    help="Output format style.",
 )
 def resolve_command(
     domains: tuple[str, ...],
@@ -70,24 +118,18 @@ def resolve_command(
     quiet: bool,
     short: bool,
     show_ttl: bool,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Resolve DNS records for one or more domains."""
-    types_to_query: list[str] = list(record_types)
-    if "ALL" in types_to_query:
-        types_to_query: list[str] = [t for t in RECORD_TYPES if t != "PTR"]
-
-    results: list[dict[str, dict[str, DNSResult] | str]] = []
+    types_to_query = _expand_record_types(record_types)
     total = len(domains) * len(types_to_query)
 
-    pbar: tqdm[NoReturn] | None = (
-        None if quiet else tqdm(total=total, desc="Resolving DNS records", unit="query")
-    )
+    pbar = _make_pbar(total, "Resolving DNS records", "query", quiet=quiet)
+
+    results: list[dict[str, Any]] = []
 
     for domain in domains:
-        domain_result: dict[str, dict[str, DNSResult] | str] = {
-            "domain": domain,
-            "records": {},
-        }
+        domain_result: dict[str, Any] = {"domain": domain, "records": {}}
+
         for rtype in types_to_query:
             result: DNSResult = resolve_dns(
                 domain=domain,
@@ -96,41 +138,55 @@ def resolve_command(
                 include_ttl=show_ttl,
             )
             domain_result["records"][rtype] = result
+
             if pbar:
                 pbar.set_description(f"Resolving {domain} {rtype}")
                 pbar.update(1)
+
         results.append(domain_result)
 
     if pbar:
         pbar.close()
 
-    if short:
-        return format_dns_record(results, style="short")
-    return format_dns_record(results, style=format_style, show_ttl=show_ttl)
+    style = "short" if short else format_style
+    return format_dns_record(results, style=style, show_ttl=show_ttl)
 
 
 @dns_group.command(name="reverse")
 @common_cli_options(include_quiet=True)
 @click.argument("ip_addresses", nargs=-1, required=True)
-@click.option("--nameserver", "-n", help="Specific nameserver to use")
+@click.option("--nameserver", "-n", help="Specific nameserver to use.")
 def reverse_command(
     ip_addresses: tuple[str, ...],
     nameserver: str | None,
     *,
     quiet: bool,
-) -> list[dict]:
-    """Perform reverse DNS lookup for one or more IP addresses."""
-    results: list[dict[str, float | str | None]] = []
-    total: int = len(ip_addresses)
+) -> list[dict[str, Any]]:
+    """
+    Perform a reverse DNS lookup for one or more IP addresses.
 
-    pbar: tqdm[NoReturn] | None = (
-        None
-        if quiet
-        else tqdm(total=total, desc="Performing reverse lookups", unit="lookup")
+    Queries PTR records to resolve each IP address to its associated
+    hostname. Results include the original IP, resolved hostname, and
+    query response time.
+
+    Args:
+        ip_addresses: One or more IP addresses to look up.
+        nameserver: Optional DNS server to use instead of the system default.
+        quiet: Suppress progress bar output when ``True``.
+
+    Returns:
+        List of dicts with keys ``ip_address``, ``hostname``, and
+        ``response_time_ms`` for each queried address.
+
+    """
+    pbar = _make_pbar(
+        len(ip_addresses), "Performing reverse lookups", "lookup", quiet=quiet
     )
 
+    results: list[dict[str, Any]] = []
+
     for ip in ip_addresses:
-        result: dict[str, float | str | None] = reverse_dns(ip, nameserver)
+        result: dict[str, Any] = reverse_dns(ip, nameserver)
         results.append(
             {
                 "ip_address": result["ip_address"],
@@ -138,6 +194,7 @@ def reverse_command(
                 "response_time_ms": result["response_time"] or "N/A",
             }
         )
+
         if pbar:
             pbar.set_description(f"Looking up {ip}")
             pbar.update(1)
@@ -151,17 +208,15 @@ def reverse_command(
 @dns_group.command(name="check")
 @common_cli_options(include_quiet=True)
 @click.argument("domains", nargs=-1, required=True)
-@click.option("--nameserver", "-n", help="Specific nameserver to use")
+@click.option("--nameserver", "-n", help="Specific nameserver to use.")
 @click.option(
     "--types",
     "-t",
     "record_types",
     multiple=True,
-    type=click.Choice(
-        ["A", "AAAA", "CNAME", "MX", "NS", "TXT", "ALL"], case_sensitive=False
-    ),
+    type=_RECORD_TYPE_CHOICE,
     default=["ALL"],
-    help="DNS record types to check (can be used multiple times, default ALL)",
+    help="DNS record types to check (repeatable; default: ALL).",
 )
 def check_command(
     domains: tuple[str, ...],
@@ -169,20 +224,31 @@ def check_command(
     record_types: tuple[str, ...],
     *,
     quiet: bool,
-) -> list[dict]:
-    """Perform comprehensive DNS check for one or more domains."""
-    types_to_check: list[str] = list(record_types)
-    if "ALL" in types_to_check:
-        types_to_check: list[str] = [t for t in RECORD_TYPES if t != "PTR"]
+) -> list[dict[str, Any]]:
+    """
+    Perform a comprehensive DNS check for one or more domains.
 
-    results: list[dict[str, str]] = []
-    total: int = len(domains)
+    Validates MX priorities, SPF/DKIM TXT records, and reports any
+    resolution errors per record type.
 
-    pbar: tqdm[NoReturn] | None = (
-        None
-        if quiet
-        else tqdm(total=total, desc="Performing DNS checks", unit="domain")
-    )
+    Args:
+        domains: One or more domain names to check.
+        nameserver: Optional DNS server to use instead of the system default.
+        record_types: Record types to query; ``ALL`` expands to every
+            supported type except PTR.
+        quiet: Suppress progress bar output when ``True``.
+
+    Returns:
+        List of dicts with one entry per domain. Each entry contains the
+        domain name and a column per record type with its resolved value
+        or an error string.
+
+    """
+    types_to_check = _expand_record_types(record_types)
+
+    pbar = _make_pbar(len(domains), "Performing DNS checks", "domain", quiet=quiet)
+
+    results: list[dict[str, Any]] = []
 
     for domain in domains:
         result: DetailedCheckResult = check_dns(
@@ -193,22 +259,23 @@ def check_command(
             validate_txt=True,
         )
 
-        formatted_result: dict[str, str] = {"domain": domain}
+        row: dict[str, Any] = {"domain": domain}
+
         for rtype in types_to_check:
             if rtype in result["records"] and result["records"][rtype]:
                 if rtype == "MX":
-                    formatted: list[str] = [
+                    row[rtype] = "\n".join(
                         f"Priority {r}" for r in result["records"][rtype]
-                    ]
-                    formatted_result[rtype] = "\n".join(formatted)
+                    )
                 else:
-                    formatted_result[rtype] = "\n".join(result["records"][rtype])
+                    row[rtype] = "\n".join(result["records"][rtype])
             elif rtype in result["errors"]:
-                formatted_result[rtype] = f"[{result['errors'][rtype]}]"
+                row[rtype] = f"[{result['errors'][rtype]}]"
             else:
-                formatted_result[rtype] = "None"
+                row[rtype] = "None"
 
-        results.append(formatted_result)
+        results.append(row)
+
         if pbar:
             pbar.set_description(f"Checking {domain}")
             pbar.update(1)
@@ -222,14 +289,30 @@ def check_command(
 @dns_group.command(name="trace")
 @common_cli_options(include_quiet=True)
 @click.argument("domain", required=True)
-@click.option("--nameserver", "-n", help="Starting nameserver to use")
+@click.option("--nameserver", "-n", help="Starting nameserver to use.")
 def trace_command(
     domain: str,
     nameserver: str | None,
     *,
     quiet: bool,
-) -> list[dict]:
-    """Trace the DNS resolution path for a domain."""
+) -> list[dict[str, Any]]:
+    """
+    Trace the full DNS resolution path for a domain.
+
+    Walks the DNS delegation chain from the specified (or root) nameserver
+    down to the authoritative answer, recording each intermediate hop.
+
+    Args:
+        domain: Domain name to trace.
+        nameserver: Optional starting nameserver; defaults to a root server.
+        quiet: Suppress informational messages when ``True``.
+
+    Returns:
+        List of dicts representing each hop in the resolution path, with
+        columns ``hop``, ``nameserver``, ``response_time``, ``records``,
+        and ``next``.
+
+    """
     if not quiet:
         click.echo(f"Tracing DNS for {domain}...", err=True)
 
@@ -245,7 +328,7 @@ def trace_command(
     "-s",
     multiple=True,
     default=["8.8.8.8", "1.1.1.1", "9.9.9.9"],
-    help="DNS servers to compare (can be used multiple times)",
+    help="DNS servers to compare (repeatable).",
 )
 @click.option(
     "--type",
@@ -253,7 +336,7 @@ def trace_command(
     "record_types",
     multiple=True,
     default=["A"],
-    help="Record types to compare",
+    help="Record types to compare (repeatable).",
 )
 def compare_command(
     domain: str,
@@ -261,14 +344,29 @@ def compare_command(
     record_types: tuple[str, ...],
     *,
     quiet: bool,
-) -> list[dict]:
-    """Compare DNS responses from different servers."""
-    types_to_query: list[str] = list(record_types) if record_types else ["A"]
-    total: int = len(servers) * len(types_to_query)
+) -> list[dict[str, Any]]:
+    """
+    Compare DNS responses for a domain across multiple nameservers.
 
-    pbar: tqdm[NoReturn] | None = (
-        None if quiet else tqdm(total=total, desc="Comparing DNS servers", unit="query")
-    )
+    Queries each listed server for the requested record types and flags
+    any discrepancies in the returned records or response times.
+
+    Args:
+        domain: Domain name to compare.
+        servers: DNS servers to query; defaults to Google, Cloudflare, and Quad9.
+        record_types: Record types to compare; defaults to ``A``.
+        quiet: Suppress progress bar output when ``True``.
+
+    Returns:
+        List of dicts with per-server, per-type results including
+        ``server``, ``type``, ``response_time_ms``, ``records``, and
+        ``differs`` flag.
+
+    """
+    types_to_query = list(record_types) if record_types else ["A"]
+    total = len(servers) * len(types_to_query)
+
+    pbar = _make_pbar(total, "Comparing DNS servers", "query", quiet=quiet)
 
     def progress_callback() -> None:
         if pbar:
@@ -290,14 +388,30 @@ def compare_command(
 @dns_group.command(name="health")
 @common_cli_options(include_quiet=True)
 @click.argument("domain", required=True)
-@click.option("--nameserver", "-n", help="Nameserver to use for checks")
+@click.option("--nameserver", "-n", help="Nameserver to use for health checks.")
 def health_command(
     domain: str,
     nameserver: str | None,
     *,
     quiet: bool,
-) -> list[dict]:
-    """Perform comprehensive DNS health check for a domain."""
+) -> list[dict[str, Any]]:
+    """
+    Run a comprehensive DNS health check for a domain.
+
+    Scores the domain's DNS configuration (0-100) by checking record
+    presence, MX priority uniqueness, SPF completeness, DKIM key presence,
+    and correct CNAME usage.
+
+    Args:
+        domain: Domain name to check.
+        nameserver: Optional DNS server to use instead of the system default.
+        quiet: Suppress informational messages when ``True``.
+
+    Returns:
+        List of dicts with the overall health score, status, issues, and
+        warnings; followed by per-record-type score rows.
+
+    """
     if not quiet:
         click.echo(f"Checking DNS health for {domain}...", err=True)
 
@@ -311,33 +425,36 @@ def health_command(
     "--domain",
     "-d",
     default="google.com",
-    help="Domain to use for benchmarking",
+    show_default=True,
+    help="Domain to use for benchmarking.",
 )
 @click.option(
     "--servers",
     "-s",
     multiple=True,
-    help="DNS servers to benchmark (default: public DNS servers)",
+    help="DNS servers to benchmark (repeatable; defaults to public resolvers).",
 )
 @click.option(
     "--type",
     "-t",
     "record_type",
     default="A",
+    show_default=True,
     type=click.Choice(["A", "AAAA", "MX", "NS", "TXT"]),
-    help="Record type to query",
+    help="Record type to query.",
 )
 @click.option(
     "--queries",
     "-q",
     default=10,
+    show_default=True,
     type=int,
-    help="Number of queries per server",
+    help="Number of queries per server.",
 )
 @click.option(
     "--parallel/--sequential",
     default=True,
-    help="Run benchmarks in parallel or sequentially",
+    help="Run benchmarks in parallel (default) or sequentially.",
 )
 def benchmark_command(
     domain: str,
@@ -347,21 +464,37 @@ def benchmark_command(
     *,
     parallel: bool,
     quiet: bool,
-) -> list[dict]:
-    """Benchmark the performance of DNS servers."""
+) -> list[dict[str, Any]]:
+    """
+    Benchmark DNS server performance.
+
+    Sends a configurable number of queries to each server and reports
+    average, minimum, and maximum response times together with a success
+    rate percentage.
+
+    Args:
+        domain: Domain used for each test query.
+        servers: Servers to benchmark; when empty the default public
+            resolvers are used.
+        record_type: DNS record type to query.
+        queries: Number of queries sent to each server.
+        parallel: Run queries concurrently when ``True``.
+        quiet: Suppress progress bar output when ``True``.
+
+    Returns:
+        List of dicts with ``server``, ``avg_ms``, ``min_ms``, ``max_ms``,
+        and ``success_rate`` for each benchmarked server.
+
+    """
     if not quiet:
         click.echo(f"Benchmarking DNS servers for {domain}...", err=True)
 
     servers_list: list[str] | None = list(servers) if servers else None
-    total_servers: int = len(servers_list) if servers_list else 10
+    total_servers = len(servers_list) if servers_list else 10
 
-    pbar: tqdm[NoReturn] | None = (
-        None
-        if quiet
-        else tqdm(total=total_servers, desc="Benchmarking servers", unit="server")
-    )
+    pbar = _make_pbar(total_servers, "Benchmarking servers", "server", quiet=quiet)
 
-    def progress_callback(server: str, index: int) -> None:
+    def progress_callback(server: str, _index: int) -> None:
         if pbar:
             pbar.set_description(f"Benchmarking {server}")
             pbar.update(1)
@@ -397,26 +530,28 @@ def benchmark_command(
     "--control-server",
     "-c",
     default="8.8.8.8",
-    help="Control server to compare against",
+    show_default=True,
+    help="Trusted control server used as reference.",
 )
 @click.option(
     "--test-servers",
     "-t",
     multiple=True,
-    help="Test servers to check (default: all public DNS servers)",
+    help="Servers to test against the control.",
 )
 @click.option(
     "--type",
     "-T",
     "record_type",
     default="A",
-    help="Record type to check",
+    show_default=True,
+    help="Record type to check.",
 )
 @click.option(
     "--additional-types",
     "-a",
     multiple=True,
-    help="Additional record types to check on control server",
+    help="Extra record types to query on the control server.",
 )
 def poisoning_command(
     domain: str,
@@ -426,8 +561,28 @@ def poisoning_command(
     additional_types: tuple[str, ...],
     *,
     quiet: bool,
-) -> list[dict]:
-    """Check for signs of DNS poisoning or censorship."""
+) -> list[dict[str, Any]]:
+    """
+    Detect DNS poisoning, censorship, or CDN routing variations for a domain.
+
+    Compares the control server's response against multiple test servers and
+    classifies any discrepancies by severity (INFO → CRITICAL). CDN and
+    anycast patterns are recognised as legitimate and reported separately.
+
+    Args:
+        domain: Domain name to test.
+        control_server: Trusted DNS server used as the reference baseline.
+        test_servers: Additional servers to compare against the control.
+        record_type: Primary record type to check.
+        additional_types: Extra record types to query on the control server.
+        quiet: Suppress informational messages when ``True``.
+
+    Returns:
+        Formatted list of analysis rows covering control server details,
+        summary statistics, CDN detection, IP diversity, consensus data,
+        and a final verdict.
+
+    """
     test_servers_list: list[str] | None = list(test_servers) if test_servers else None
     additional: list[str] | None = list(additional_types) if additional_types else None
 

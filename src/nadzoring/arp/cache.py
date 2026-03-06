@@ -1,12 +1,12 @@
 """ARP cache retrieval functionality."""
 
+import ipaddress
 import re
 import subprocess
 import sys
 from re import Match
 from shutil import which
 from subprocess import CompletedProcess
-from typing import Literal
 
 from nadzoring.arp.models import ARPEntry, ARPEntryState
 
@@ -37,10 +37,10 @@ class ARPCache:
         Detect the current platform.
 
         Returns:
-            Platform identifier: 'linux', 'windows', or 'darwin'.
+            Platform identifier: ``"linux"``, ``"windows"``, or ``"darwin"``.
 
         Raises:
-            ARPCacheRetrievalError: If platform is not supported.
+            ARPCacheRetrievalError: If the platform is not supported.
 
         """
         if sys.platform.startswith("linux"):
@@ -53,13 +53,13 @@ class ARPCache:
 
     def get_cache(self) -> list[ARPEntry]:
         """
-        Get ARP cache entries for current platform.
+        Get ARP cache entries for the current platform.
 
         Automatically selects the appropriate method based on the detected
         platform and returns parsed ARP entries.
 
         Returns:
-            List of ARPEntry objects representing the current ARP cache.
+            List of :class:`ARPEntry` objects representing the current ARP cache.
 
         Raises:
             ARPCacheRetrievalError: If cache retrieval fails or platform is
@@ -72,15 +72,13 @@ class ARPCache:
 
     def _get_linux_cache(self) -> list[ARPEntry]:
         """
-        Get ARP cache on Linux using 'ip neigh'.
-
-        Executes 'ip neigh show' command and parses the output.
+        Get ARP cache on Linux using ``ip neigh``.
 
         Returns:
-            List of ARPEntry objects from Linux ARP cache.
+            List of :class:`ARPEntry` objects from the Linux ARP cache.
 
         Raises:
-            ARPCacheRetrievalError: If 'ip' command not found or execution fails.
+            ARPCacheRetrievalError: If ``ip`` command not found or fails.
 
         """
         ip_path: str | None = which("ip")
@@ -95,21 +93,18 @@ class ARPCache:
                 check=True,
             )
             return self._parse_ip_neigh_output(result.stdout)
-        except subprocess.CalledProcessError as e:
-            raise ARPCacheRetrievalError(f"Failed to get ARP cache: {e}") from e
+        except subprocess.CalledProcessError as exc:
+            raise ARPCacheRetrievalError(f"Failed to get ARP cache: {exc}") from exc
 
     def _get_windows_cache(self) -> list[ARPEntry]:
         """
-        Get ARP cache on Windows using 'arp -a'.
-
-        Executes 'arp -a' command and parses the output with Windows-specific
-        encoding (CP866).
+        Get ARP cache on Windows using ``arp -a``.
 
         Returns:
-            List of ARPEntry objects from Windows ARP cache.
+            List of :class:`ARPEntry` objects from the Windows ARP cache.
 
         Raises:
-            ARPCacheRetrievalError: If 'arp' command not found or execution fails.
+            ARPCacheRetrievalError: If ``arp`` command not found or fails.
 
         """
         arp_path = which("arp")
@@ -125,20 +120,18 @@ class ARPCache:
                 encoding="cp866" if sys.platform == "win32" else None,
             )
             return self._parse_windows_arp_output(result.stdout)
-        except subprocess.CalledProcessError as e:
-            raise ARPCacheRetrievalError(f"Failed to get ARP cache: {e}") from e
+        except subprocess.CalledProcessError as exc:
+            raise ARPCacheRetrievalError(f"Failed to get ARP cache: {exc}") from exc
 
     def _get_darwin_cache(self) -> list[ARPEntry]:
         """
-        Get ARP cache on macOS using 'arp -a'.
-
-        Executes 'arp -a' command and parses the output.
+        Get ARP cache on macOS using ``arp -a``.
 
         Returns:
-            List of ARPEntry objects from macOS ARP cache.
+            List of :class:`ARPEntry` objects from the macOS ARP cache.
 
         Raises:
-            ARPCacheRetrievalError: If 'arp' command not found or execution fails.
+            ARPCacheRetrievalError: If ``arp`` command not found or fails.
 
         """
         arp_path: str | None = which("arp")
@@ -153,18 +146,18 @@ class ARPCache:
                 check=True,
             )
             return self._parse_darwin_arp_output(result.stdout)
-        except subprocess.CalledProcessError as e:
-            raise ARPCacheRetrievalError(f"Failed to get ARP cache: {e}") from e
+        except subprocess.CalledProcessError as exc:
+            raise ARPCacheRetrievalError(f"Failed to get ARP cache: {exc}") from exc
 
     def _parse_ip_neigh_output(self, output: str) -> list[ARPEntry]:
         """
-        Parse 'ip neigh' output on Linux.
+        Parse ``ip neigh`` output on Linux.
 
         Args:
-            output: Raw output from 'ip neigh show' command.
+            output: Raw output from ``ip neigh show``.
 
         Returns:
-            List of parsed ARPEntry objects.
+            List of parsed :class:`ARPEntry` objects.
 
         """
         entries: list[ARPEntry] = []
@@ -187,7 +180,7 @@ class ARPCache:
                     interface = parts[i + 1]
                 elif part == "lladdr" and i + 1 < len(parts):
                     mac = parts[i + 1]
-                elif part in [
+                elif part in {
                     "REACHABLE",
                     "STALE",
                     "DELAY",
@@ -195,7 +188,7 @@ class ARPCache:
                     "FAILED",
                     "PERMANENT",
                     "NOARP",
-                ]:
+                }:
                     state = ARPEntryState(part.lower())
 
             if interface:
@@ -212,13 +205,13 @@ class ARPCache:
 
     def _parse_windows_arp_output(self, output: str) -> list[ARPEntry]:
         """
-        Parse 'arp -a' output on Windows.
+        Parse ``arp -a`` output on Windows.
 
         Args:
-            output: Raw output from Windows 'arp -a' command.
+            output: Raw output from Windows ``arp -a``.
 
         Returns:
-            List of parsed ARPEntry objects.
+            List of parsed :class:`ARPEntry` objects.
 
         """
         entries: list[ARPEntry] = []
@@ -236,10 +229,10 @@ class ARPCache:
                 continue
 
             parts = line.split()
-            if len(parts) >= 3 and self._is_valid_ip(parts[0]):
+            if len(parts) >= 3 and _is_valid_ip(parts[0]):
                 ip: str = parts[0]
                 mac: str = parts[1].replace("-", ":")
-                state: Literal[ARPEntryState.PERMANENT, ARPEntryState.REACHABLE] = (
+                state: ARPEntryState = (
                     ARPEntryState.REACHABLE
                     if parts[2].lower() == "dynamic"
                     else ARPEntryState.PERMANENT
@@ -258,13 +251,13 @@ class ARPCache:
 
     def _parse_darwin_arp_output(self, output: str) -> list[ARPEntry]:
         """
-        Parse 'arp -a' output on macOS.
+        Parse ``arp -a`` output on macOS.
 
         Args:
-            output: Raw output from macOS 'arp -a' command.
+            output: Raw output from macOS ``arp -a``.
 
         Returns:
-            List of parsed ARPEntry objects.
+            List of parsed :class:`ARPEntry` objects.
 
         """
         entries: list[ARPEntry] = []
@@ -285,22 +278,19 @@ class ARPCache:
 
         return entries
 
-    @staticmethod
-    def _is_valid_ip(ip: str) -> bool:
-        """
-        Simple IP validation.
 
-        Args:
-            ip: IP address string to validate.
+def _is_valid_ip(ip: str) -> bool:
+    """
+    Check whether *ip* is a valid IPv4 address string.
 
-        Returns:
-            True if string is a valid IPv4 address, False otherwise.
+    Args:
+        ip: String to validate.
 
-        """
-        parts: list[str] = ip.split(".")
-        if len(parts) != 4:
-            return False
-        try:
-            return all(0 <= int(part) <= 255 for part in parts)
-        except ValueError:
-            return False
+    Returns:
+        ``True`` if the string represents a valid IPv4 address.
+
+    """
+    try:
+        return ipaddress.ip_address(ip).version == 4
+    except ValueError:
+        return False

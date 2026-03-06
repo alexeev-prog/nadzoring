@@ -1,9 +1,9 @@
 """
 DNS poisoning detection and analysis functionality.
 
-This module provides tools to detect DNS cache poisoning, censorship,
-and manipulation by comparing responses from multiple DNS resolvers
-across different geographic locations and providers.
+This module detects DNS cache poisoning, censorship, and manipulation by
+comparing responses from multiple resolvers across different geographic
+locations and providers.
 """
 
 import ipaddress
@@ -18,8 +18,6 @@ from nadzoring.logger import get_logger
 
 logger: Logger = get_logger(__name__)
 
-
-# Mapping of DNS server IPs to their provider names
 SERVER_NAMES: dict[str, str] = {
     "8.8.8.8": "Google",
     "8.8.4.4": "Google",
@@ -37,10 +35,8 @@ SERVER_NAMES: dict[str, str] = {
     "94.140.14.14": "AdGuard",
     "94.140.15.15": "AdGuard",
 }
-"""Mapping of public DNS server IP addresses to their provider names."""
+"""Mapping of public DNS server IPs to their provider names."""
 
-
-# Mapping of DNS server IPs to their geographic locations (country codes)
 SERVER_COUNTRIES: dict[str, str] = {
     "8.8.8.8": "US",
     "8.8.4.4": "US",
@@ -58,10 +54,8 @@ SERVER_COUNTRIES: dict[str, str] = {
     "94.140.14.14": "CY",
     "94.140.15.15": "CY",
 }
-"""Mapping of public DNS server IP addresses to their country codes."""
+"""Mapping of public DNS server IPs to their country codes."""
 
-
-# Known CDN and cloud provider network ranges
 CDN_NETWORKS: dict[str, list[str]] = {
     "Google": [
         "8.8.8.0/24",
@@ -96,12 +90,6 @@ CDN_NETWORKS: dict[str, list[str]] = {
         "103.21.244.0/22",
         "103.22.200.0/22",
         "103.31.4.0/22",
-        "141.101.64.0/18",
-        "108.162.192.0/18",
-        "190.93.240.0/20",
-        "188.114.96.0/20",
-        "197.234.240.0/22",
-        "198.41.128.0/17",
     ],
     "Akamai": [
         "23.32.0.0/11",
@@ -145,8 +133,6 @@ CDN_NETWORKS: dict[str, list[str]] = {
         "18.64.0.0/14",
         "52.124.0.0/14",
         "52.222.0.0/15",
-        "54.230.0.0/16",
-        "54.239.128.0/18",
     ],
     "CloudFront": [
         "13.32.0.0/15",
@@ -252,18 +238,15 @@ class IPAnalysisResult(TypedDict, total=False):
     """
     Result of IP address pattern analysis.
 
-    Contains detailed statistics and classifications for a set of IP addresses
-    returned by DNS resolvers.
-
     Attributes:
-        count: Total number of IP addresses analyzed.
-        unique: Number of unique IP addresses in the set.
+        count: Total number of IP addresses analysed.
+        unique: Number of unique IP addresses.
         ipv4: Count of IPv4 addresses.
         ipv6: Count of IPv6 addresses.
-        private: Count of private (RFC 1918) IP addresses.
-        reserved: Count of reserved IP addresses.
-        owners: List of inferred owners for each IP (CDN/provider names).
-        countries: List of inferred countries for each IP.
+        private: Count of private (RFC 1918) addresses.
+        reserved: Count of reserved addresses.
+        owners: Inferred provider name for each IP.
+        countries: Inferred country for each IP (simplified heuristic).
 
     """
 
@@ -282,25 +265,27 @@ class InconsistencyDetail(TypedDict):
     Detailed information about a DNS response inconsistency.
 
     Attributes:
-        server: IP address of the DNS server that returned inconsistent results.
-        server_name: Provider name of the server (from SERVER_NAMES).
-        server_country: Country code of the server (from SERVER_COUNTRIES).
-        type: Type of inconsistency ('error_mismatch', 'record_mismatch',
-              'cdn_variation', 'ttl_mismatch').
-        severity: Impact severity ('high', 'medium', 'low', 'info').
-        control_error: Error from control server (if any).
-        test_error: Error from test server (if any).
-        control_records: Records from control server.
-        test_records: Records from test server.
-        control_ttl: TTL from control server.
-        test_ttl: TTL from test server.
-        diff: Difference description or value.
-        common_records: Records common to both responses (optional).
-        control_analysis: IP analysis for control records.
-        test_analysis: IP analysis for test records.
-        owner: Common owner if applicable (optional).
-        control_owner: Owner of control records (optional).
-        test_owner: Owner of test records (optional).
+        server: IP of the DNS server that returned inconsistent results.
+        server_name: Provider name from :data:`SERVER_NAMES`.
+        server_country: Country code from :data:`SERVER_COUNTRIES`.
+        type: Inconsistency class — ``"error_mismatch"``,
+            ``"record_mismatch"``, ``"cdn_variation"``, or
+            ``"ttl_mismatch"``.
+        severity: Impact level — ``"high"``, ``"medium"``, ``"low"``,
+            or ``"info"``.
+        control_error: Error from the control server, if any.
+        test_error: Error from the test server, if any.
+        control_records: Records returned by the control server.
+        test_records: Records returned by the test server.
+        control_ttl: TTL from the control server.
+        test_ttl: TTL from the test server.
+        diff: Description or numeric magnitude of the difference.
+        common_records: Records present in both responses.
+        control_analysis: IP analysis for the control records.
+        test_analysis: IP analysis for the test records.
+        owner: Shared owner when both sides belong to the same network.
+        control_owner: Inferred owner of the control records.
+        test_owner: Inferred owner of the test records.
 
     """
 
@@ -326,26 +311,26 @@ class InconsistencyDetail(TypedDict):
 
 class MetricsResult(TypedDict):
     """
-    Calculated metrics from DNS poisoning test.
+    Aggregated metrics from a DNS poisoning test run.
 
     Attributes:
         total_tested: Number of test servers queried.
-        poisoned: Boolean indicating if poisoning was detected.
-        confidence: Confidence score (0-100) of poisoning detection.
-        mismatches: Count of record mismatches found.
-        cdn_variations: Count of CDN variations found.
-        cdn_detected: Whether CDN usage was detected.
-        cdn_owner: Name of detected CDN provider.
-        cdn_percentage: Percentage of IPs belonging to CDN.
-        unique_ips_seen: Number of unique IPs across all test results.
-        ip_diversity: Number of IPs not in control results.
-        control_ip_count: Number of IPs in control results.
-        consensus_top: Top 3 most common IPs and their counts.
+        poisoned: Whether poisoning indicators exceed the threshold.
+        confidence: Confidence score (0-100).
+        mismatches: Count of record mismatches.
+        cdn_variations: Count of CDN-related IP variations.
+        cdn_detected: Whether CDN usage was identified.
+        cdn_owner: Name of the detected CDN provider.
+        cdn_percentage: Percentage of IPs belonging to the CDN.
+        unique_ips_seen: Unique IPs across all test results.
+        ip_diversity: IPs not present in the control result.
+        control_ip_count: IPs returned by the control server.
+        consensus_top: Top-3 most common IPs with counts.
         consensus_rate: Percentage of servers returning the most common IP.
-        geo_diversity: Number of unique countries among test servers.
-        anycast_likely: Whether anycast routing is likely.
-        cdn_likely: Whether CDN usage is likely.
-        poisoning_likely: Whether poisoning is likely.
+        geo_diversity: Unique countries among test servers.
+        anycast_likely: Whether anycast routing is probable.
+        cdn_likely: Whether CDN usage is probable.
+        poisoning_likely: Whether deliberate poisoning is probable.
 
     """
 
@@ -370,39 +355,32 @@ class MetricsResult(TypedDict):
 
 def get_ip_owner(ip: str) -> str:
     """
-    Determine the owner/provider of an IP address based on known network ranges.
+    Determine the CDN/cloud provider for an IP address.
 
-    Checks if the IP address falls within any known CDN or cloud provider
-    network ranges defined in CDN_NETWORKS.
+    Only IPv4 addresses are matched against :data:`CDN_NETWORKS`; IPv6
+    always returns ``"Unknown"``.
 
     Args:
-        ip: IP address string to check (IPv4 or IPv6).
+        ip: IP address string to check.
 
     Returns:
-        str: Name of the owner/provider if found in known networks,
-             otherwise returns "Unknown".
+        Provider name if a match is found, otherwise ``"Unknown"``.
 
     Examples:
         >>> get_ip_owner("8.8.8.8")
         'Google'
-        >>> get_ip_owner("1.1.1.1")
-        'Cloudflare'
         >>> get_ip_owner("192.168.1.1")
         'Unknown'
-
-    Notes:
-        - Only IPv4 networks are currently supported in CDN_NETWORKS.
-        - IPv6 addresses will always return "Unknown" with current data.
-        - Exceptions during IP parsing are logged and result in "Unknown".
 
     """
     try:
         ip_obj: IPv4Address | IPv6Address = ipaddress.ip_address(ip)
-        if ip_obj.version == 4:
-            for owner, networks in CDN_NETWORKS.items():
-                for network in networks:
-                    if ipaddress.ip_address(ip) in ipaddress.ip_network(network):
-                        return owner
+        if ip_obj.version != 4:
+            return "Unknown"
+        for owner, networks in CDN_NETWORKS.items():
+            for network in networks:
+                if ip_obj in ipaddress.ip_network(network):
+                    return owner
     except Exception:
         logger.exception("Error determining IP owner for %s", ip)
     return "Unknown"
@@ -410,81 +388,47 @@ def get_ip_owner(ip: str) -> str:
 
 def is_likely_cdn(ips: list[str]) -> tuple[bool, str, float]:
     """
-    Determine if a set of IP addresses likely belongs to a CDN.
+    Determine whether a set of IP addresses likely belongs to a CDN.
 
-    Analyzes IP addresses to detect patterns consistent with Content Delivery
-    Network (CDN) usage, such as multiple IPs from the same provider.
+    More than 50 % of IPs belonging to the same known provider is treated
+    as CDN usage.
 
     Args:
-        ips: List of IP address strings to analyze.
+        ips: IP address strings to analyse.
 
     Returns:
-        Tuple[bool, str, float]: A tuple containing:
-            - is_cdn: True if more than 50% of IPs belong to the same known CDN.
-            - owner: Name of the most common CDN owner found.
-            - percentage: Percentage of IPs belonging to that owner (0-100).
+        Three-tuple of ``(is_cdn, owner_name, percentage)``.
+        Returns ``(False, "Unknown", 0.0)`` for empty input.
 
     Examples:
-        >>> ips = ["1.1.1.1", "1.0.0.1", "8.8.8.8"]
-        >>> is_likely_cdn(ips)
+        >>> is_likely_cdn(["1.1.1.1", "1.0.0.1", "8.8.8.8"])
         (True, 'Cloudflare', 66.7)
-
-        >>> ips = ["192.168.1.1", "10.0.0.1"]
-        >>> is_likely_cdn(ips)
-        (False, 'Unknown', 0.0)
-
-    Notes:
-        - Returns (False, "Unknown", 0.0) for empty input.
-        - The 50% threshold is used to determine CDN likelihood.
-        - Only considers IPs from known CDN networks.
 
     """
     if not ips:
         return False, "Unknown", 0.0
 
-    owners: list[str] = []
-    for ip in ips:
-        owner: str = get_ip_owner(ip)
-        if owner != "Unknown":
-            owners.append(owner)
+    known_owners = [get_ip_owner(ip) for ip in ips if get_ip_owner(ip) != "Unknown"]
 
-    if not owners:
+    if not known_owners:
         return False, "Unknown", 0.0
 
-    owner_counts: Counter[str] = Counter(owners)
-    most_common: tuple[str, int] = owner_counts.most_common(1)[0]
-    owner = most_common[0]
-    percentage: float = (most_common[1] / len(ips)) * 100
+    most_common_owner, most_common_count = Counter(known_owners).most_common(1)[0]
+    percentage = (most_common_count / len(ips)) * 100
+    is_cdn = percentage > 50 and most_common_owner != "Unknown"
 
-    is_cdn: bool = percentage > 50 and owner != "Unknown"
-    return is_cdn, owner, percentage
+    return is_cdn, most_common_owner, percentage
 
 
 def _analyze_ip_patterns(records: list[str]) -> IPAnalysisResult:
     """
-    Analyze IP address patterns for anomalies and characteristics.
-
-    Performs detailed analysis of IP addresses returned in DNS responses,
-    classifying them by type, ownership, and geographic patterns.
+    Analyse IP address patterns for characteristics and ownership.
 
     Args:
-        records: List of IP address strings to analyze.
+        records: IP address strings to analyse.
 
     Returns:
-        IPAnalysisResult: Dictionary containing analysis results:
-            - count: Total number of records analyzed
-            - unique: Number of unique IPs
-            - ipv4: Count of IPv4 addresses
-            - ipv6: Count of IPv6 addresses
-            - private: Count of private IPs (RFC 1918)
-            - reserved: Count of reserved IPs
-            - owners: List of inferred owners for each IP
-            - countries: List of inferred countries for each IP
-
-    Notes:
-        - Returns empty dict for empty input.
-        - Country inference is simplified based on IP prefixes.
-        - Exceptions during analysis are logged and skipped.
+        :class:`IPAnalysisResult` dict, or an empty dict for empty input.
 
     """
     if not records:
@@ -504,31 +448,30 @@ def _analyze_ip_patterns(records: list[str]) -> IPAnalysisResult:
     for record in records:
         try:
             ip: IPv4Address | IPv6Address = ipaddress.ip_address(record)
-            if ip.version == 4:
-                result["ipv4"] += 1
-            else:
-                result["ipv6"] += 1
-
-            if ip.is_private:
-                result["private"] += 1
-            if ip.is_reserved:
-                result["reserved"] += 1
-
-            owner: str = get_ip_owner(record)
-            result["owners"].append(owner)
-
-            # Simplified country inference based on IP prefixes
-            if record.startswith(("8.", "4.", "64.", "74.")):
-                result["countries"].append("US")
-            elif record.startswith(("1.", "2.")):
-                result["countries"].append("EU")
-            elif record.startswith(("3.", "13.")):
-                result["countries"].append("Asia")
-            else:
-                result["countries"].append("Unknown")
-        except Exception:
-            logger.exception("Error analyzing IP pattern for %s", record)
+        except ValueError:
+            logger.debug("Skipping invalid IP in pattern analysis: %s", record)
             continue
+
+        if ip.version == 4:
+            result["ipv4"] += 1
+        else:
+            result["ipv6"] += 1
+
+        if ip.is_private:
+            result["private"] += 1
+        if ip.is_reserved:
+            result["reserved"] += 1
+
+        result["owners"].append(get_ip_owner(record))
+
+        if record.startswith(("8.", "4.", "64.", "74.")):
+            result["countries"].append("US")
+        elif record.startswith(("1.", "2.")):
+            result["countries"].append("EU")
+        elif record.startswith(("3.", "13.")):
+            result["countries"].append("Asia")
+        else:
+            result["countries"].append("Unknown")
 
     return result
 
@@ -537,157 +480,100 @@ def _compare_results(
     control: DNSResult,
     test: DNSResult,
     server: str,
-    domain: str,
 ) -> InconsistencyDetail | None:
     """
-    Compare control and test DNS results for inconsistencies.
+    Compare control and test DNS results and return an inconsistency if found.
 
-    Performs detailed comparison between a trusted control resolver and a
-    test resolver, identifying various types of discrepancies.
+    Detects ``error_mismatch``, ``record_mismatch``, ``cdn_variation``, and
+    ``ttl_mismatch`` (> 1 hour) types.
 
     Args:
-        control: DNSResult from the control (trusted) resolver.
-        test: DNSResult from the test resolver to compare.
+        control: DNS result from the trusted control resolver.
+        test: DNS result from the test resolver.
         server: IP address of the test server.
-        domain: Domain name being tested (for context).
 
     Returns:
-        Optional[InconsistencyDetail]: Detailed inconsistency information if
-            discrepancies are found, None if results are consistent.
-
-    Types of inconsistencies detected:
-        - error_mismatch: Different error states between resolvers
-        - record_mismatch: Different record sets returned
-        - cdn_variation: Different but CDN-related records (informational)
-        - ttl_mismatch: Significant TTL differences (>1 hour)
-
-    Notes:
-        - Severity levels: high (potential poisoning), medium (suspicious),
-          low (minor), info (informational)
-        - CDN variations are flagged as "info" severity
-        - Error mismatches with NXDOMAIN are considered high severity
+        :class:`InconsistencyDetail` when a discrepancy is found,
+        ``None`` when results are consistent.
 
     """
-    if test["error"] != control["error"]:
-        severity: Literal["high", "medium"] = (
-            "high" if "NXDOMAIN" in str(test["error"]) else "medium"
+    base: dict = {
+        "server": server,
+        "server_name": SERVER_NAMES.get(server, "Unknown"),
+        "server_country": SERVER_COUNTRIES.get(server, "Unknown"),
+        "control_error": control.get("error"),
+        "test_error": test.get("error"),
+        "control_records": control.get("records", []),
+        "test_records": test.get("records", []),
+        "control_ttl": control.get("ttl"),
+        "test_ttl": test.get("ttl"),
+        "common_records": [],
+        "control_analysis": {},
+        "test_analysis": {},
+        "owner": None,
+        "control_owner": None,
+        "test_owner": None,
+        "diff": None,
+    }
+
+    if test.get("error") != control.get("error"):
+        level: Literal["high", "medium"] = (
+            "high" if "NXDOMAIN" in str(test.get("error")) else "medium"
         )
+        return {**base, "type": "error_mismatch", "severity": level}
+
+    if test.get("error") or control.get("error"):
+        return None
+
+    control_analysis = _analyze_ip_patterns(control.get("records", []))
+    test_analysis = _analyze_ip_patterns(test.get("records", []))
+
+    if test.get("records") != control.get("records"):
+        control_owners = set(control_analysis.get("owners", []))
+        test_owners = set(test_analysis.get("owners", []))
+        common = set(control.get("records", [])).intersection(test.get("records", []))
+
+        if control_owners and test_owners and control_owners == test_owners:
+            return {
+                **base,
+                "type": "cdn_variation",
+                "severity": "info",
+                "diff": "cdn_nodes",
+                "common_records": list(common),
+                "control_analysis": control_analysis,
+                "test_analysis": test_analysis,
+                "owner": next(iter(control_owners), "Unknown"),
+            }
+
+        mismatch_severity: Literal["high", "medium"] = "medium" if common else "high"
+        control_owners_list = control_analysis.get("owners", [])
+        test_owners_list = test_analysis.get("owners", [])
+
         return {
-            "server": server,
-            "server_name": SERVER_NAMES.get(server, "Unknown"),
-            "server_country": SERVER_COUNTRIES.get(server, "Unknown"),
-            "type": "error_mismatch",
-            "severity": severity,
-            "control_error": control["error"],
-            "test_error": test["error"],
-            "control_records": [],
-            "test_records": [],
-            "control_ttl": control["ttl"],
-            "test_ttl": test["ttl"],
-            "diff": None,
-            "common_records": [],
-            "control_analysis": {},
-            "test_analysis": {},
-            "owner": None,
-            "control_owner": None,
-            "test_owner": None,
+            **base,
+            "type": "record_mismatch",
+            "severity": mismatch_severity,
+            "diff": "records_differ",
+            "common_records": list(common),
+            "control_analysis": control_analysis,
+            "test_analysis": test_analysis,
+            "control_owner": (
+                control_owners_list[0] if control_owners_list else "Unknown"
+            ),
+            "test_owner": test_owners_list[0] if test_owners_list else "Unknown",
         }
 
-    if not test["error"] and not control["error"]:
-        control_analysis: IPAnalysisResult = _analyze_ip_patterns(control["records"])
-        test_analysis: IPAnalysisResult = _analyze_ip_patterns(test["records"])
-
-        if test["records"] != control["records"]:
-            control_owners: set[str] = set(control_analysis.get("owners", []))
-            test_owners: set[str] = set(test_analysis.get("owners", []))
-
-            # Check if this is a CDN variation (different IPs, same owner)
-            if control_owners and test_owners and control_owners == test_owners:
-                return {
-                    "server": server,
-                    "server_name": SERVER_NAMES.get(server, "Unknown"),
-                    "server_country": SERVER_COUNTRIES.get(server, "Unknown"),
-                    "type": "cdn_variation",
-                    "severity": "info",
-                    "control_error": None,
-                    "test_error": None,
-                    "control_records": control["records"],
-                    "test_records": test["records"],
-                    "control_ttl": control["ttl"],
-                    "test_ttl": test["ttl"],
-                    "diff": "cdn_nodes",
-                    "common_records": list(
-                        set(control["records"]).intersection(set(test["records"]))
-                    ),
-                    "control_analysis": control_analysis,
-                    "test_analysis": test_analysis,
-                    "owner": (
-                        next(iter(control_owners)) if control_owners else "Unknown"
-                    ),
-                    "control_owner": None,
-                    "test_owner": None,
-                }
-
-            # Regular record mismatch
-            severity: Literal["high", "medium"] = "high"
-            common: set[str] = set(control["records"]).intersection(
-                set(test["records"])
-            )
-            if common:
-                severity = "medium"
-
-            return {
-                "server": server,
-                "server_name": SERVER_NAMES.get(server, "Unknown"),
-                "server_country": SERVER_COUNTRIES.get(server, "Unknown"),
-                "type": "record_mismatch",
-                "severity": severity,
-                "control_error": None,
-                "test_error": None,
-                "control_records": control["records"],
-                "test_records": test["records"],
-                "control_ttl": control["ttl"],
-                "test_ttl": test["ttl"],
-                "diff": "records_differ",
-                "common_records": list(common) if common else [],
-                "control_analysis": control_analysis,
-                "test_analysis": test_analysis,
-                "control_owner": (
-                    control_analysis.get("owners", ["Unknown"])[0]
-                    if control_analysis.get("owners")
-                    else "Unknown"
-                ),
-                "test_owner": (
-                    test_analysis.get("owners", ["Unknown"])[0]
-                    if test_analysis.get("owners")
-                    else "Unknown"
-                ),
-                "owner": None,
-            }
-
-        # Check for significant TTL differences
-        ttl_diff: int = abs((test["ttl"] or 0) - (control["ttl"] or 0))
-        if ttl_diff > 3600:  # More than 1 hour difference
-            return {
-                "server": server,
-                "server_name": SERVER_NAMES.get(server, "Unknown"),
-                "server_country": SERVER_COUNTRIES.get(server, "Unknown"),
-                "type": "ttl_mismatch",
-                "severity": "low",
-                "control_error": None,
-                "test_error": None,
-                "control_records": control["records"],
-                "test_records": test["records"],
-                "control_ttl": control["ttl"],
-                "test_ttl": test["ttl"],
-                "diff": ttl_diff,
-                "common_records": control["records"],
-                "control_analysis": control_analysis,
-                "test_analysis": test_analysis,
-                "owner": None,
-                "control_owner": None,
-                "test_owner": None,
-            }
+    ttl_diff = abs((test.get("ttl") or 0) - (control.get("ttl") or 0))
+    if ttl_diff > 3600:
+        return {
+            **base,
+            "type": "ttl_mismatch",
+            "severity": "low",
+            "diff": ttl_diff,
+            "common_records": control.get("records", []),
+            "control_analysis": control_analysis,
+            "test_analysis": test_analysis,
+        }
 
     return None
 
@@ -700,90 +586,60 @@ def check_dns_poisoning(
     additional_types: list[str] | None = None,
 ) -> PoisoningCheckResult:
     """
-    Check for signs of DNS poisoning, censorship, or manipulation.
+    Check for DNS poisoning, censorship, or manipulation.
 
-    Comprehensive DNS poisoning detection by comparing responses from multiple
-    DNS resolvers against a trusted control resolver. Analyzes patterns,
-    identifies inconsistencies, and provides confidence scoring.
+    Queries the trusted *control_server* and compares its response against
+    multiple test servers. CDN and anycast patterns are classified separately
+    from true poisoning.
 
     Args:
-        domain: Domain name to test for poisoning (e.g., "example.com").
-        control_server: Trusted DNS server IP to use as baseline comparison.
-                       Defaults to Google DNS (8.8.8.8).
-        test_servers: List of DNS server IPs to test. If None, uses
-                     get_public_dns_servers() for a comprehensive list.
-        record_type: DNS record type to query for poisoning detection.
-                    Defaults to "A" records.
-        additional_types: Optional list of additional record types to query
-                         from the control server for extra context.
+        domain: Domain to test (e.g. ``"example.com"``).
+        control_server: Trusted DNS server IP used as the baseline.
+            Defaults to ``"8.8.8.8"`` (Google DNS).
+        test_servers: Test server IPs. ``None`` uses
+            :func:`~nadzoring.dns_lookup.utils.get_public_dns_servers`.
+        record_type: Record type to query. Defaults to ``"A"``.
+        additional_types: Extra record types to query on the control server
+            for additional context.
 
     Returns:
-        PoisoningCheckResult: Comprehensive poisoning analysis containing:
-            - domain: The tested domain
-            - record_type: The record type queried
-            - control_server: IP of control server used
-            - control_result: DNSResult from control server
-            - test_results: Dict mapping test servers to their DNSResults
-            - inconsistencies: List of detected inconsistencies
-            - poisoned: Boolean indicating poisoning detection
-            - poisoning_level: Severity level ("NONE", "LOW", "MEDIUM",
-                              "HIGH", "CRITICAL", "SUSPICIOUS")
-            - confidence: Confidence score (0-100)
-            - Additional metrics including CDN detection, geo-diversity,
-              consensus analysis, and more
+        :class:`PoisoningCheckResult` with comprehensive analysis fields.
 
     Examples:
-        >>> # Basic poisoning check
         >>> result = check_dns_poisoning("example.com")
         >>> if result["poisoned"]:
-        ...     print(f"Poisoning detected! Confidence: {result['confidence']}%")
+        ...     print(f"Confidence: {result['confidence']}%")
 
-        >>> # Check multiple record types
-        >>> result = check_dns_poisoning("example.com", additional_types=["MX", "TXT"])
-
-        >>> # Custom test servers
         >>> result = check_dns_poisoning(
         ...     "example.com", test_servers=["1.1.1.1", "9.9.9.9"]
         ... )
-
-    Notes:
-        - High confidence (>80%) with mismatches indicates probable poisoning
-        - CDN variations are flagged as informational, not poisoning
-        - Geographic diversity of test servers improves detection accuracy
-        - Timeout errors are logged but don't affect poisoning detection
 
     """
     if test_servers is None:
         test_servers = get_public_dns_servers()
 
-    # Query control server
     control_result: DNSResult = resolve_with_timer(
         domain, record_type, control_server, include_ttl=True
     )
 
-    # Get additional record types if requested
-    additional_results: dict[str, DNSResult] | None = _get_additional_records(
+    additional_results = _get_additional_records(
         domain, additional_types, control_server
     )
 
-    # Test all DNS servers and collect inconsistencies
     test_results, inconsistencies, mismatches, cdn_variations = _test_dns_servers(
-        domain, record_type, test_servers, control_result
+        domain, record_type, test_servers, control_result, control_server
     )
 
-    # Calculate metrics
     metrics: MetricsResult = _calculate_metrics(
         test_results, control_result, mismatches, cdn_variations
     )
 
-    # Determine poisoning level
-    poisoning_level: str = _determine_poisoning_level(
+    poisoning_level = _determine_poisoning_level(
         metrics["confidence"],
         poisoned=metrics["poisoned"],
         cdn_detected=metrics["cdn_detected"],
     )
 
-    # Build and return final result
     return _build_result(
         domain=domain,
         record_type=record_type,
@@ -800,33 +656,29 @@ def check_dns_poisoning(
 
 
 def _get_additional_records(
-    domain: str, additional_types: list[str] | None, control_server: str
+    domain: str,
+    additional_types: list[str] | None,
+    control_server: str,
 ) -> dict[str, DNSResult] | None:
     """
-    Retrieve additional DNS record types from the control server.
-
-    Queries the control server for supplementary record types to provide
-    additional context for poisoning analysis.
+    Retrieve supplementary DNS record types from the control server.
 
     Args:
         domain: Domain name to query.
-        additional_types: List of record types to query (e.g., ["MX", "TXT"]).
-        control_server: IP address of the control DNS server.
+        additional_types: Record types to query, or ``None`` to skip.
+        control_server: Control server IP address.
 
     Returns:
-        Optional[Dict[str, DNSResult]]: Dictionary mapping record types to
-            their DNS results, or None if no additional types requested.
+        Dict mapping record types to results, or ``None`` when
+        *additional_types* is empty/``None``.
 
     """
     if not additional_types:
         return None
-
-    additional_results: dict[str, DNSResult] = {}
-    for rtype in additional_types:
-        additional_results[rtype] = resolve_with_timer(
-            domain, rtype, control_server, include_ttl=True
-        )
-    return additional_results
+    return {
+        rtype: resolve_with_timer(domain, rtype, control_server, include_ttl=True)
+        for rtype in additional_types
+    }
 
 
 def _test_dns_servers(
@@ -834,25 +686,23 @@ def _test_dns_servers(
     record_type: str,
     test_servers: list[str],
     control_result: DNSResult,
+    control_server: str,
 ) -> tuple[dict[str, DNSResult], list[InconsistencyDetail], int, int]:
     """
-    Test all DNS servers and collect results and inconsistencies.
+    Query all test servers and collect comparison results.
 
-    Queries each test server and compares results against the control server
-    to identify discrepancies.
+    The control server itself is skipped if it appears in *test_servers*.
 
     Args:
-        domain: Domain name to query.
+        domain: Domain to query.
         record_type: DNS record type to query.
-        test_servers: List of test server IP addresses.
-        control_result: DNSResult from the control server for comparison.
+        test_servers: Test server IP addresses.
+        control_result: Result from the control server for comparison.
+        control_server: Control server IP (skipped when encountered in list).
 
     Returns:
-        Tuple containing:
-            - test_results: Dict mapping server IPs to their DNSResults
-            - inconsistencies: List of detected inconsistencies
-            - mismatches: Count of record mismatches found
-            - cdn_variations: Count of CDN variations found
+        Four-tuple of ``(test_results, inconsistencies, mismatches,
+        cdn_variations)``.
 
     """
     test_results: dict[str, DNSResult] = {}
@@ -861,8 +711,7 @@ def _test_dns_servers(
     cdn_variations = 0
 
     for server in test_servers:
-        # Skip the control server itself
-        if server == next(iter(SERVER_NAMES.keys())):  # 8.8.8.8
+        if server == control_server:
             continue
 
         test_result: DNSResult = resolve_with_timer(
@@ -870,16 +719,16 @@ def _test_dns_servers(
         )
         test_results[server] = test_result
 
-        inconsistency: InconsistencyDetail | None = _compare_results(
-            control_result, test_result, server, domain
-        )
-        if inconsistency:
-            inconsistencies.append(inconsistency)
+        inconsistency = _compare_results(control_result, test_result, server)
+        if inconsistency is None:
+            continue
 
-            if inconsistency["type"] == "record_mismatch":
-                mismatches += 1
-            elif inconsistency["type"] == "cdn_variation":
-                cdn_variations += 1
+        inconsistencies.append(inconsistency)
+
+        if inconsistency["type"] == "record_mismatch":
+            mismatches += 1
+        elif inconsistency["type"] == "cdn_variation":
+            cdn_variations += 1
 
     return test_results, inconsistencies, mismatches, cdn_variations
 
@@ -891,65 +740,52 @@ def _calculate_metrics(
     cdn_variations: int,
 ) -> MetricsResult:
     """
-    Calculate various metrics from test results for poisoning analysis.
-
-    Computes statistical measures including confidence scores, diversity
-    metrics, and pattern detection for the poisoning check.
+    Compute poisoning-detection metrics from test results.
 
     Args:
-        test_results: Dict mapping server IPs to their DNSResults.
-        control_result: DNSResult from the control server.
-        mismatches: Count of record mismatches found.
-        cdn_variations: Count of CDN variations found.
+        test_results: Dict mapping server IPs to DNS results.
+        control_result: Control server DNS result.
+        mismatches: Count of record mismatches.
+        cdn_variations: Count of CDN-related variations.
 
     Returns:
-        MetricsResult: Comprehensive metrics including confidence scores,
-            diversity measures, and detection flags.
+        :class:`MetricsResult` with confidence, diversity, and detection flags.
 
     """
-    total_tested: int = len(test_results)
+    total = len(test_results)
 
-    # Collect all IPs from test results
-    all_ips: list[str] = []
-    for res in test_results.values():
-        all_ips.extend(res.get("records", []))
+    all_ips: list[str] = [
+        ip for res in test_results.values() for ip in res.get("records", [])
+    ]
 
-    # Check for CDN usage
     is_cdn, cdn_owner, cdn_percentage = is_likely_cdn(all_ips)
 
-    # Calculate confidence based on CDN detection
     if is_cdn:
-        poisoned: bool = mismatches > 0 and cdn_percentage < 50
-        confidence: float = (mismatches / total_tested * 100) if total_tested > 0 else 0
-        confidence = confidence * (1 - cdn_percentage / 100)
+        poisoned = mismatches > 0 and cdn_percentage < 50
+        confidence = (
+            mismatches / total * 100 * (1 - cdn_percentage / 100) if total > 0 else 0.0
+        )
     else:
-        poisoned: bool = mismatches > 0
-        confidence: float = (mismatches / total_tested * 100) if total_tested > 0 else 0
+        poisoned = mismatches > 0
+        confidence = (mismatches / total * 100) if total > 0 else 0.0
 
-    # Calculate IP diversity
-    control_ips: set[str] = set(control_result.get("records", []))
-    all_test_ips: set[str] = set()
-    for res in test_results.values():
-        all_test_ips.update(res.get("records", []))
+    control_ips = set(control_result.get("records", []))
+    all_test_ips: set[str] = {
+        ip for res in test_results.values() for ip in res.get("records", [])
+    }
 
-    # Find consensus IPs
-    consensus_ips: Counter[str] = Counter()
-    for res in test_results.values():
-        for ip in res.get("records", []):
-            consensus_ips[ip] += 1
-
-    top_consensus: list[tuple[str, int]] = consensus_ips.most_common(3)
-    consensus_rate: float = (
-        (top_consensus[0][1] / total_tested * 100)
-        if top_consensus and total_tested > 0
-        else 0
+    ip_counter: Counter[str] = Counter(
+        ip for res in test_results.values() for ip in res.get("records", [])
+    )
+    top_consensus = ip_counter.most_common(3)
+    consensus_rate = (
+        (top_consensus[0][1] / total * 100) if top_consensus and total > 0 else 0.0
     )
 
-    # Geographic diversity
-    geo_diversity: int = len({SERVER_COUNTRIES.get(s, "Unknown") for s in test_results})
+    geo_diversity = len({SERVER_COUNTRIES.get(s, "Unknown") for s in test_results})
 
     return {
-        "total_tested": total_tested,
+        "total_tested": total,
         "poisoned": poisoned,
         "confidence": round(confidence, 1),
         "mismatches": mismatches,
@@ -965,47 +801,38 @@ def _calculate_metrics(
         "geo_diversity": geo_diversity,
         "anycast_likely": len(all_test_ips) > 3 and len(control_ips) == 1,
         "cdn_likely": is_cdn,
-        "poisoning_likely": mismatches == total_tested
-        and not is_cdn
-        and len(control_ips) > 1
-        and len(all_test_ips) == 1,
+        "poisoning_likely": (
+            mismatches == total
+            and not is_cdn
+            and len(control_ips) > 1
+            and len(all_test_ips) == 1
+        ),
     }
 
 
 def _determine_poisoning_level(
-    confidence: float, *, poisoned: bool, cdn_detected: bool
+    confidence: float,
+    *,
+    poisoned: bool,
+    cdn_detected: bool,
 ) -> str:
     """
-    Determine the poisoning level based on confidence and CDN detection.
-
-    Maps numerical confidence and detection flags to a human-readable
-    poisoning severity level.
+    Map confidence and detection flags to a poisoning severity label.
 
     Args:
         confidence: Confidence score (0-100).
-        poisoned: Whether poisoning was detected.
-        cdn_detected: Whether CDN usage was detected.
+        poisoned: Whether poisoning indicators exceed the threshold.
+        cdn_detected: Whether CDN usage was identified.
 
     Returns:
-        str: Poisoning level classification:
-            - "NONE": No poisoning detected
-            - "LOW": Low confidence poisoning or with CDN
-            - "MEDIUM": Moderate confidence poisoning
-            - "HIGH": High confidence poisoning
-            - "CRITICAL": Very high confidence poisoning
-            - "SUSPICIOUS": High confidence but CDN detected
-
-    Notes:
-        - Returns "NONE" if not poisoned
-        - CDN detection downgrades severity to "SUSPICIOUS" for high confidence
+        One of ``"NONE"``, ``"LOW"``, ``"MEDIUM"``, ``"HIGH"``,
+        ``"CRITICAL"``, or ``"SUSPICIOUS"``.
 
     """
     if not poisoned:
         return "NONE"
     if cdn_detected:
-        if confidence > 80:
-            return "SUSPICIOUS"
-        return "LOW"
+        return "SUSPICIOUS" if confidence > 80 else "LOW"
     if confidence > 80:
         return "CRITICAL"
     if confidence > 50:
@@ -1029,46 +856,41 @@ def _build_result(
     poisoning_level: str,
 ) -> PoisoningCheckResult:
     """
-    Build the final poisoning check result dictionary.
-
-    Constructs the comprehensive PoisoningCheckResult by combining all
-    collected data, analyses, and metrics.
+    Assemble the final :class:`PoisoningCheckResult` from collected data.
 
     Args:
         domain: Tested domain name.
         record_type: DNS record type queried.
-        control_server: Control server IP address.
-        control_result: DNSResult from control server.
+        control_server: Control server IP.
+        control_result: DNS result from the control server.
         test_results: Dict of test server results.
-        additional_results: Optional additional record type results.
-        inconsistencies: List of detected inconsistencies.
+        additional_results: Optional supplementary record results.
+        inconsistencies: Detected inconsistencies.
         mismatches: Count of record mismatches.
         cdn_variations: Count of CDN variations.
-        metrics: Calculated metrics from _calculate_metrics.
-        poisoning_level: Determined poisoning level string.
+        metrics: Aggregated metrics from :func:`_calculate_metrics`.
+        poisoning_level: Poisoning severity label.
 
     Returns:
-        PoisoningCheckResult: Complete poisoning check result with all fields
-            populated according to the type definition.
+        Complete :class:`PoisoningCheckResult`.
 
     """
-    # Analyze control server records
-    control_analysis: IPAnalysisResult = _analyze_ip_patterns(
-        control_result.get("records", [])
-    )
+    control_analysis = _analyze_ip_patterns(control_result.get("records", []))
+    control_owners = control_analysis.get("owners", [])
 
-    # Format consensus top with additional metadata
-    formatted_consensus = []
-    if metrics["consensus_top"]:
-        for ip, count in metrics["consensus_top"]:
-            formatted_consensus.append(
-                {
-                    "ip": ip,
-                    "count": count,
-                    "percentage": round(count / metrics["total_tested"] * 100, 1),
-                    "owner": get_ip_owner(ip),
-                }
-            )
+    formatted_consensus = [
+        {
+            "ip": ip,
+            "count": count,
+            "percentage": (
+                round(count / metrics["total_tested"] * 100, 1)
+                if metrics["total_tested"] > 0
+                else 0.0
+            ),
+            "owner": get_ip_owner(ip),
+        }
+        for ip, count in metrics["consensus_top"]
+    ]
 
     return {
         "domain": domain,
@@ -1078,11 +900,7 @@ def _build_result(
         "control_country": SERVER_COUNTRIES.get(control_server, "Unknown"),
         "control_result": control_result,
         "control_analysis": control_analysis,
-        "control_owner": (
-            control_analysis.get("owners", ["Unknown"])[0]
-            if control_analysis.get("owners")
-            else "Unknown"
-        ),
+        "control_owner": control_owners[0] if control_owners else "Unknown",
         "additional_records": additional_results,
         "test_results": test_results,
         "test_servers_count": metrics["total_tested"],
@@ -1110,22 +928,16 @@ def _build_result(
 
 def _count_severities(inconsistencies: list[InconsistencyDetail]) -> dict[str, int]:
     """
-    Count inconsistencies by severity level.
-
-    Aggregates the count of inconsistencies for each severity category.
+    Aggregate inconsistency counts by severity level.
 
     Args:
-        inconsistencies: List of inconsistency details.
+        inconsistencies: List of inconsistency detail dicts.
 
     Returns:
-        Dict[str, int]: Dictionary mapping severity levels to their counts:
-            - "high": Critical issues
-            - "medium": Suspicious issues
-            - "low": Minor issues
-            - "info": Informational items
+        Dict with ``"high"``, ``"medium"``, ``"low"``, and ``"info"`` keys.
 
     """
-    severity_counts: dict[str, int] = {"high": 0, "medium": 0, "low": 0, "info": 0}
+    counts: dict[str, int] = {"high": 0, "medium": 0, "low": 0, "info": 0}
     for inc in inconsistencies:
-        severity_counts[inc.get("severity", "low")] += 1
-    return severity_counts
+        counts[inc.get("severity", "low")] += 1
+    return counts

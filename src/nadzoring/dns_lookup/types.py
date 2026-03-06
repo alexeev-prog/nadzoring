@@ -2,23 +2,10 @@
 
 from typing import Any, Literal, TypedDict
 
-RecordType: type["RecordType"] = Literal[
+type RecordType = Literal[
     "A", "AAAA", "CNAME", "MX", "NS", "TXT", "PTR", "SOA", "DNSKEY"
 ]
-"""Supported DNS record types for queries and validation.
-
-Type Aliases:
-    RecordType: Literal type restricting values to valid DNS record types:
-        - A: IPv4 address records
-        - AAAA: IPv6 address records
-        - CNAME: Canonical name records (aliases)
-        - MX: Mail exchange records
-        - NS: Nameserver records
-        - TXT: Text records (SPF, DKIM, etc.)
-        - PTR: Pointer records (reverse DNS)
-        - SOA: Start of authority records
-        - DNSKEY: DNS key records (DNSSEC)
-"""
+"""Supported DNS record types for queries and validation."""
 
 RECORD_TYPES: list[str] = [
     "A",
@@ -31,37 +18,27 @@ RECORD_TYPES: list[str] = [
     "SOA",
     "DNSKEY",
 ]
-"""List of all supported DNS record types as strings.
-
-Useful for iterating over all record types or validating input.
-Maintains the same order as the RecordType Literal for consistency.
-"""
+"""List of all supported DNS record type strings."""
 
 
 class DNSResult(TypedDict, total=False):
     """
     DNS resolution result for a single query.
 
-    Represents the outcome of a DNS lookup operation, including resolved records,
-    timing information, and any errors encountered. All fields are optional
-    to accommodate partial results from failed queries.
+    All fields are optional to accommodate partial results from failed queries.
 
     Attributes:
-        domain: The domain name that was queried (e.g., "example.com").
+        domain: The domain name that was queried.
         record_type: The type of DNS record that was requested.
         records: List of resolved record strings. Format varies by record type:
-            - A/AAAA: IP addresses
-            - MX: "priority mailserver" strings
-            - TXT: Concatenated text strings
-            - Others: String representations with trailing dots removed
-        ttl: Time To Live in seconds for the records. None if not available
-             or if include_ttl was False in the query.
-        error: Error message string if resolution failed. None for successful
-               resolutions.
-        response_time: Query response time in milliseconds, rounded to 2 decimal
-                      places. None if the query failed or timed out.
+            A/AAAA — IP addresses; MX — ``"priority mailserver"`` strings;
+            TXT — concatenated text; others — string repr without trailing dots.
+        ttl: Time To Live in seconds, or ``None`` when not requested or unavailable.
+        error: Error message if resolution failed; ``None`` on success.
+        response_time: Query response time in milliseconds (2 d.p.), or ``None``
+            on timeout.
 
-    Example:
+    Examples:
         >>> result: DNSResult = {
         ...     "domain": "example.com",
         ...     "record_type": "A",
@@ -83,27 +60,19 @@ class DNSResult(TypedDict, total=False):
 
 class BenchmarkResult(TypedDict):
     """
-    DNS benchmark results for a single nameserver.
-
-    Comprehensive statistics from performing multiple DNS queries against
-    a specific DNS server, measuring performance and reliability.
+    DNS benchmark statistics for a single nameserver.
 
     Attributes:
         server: IP address of the tested DNS server.
-        avg_response_time: Average response time in milliseconds across
-                          all successful queries.
-        min_response_time: Minimum (fastest) response time observed in
-                          milliseconds.
-        max_response_time: Maximum (slowest) response time observed in
-                          milliseconds.
-        success_rate: Percentage of successful queries as a float between
-                     0.0 and 100.0.
-        total_queries: Total number of queries attempted against the server.
+        avg_response_time: Average response time in milliseconds.
+        min_response_time: Fastest observed response time in milliseconds.
+        max_response_time: Slowest observed response time in milliseconds.
+        success_rate: Percentage of successful queries (0.0-100.0).
+        total_queries: Total number of queries attempted.
         failed_queries: Number of queries that failed or timed out.
-        responses: List of individual response times in milliseconds for
-                  all successful queries, useful for distribution analysis.
+        responses: Individual response times for successful queries.
 
-    Example:
+    Examples:
         >>> result: BenchmarkResult = {
         ...     "server": "8.8.8.8",
         ...     "avg_response_time": 42.5,
@@ -112,7 +81,7 @@ class BenchmarkResult(TypedDict):
         ...     "success_rate": 98.5,
         ...     "total_queries": 100,
         ...     "failed_queries": 2,
-        ...     "responses": [15.2, 23.4, 31.7, ...],
+        ...     "responses": [15.2, 23.4, 31.7],
         ... }
 
     """
@@ -127,60 +96,82 @@ class BenchmarkResult(TypedDict):
     responses: list[float]
 
 
-class PoisoningCheckResult(TypedDict):
+class PoisoningCheckResult(TypedDict, total=False):
     """
     DNS cache poisoning detection result.
 
-    Results from comparing DNS responses from multiple resolvers to detect
-    potential DNS poisoning or spoofing attacks. Identifies inconsistencies
-    between a control resolver (trusted) and test resolvers.
+    Comprehensive analysis comparing responses from multiple resolvers against
+    a trusted control server to detect poisoning, censorship, or manipulation.
 
     Attributes:
-        domain: The domain name that was checked for poisoning.
-        control_result: DNS resolution result from a trusted control resolver
-                       (e.g., 8.8.8.8) used as baseline for comparison.
-        test_results: Dictionary mapping test resolver IP addresses to their
-                     DNS resolution results for the same domain.
-        inconsistencies: List of detected inconsistencies between control and
-                        test resolvers. Each item contains details about the
-                        discrepancy.
-        poisoned: Boolean flag indicating whether poisoning was detected
-                 (True if inconsistencies exceed threshold).
-        confidence: Confidence score as a float between 0.0 and 1.0,
-                   representing the certainty of poisoning detection based
-                   on the number and severity of inconsistencies.
+        domain: The domain name tested for poisoning.
+        record_type: DNS record type queried.
+        control_server: IP address of the trusted control resolver.
+        control_name: Provider name of the control server.
+        control_country: Country code of the control server.
+        control_result: DNS resolution result from the control resolver.
+        control_analysis: IP pattern analysis of control server records.
+        control_owner: Inferred owner of control server IPs.
+        additional_records: Optional extra record types from the control server.
+        test_results: Dict mapping test resolver IPs to their DNS results.
+        test_servers_count: Number of test servers queried.
+        inconsistencies: Detected discrepancies between resolvers.
+        poisoned: ``True`` when poisoning indicators exceed the threshold.
+        poisoning_level: Severity — NONE/LOW/MEDIUM/HIGH/CRITICAL/SUSPICIOUS.
+        confidence: Confidence score (0-100).
+        mismatches: Count of record mismatches.
+        cdn_variations: Count of CDN-related IP variations.
+        cdn_detected: Whether CDN usage was identified.
+        cdn_owner: Name of the detected CDN provider.
+        cdn_percentage: Percentage of IPs belonging to the CDN.
+        severity: Dict mapping severity levels to inconsistency counts.
+        unique_ips_seen: Distinct IPs across all test results.
+        ip_diversity: IPs not present in the control result.
+        control_ip_count: IPs returned by the control server.
+        consensus_top: Top-3 most common IPs with count, percentage, and owner.
+        consensus_rate: Percentage of servers returning the most common IP.
+        geo_diversity: Unique countries among test servers.
+        anycast_likely: ``True`` when anycast routing is probable.
+        cdn_likely: ``True`` when CDN usage is probable.
+        poisoning_likely: ``True`` when deliberate poisoning pattern is probable.
 
-    Example:
+    Examples:
         >>> result: PoisoningCheckResult = {
         ...     "domain": "example.com",
-        ...     "control_result": {...},
-        ...     "test_results": {"1.1.1.1": {...}, "9.9.9.9": {...}},
-        ...     "inconsistencies": [
-        ...         {
-        ...             "resolver": "1.1.1.1",
-        ...             "type": "ip_mismatch",
-        ...             "expected": "93.184.216.34",
-        ...             "got": "192.168.1.1",
-        ...         }
-        ...     ],
-        ...     "poisoned": True,
-        ...     "confidence": 0.95,
+        ...     "poisoned": False,
+        ...     "confidence": 0.0,
+        ...     "poisoning_level": "NONE",
         ... }
 
     """
 
-    server: str
-    avg_response_time: float
-    min_response_time: float
-    max_response_time: float
-    success_rate: float
-    total_queries: int
-    failed_queries: int
-    responses: list[float]
-
     domain: str
+    record_type: str
+    control_server: str
+    control_name: str
+    control_country: str
     control_result: DNSResult
+    control_analysis: dict[str, Any]
+    control_owner: str
+    additional_records: dict[str, DNSResult] | None
     test_results: dict[str, DNSResult]
+    test_servers_count: int
     inconsistencies: list[dict[str, Any]]
     poisoned: bool
+    poisoning_level: str
     confidence: float
+    mismatches: int
+    cdn_variations: int
+    cdn_detected: bool
+    cdn_owner: str
+    cdn_percentage: float
+    severity: dict[str, int]
+    unique_ips_seen: int
+    ip_diversity: int
+    control_ip_count: int
+    consensus_top: list[dict[str, Any]]
+    consensus_rate: float
+    geo_diversity: int
+    anycast_likely: bool
+    cdn_likely: bool
+    poisoning_likely: bool
