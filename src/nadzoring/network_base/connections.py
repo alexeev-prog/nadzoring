@@ -5,7 +5,9 @@ import re
 from dataclasses import dataclass
 from logging import Logger
 from platform import system
+from re import Match
 from subprocess import PIPE, CalledProcessError, check_output
+from typing import Literal, LiteralString
 
 from nadzoring.logger import get_logger
 
@@ -36,8 +38,8 @@ def _parse_ss_output(raw: str) -> list[ConnectionEntry]:
 
     """
     entries: list[ConnectionEntry] = []
-    lines = raw.strip().splitlines()
-    if len(lines) < 2:  # skip if only header or empty
+    lines: list[str] = raw.strip().splitlines()
+    if len(lines) < 2:
         return entries
 
     for line in lines[1:]:
@@ -45,10 +47,10 @@ def _parse_ss_output(raw: str) -> list[ConnectionEntry]:
         if len(parts) < 5:
             continue
 
-        proto = parts[0]
-        state = parts[1]
-        local = parts[4] if len(parts) > 4 else ""
-        remote = parts[5] if len(parts) > 5 else ""
+        proto: str = parts[0]
+        state: str = parts[1]
+        local: str = parts[4] if len(parts) > 4 else ""
+        remote: str = parts[5] if len(parts) > 5 else ""
 
         pid: str | None = None
         process: str | None = None
@@ -57,7 +59,7 @@ def _parse_ss_output(raw: str) -> list[ConnectionEntry]:
                 with contextlib.suppress(IndexError):
                     pid = part.split("pid=")[1].split(",")[0].rstrip(")")
             if part.startswith('users:(("'):
-                proc_match = re.search(r'users:\(\("([^"]+)"', part)
+                proc_match: Match[str] | None = re.search(r'users:\(\("([^"]+)"', part)
                 if proc_match:
                     process = proc_match.group(1)
 
@@ -89,11 +91,11 @@ def _parse_netstat_output(raw: str) -> list[ConnectionEntry]:
     entries: list[ConnectionEntry] = []
 
     for line in raw.splitlines():
-        parts = line.split()
+        parts: list[str] = line.split()
         if not parts or parts[0] not in ("TCP", "UDP"):
             continue
 
-        proto = parts[0]
+        proto: Literal["TCP", "UDP"] = parts[0]
         if proto == "TCP" and len(parts) >= 5:
             entries.append(
                 ConnectionEntry(
@@ -150,9 +152,9 @@ def _get_linux_connections(
     include_process: bool,
 ) -> list[ConnectionEntry]:
     """Get active connections on Linux using ss."""
-    flags = "-tuna" + ("p" if include_process else "")
+    flags: LiteralString = "-tuna" + ("p" if include_process else "")
     try:
-        raw = check_output(  # noqa: S602
+        raw: str = check_output(  # noqa: S602
             f"ss {flags}",
             shell=True,
             stderr=PIPE,
@@ -161,7 +163,7 @@ def _get_linux_connections(
         logger.exception("Failed to run ss on Linux")
         return []
 
-    entries = _parse_ss_output(raw)
+    entries: list[ConnectionEntry] = _parse_ss_output(raw)
     return _filter_entries(entries, protocol=protocol, state_filter=state_filter)
 
 
@@ -172,7 +174,7 @@ def _get_windows_connections(
 ) -> list[ConnectionEntry]:
     """Get active connections on Windows using netstat."""
     try:
-        raw = check_output(  # noqa: S602
+        raw: str = check_output(  # noqa: S602
             "netstat -ano",  # noqa: S607
             shell=True,
             stderr=PIPE,
@@ -181,7 +183,7 @@ def _get_windows_connections(
         logger.exception("Failed to run netstat on Windows")
         return []
 
-    entries = _parse_netstat_output(raw)
+    entries: list[ConnectionEntry] = _parse_netstat_output(raw)
     return _filter_entries(entries, protocol=protocol, state_filter=state_filter)
 
 
@@ -213,7 +215,7 @@ def get_connections(
         True
 
     """
-    os_name = system()
+    os_name: str = system()
 
     if os_name == "Linux":
         return _get_linux_connections(

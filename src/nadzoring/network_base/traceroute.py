@@ -4,7 +4,9 @@ import re
 from dataclasses import dataclass, field
 from logging import Logger
 from platform import system
+from re import Match
 from subprocess import PIPE, CalledProcessError, Popen, TimeoutExpired
+from typing import Literal
 
 from nadzoring.logger import get_logger
 
@@ -37,18 +39,17 @@ def _parse_linux_traceroute(raw: str) -> list[TraceHop]:
     hops: list[TraceHop] = []
 
     for line in raw.strip().splitlines():
-        line = line.strip()  # noqa: PLW2901
+        line: str = line.strip()  # noqa: PLW2901
         if not line:
             continue
 
-        match = re.match(r"^\s*(\d+)\s+(.+)$", line)
+        match: Match[str] | None = re.match(r"^\s*(\d+)\s+(.+)$", line)
         if not match:
             continue
 
         hop_num = int(match.group(1))
-        rest = match.group(2).strip()
+        rest: str | None = match.group(2).strip()
 
-        # Timeout-only hop
         if re.match(r"^(\*\s*)+$", rest):
             hops.append(TraceHop(hop=hop_num, host=None, ip=None, rtt_ms=[None]))
             continue
@@ -104,14 +105,13 @@ def _parse_windows_tracert(raw: str) -> list[TraceHop]:
 
     for line in raw.strip().splitlines():
         line = line.strip()  # noqa: PLW2901
-        match = re.match(r"^\s*(\d+)\s+(.+)$", line)
+        match: Match[str] | None = re.match(r"^\s*(\d+)\s+(.+)$", line)
         if not match:
             continue
 
         hop_num = int(match.group(1))
-        rest = match.group(2).strip()
+        rest: str | None = match.group(2).strip()
 
-        # All-timeout hop
         if re.match(r"^(\*\s*)+$", rest):
             hops.append(TraceHop(hop=hop_num, host=None, ip=None, rtt_ms=[None]))
             continue
@@ -124,10 +124,10 @@ def _parse_windows_tracert(raw: str) -> list[TraceHop]:
                 rtts.append(None)
 
         ip_match = re.search(r"([\d.]+)\s*$", rest)
-        ip = ip_match.group(1) if ip_match else None
+        ip: str | None = ip_match.group(1) if ip_match else None
 
         host_match = re.search(r"([a-zA-Z][^\s]+)\s+[\d.]+\s*$", rest)
-        host = host_match.group(1) if host_match else ip
+        host: str | None = host_match.group(1) if host_match else ip
 
         hops.append(
             TraceHop(
@@ -202,12 +202,11 @@ def _run_linux_traceroute(
         List of TraceHop objects (may be partial on timeout).
 
     """
-    timeout_int = max(1, int(per_hop_timeout))
-    # 3 probes per hop + small fixed margin
-    wall_timeout = max_hops * per_hop_timeout * 3 + 5
+    timeout_int: int = max(1, int(per_hop_timeout))
+    wall_timeout: float = max_hops * per_hop_timeout * 3 + 5
 
-    prefix = "sudo " if use_sudo else ""
-    cmd = f"{prefix}traceroute -m {max_hops} -w {timeout_int} {target}"
+    prefix: Literal["", "sudo "] = "sudo " if use_sudo else ""
+    cmd: str = f"{prefix}traceroute -m {max_hops} -w {timeout_int} {target}"
 
     stdout, stderr = _stream_process(cmd, wall_timeout=wall_timeout)
 
@@ -222,7 +221,6 @@ def _run_linux_traceroute(
     if stdout:
         return _parse_linux_traceroute(stdout)
 
-    # Binary not found — try tracepath (no root required)
     if "not found" in stderr.lower() or "no such file" in stderr.lower():
         logger.warning("traceroute not found, trying tracepath")
         return _run_tracepath(
@@ -253,7 +251,7 @@ def _run_tracepath(
         List of TraceHop objects (may be partial on timeout).
 
     """
-    wall_timeout = max_hops * per_hop_timeout * 3 + 5
+    wall_timeout: float = max_hops * per_hop_timeout * 3 + 5
     stdout, stderr = _stream_process(
         f"tracepath -m {max_hops} -n {target}",
         wall_timeout=wall_timeout,
@@ -284,8 +282,8 @@ def _run_windows_tracert(
         List of TraceHop objects (may be partial on timeout).
 
     """
-    wall_timeout = max_hops * per_hop_timeout * 3 + 5
-    cmd = f"tracert -h {max_hops} {target}"
+    wall_timeout: float = max_hops * per_hop_timeout * 3 + 5
+    cmd: str = f"tracert -h {max_hops} {target}"
 
     try:
         with Popen(  # noqa: S602
@@ -303,7 +301,7 @@ def _run_windows_tracert(
         logger.exception("Failed to run tracert for %s", target)
         return []
 
-    raw = stdout_b.decode("cp866", errors="replace") if stdout_b else ""
+    raw: str = stdout_b.decode("cp866", errors="replace") if stdout_b else ""
     return _parse_windows_tracert(raw)
 
 
@@ -344,7 +342,7 @@ def traceroute(
         1
 
     """
-    os_name = system()
+    os_name: str = system()
 
     if os_name == "Linux":
         return _run_linux_traceroute(

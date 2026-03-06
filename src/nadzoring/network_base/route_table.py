@@ -39,7 +39,7 @@ def _parse_linux_ip_route(raw: str) -> list[RouteEntry]:
     entries: list[RouteEntry] = []
 
     for line in raw.strip().splitlines():
-        parts = line.split()
+        parts: list[str] = line.split()
         if not parts:
             continue
 
@@ -87,7 +87,7 @@ def _parse_windows_route_print(raw: str) -> list[RouteEntry]:
     in_active_section = False
 
     for line in raw.splitlines():
-        stripped = line.strip()
+        stripped: str = line.strip()
 
         if "Active Routes:" in stripped:
             in_active_section = True
@@ -100,7 +100,7 @@ def _parse_windows_route_print(raw: str) -> list[RouteEntry]:
         if "Network Destination" in stripped or stripped.startswith("="):
             continue
 
-        parts = stripped.split()
+        parts: list[str] = stripped.split()
         if len(parts) >= 5:
             entries.append(
                 RouteEntry(
@@ -119,7 +119,7 @@ def _parse_windows_route_print(raw: str) -> list[RouteEntry]:
 def _get_linux_routes() -> list[RouteEntry]:
     """Retrieve routing table on Linux using 'ip route'."""
     try:
-        raw = check_output(  # noqa: S602
+        raw: str = check_output(  # noqa: S602
             "ip route",  # noqa: S607
             shell=True,
             stderr=PIPE,
@@ -134,7 +134,7 @@ def _get_linux_routes() -> list[RouteEntry]:
 def _get_windows_routes() -> list[RouteEntry]:
     """Retrieve routing table on Windows using 'route PRINT'."""
     try:
-        raw = check_output(  # noqa: S602
+        raw: str = check_output(  # noqa: S602
             "route PRINT",  # noqa: S607
             shell=True,
             stderr=PIPE,
@@ -163,7 +163,7 @@ def get_route_table() -> list[RouteEntry]:
         True
 
     """
-    os_name = system()
+    os_name: str = system()
 
     if os_name == "Linux":
         return _get_linux_routes()

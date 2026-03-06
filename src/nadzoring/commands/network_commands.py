@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 from logging import Logger
-from typing import Any
+from typing import Any, NoReturn
 
 import click
 from tqdm import tqdm
@@ -214,10 +214,12 @@ def ping_command(
     quiet: bool,
 ) -> list[dict]:
     """Ping one or more addresses."""
-    results = []
-    total = len(addresses)
+    results: list[dict[str, str]] = []
+    total: int = len(addresses)
 
-    pbar = None if quiet else tqdm(total=total, desc="Pinging addresses", unit="ping")
+    pbar: tqdm[NoReturn] | None = (
+        None if quiet else tqdm(total=total, desc="Pinging addresses", unit="ping")
+    )
 
     for address in addresses:
         is_pinged = ping_addr(address)
@@ -247,13 +249,15 @@ def geolocation_command(
     quiet: bool,
 ) -> list[dict]:
     """Get geolocation for one or more IPs."""
-    results = []
-    total = len(ips)
+    results: list[dict[str, str]] = []
+    total: int = len(ips)
 
-    pbar = None if quiet else tqdm(total=total, desc="Getting geolocation", unit="ip")
+    pbar: tqdm[NoReturn] | None = (
+        None if quiet else tqdm(total=total, desc="Getting geolocation", unit="ip")
+    )
 
     for ip in ips:
-        geolocation = geo_ip(ip)
+        geolocation: dict[str, str] = geo_ip(ip)
         results.append(
             {
                 "ip_address": ip,
@@ -274,10 +278,10 @@ def geolocation_command(
 
 
 @network_group.command(name="params")
-@common_cli_options(include_quiet=True)
-def params_command(*, quiet: bool = False) -> list[dict]:
+@common_cli_options()
+def params_command() -> list[dict]:
     """Display network configuration parameters for the current system."""
-    data = network_param() or {}
+    data: dict[str, str | None] = network_param() or {}
     data["local_ipv4"] = get_local_ipv4()
     return [data]
 
@@ -291,17 +295,19 @@ def host_to_ip_command(
     quiet: bool,
 ) -> list[dict]:
     """Get IPs for one or more hostname addresses."""
-    results = []
-    total = len(hostnames)
+    results: list[dict[str, str]] = []
+    total: int = len(hostnames)
 
-    pbar = None if quiet else tqdm(total=total, desc="Resolving hostnames", unit="host")
+    pbar: tqdm[NoReturn] | None = (
+        None if quiet else tqdm(total=total, desc="Resolving hostnames", unit="host")
+    )
 
-    router_ipv4 = router_ip(ipv6=False)
-    router_ipv6 = router_ip(ipv6=True)
+    router_ipv4: str | None = router_ip(ipv6=False)
+    router_ipv6: str | None = router_ip(ipv6=True)
 
     for hostname in hostnames:
-        ip = get_ip_from_host(hostname)
-        ipv4_check = check_ipv4(hostname)
+        ip: str = get_ip_from_host(hostname)
+        ipv4_check: str = check_ipv4(hostname)
         ipv6_check = check_ipv6(hostname)
 
         results.append(
@@ -333,10 +339,12 @@ def port_service_command(
     quiet: bool,
 ) -> list[dict]:
     """Get service names for one or more ports."""
-    results = []
-    total = len(ports)
+    results: list[dict[str, int | str]] = []
+    total: int = len(ports)
 
-    pbar = None if quiet else tqdm(total=total, desc="Looking up ports", unit="port")
+    pbar: tqdm[NoReturn] | None = (
+        None if quiet else tqdm(total=total, desc="Looking up ports", unit="port")
+    )
 
     for port in ports:
         service = get_service_on_port(port)
@@ -397,9 +405,11 @@ def http_ping_command(
     time, HTTP status code and optional response headers.
     """
     results: list[dict[str, Any]] = []
-    total = len(urls)
+    total: int = len(urls)
 
-    pbar = None if quiet else tqdm(total=total, desc="Probing URLs", unit="url")
+    pbar: tqdm[NoReturn] | None = (
+        None if quiet else tqdm(total=total, desc="Probing URLs", unit="url")
+    )
 
     for url in urls:
         result: HttpPingResult = http_ping(
@@ -431,9 +441,9 @@ def http_ping_command(
                 "Cache-Control",
                 "X-Powered-By",
             ):
-                value = result.headers.get(header_key) or result.headers.get(
-                    header_key.lower()
-                )
+                value: str | None = result.headers.get(
+                    header_key
+                ) or result.headers.get(header_key.lower())
                 if value:
                     row[f"header_{header_key.lower().replace('-', '_')}"] = value
 
@@ -464,13 +474,14 @@ def whois_command(
     (apt install whois / brew install whois).
     """
     results: list[dict[str, Any]] = []
-    total = len(targets)
+    total: int = len(targets)
 
-    pbar = None if quiet else tqdm(total=total, desc="Running WHOIS", unit="target")
+    pbar: tqdm[NoReturn] | None = (
+        None if quiet else tqdm(total=total, desc="Running WHOIS", unit="target")
+    )
 
     for target in targets:
-        info = whois_lookup(target)
-        # Flatten to flat dict, drop None values for cleaner table output
+        info: dict[str, str | None] = whois_lookup(target)
         row: dict[str, Any] = {k: v for k, v in info.items() if v is not None}
         results.append(row)
 
@@ -582,9 +593,11 @@ def traceroute_command(
     tracepath is tried automatically as a root-free fallback.
     """
     results: list[dict[str, Any]] = []
-    total = len(targets)
+    total: int = len(targets)
 
-    pbar = None if quiet else tqdm(total=total, desc="Tracing routes", unit="target")
+    pbar: tqdm[NoReturn] | None = (
+        None if quiet else tqdm(total=total, desc="Tracing routes", unit="target")
+    )
 
     for target in targets:
         if not quiet:
@@ -598,7 +611,9 @@ def traceroute_command(
         )
 
         for hop in hops:
-            rtt_values = [f"{r:.1f} ms" if r is not None else "*" for r in hop.rtt_ms]
+            rtt_values: list[str] = [
+                f"{r:.1f} ms" if r is not None else "*" for r in hop.rtt_ms
+            ]
             results.append(
                 {
                     "target": target,

@@ -3,7 +3,8 @@
 import socket
 import time
 from dataclasses import dataclass, field
-from urllib.parse import urlparse
+from typing import Any, Literal
+from urllib.parse import ParseResult, urlparse
 
 from requests import Session
 from requests.exceptions import RequestException
@@ -35,7 +36,7 @@ def _measure_dns(hostname: str) -> float | None:
         Resolution time in milliseconds, or None if resolution failed.
 
     """
-    start = time.perf_counter()
+    start: float = time.perf_counter()
     try:
         socket.gethostbyname(hostname)
     except socket.gaierror:
@@ -76,14 +77,14 @@ def http_ping(
     if not url.startswith(("http://", "https://")):
         url = f"http://{url}"
 
-    parsed = urlparse(url)
-    hostname = parsed.hostname or ""
+    parsed: ParseResult = urlparse(url)
+    hostname: Literal[""] | str = parsed.hostname or ""
 
-    dns_ms = _measure_dns(hostname) if hostname else None
+    dns_ms: float | None = _measure_dns(hostname) if hostname else None
 
     session = Session()
     try:
-        start = time.perf_counter()
+        start: float = time.perf_counter()
         with session.get(
             url,
             stream=True,
@@ -91,11 +92,11 @@ def http_ping(
             verify=verify_ssl,
             allow_redirects=follow_redirects,
         ) as response:
-            ttfb_ms = round((time.perf_counter() - start) * 1000, 2)
-            content = response.content
-            total_ms = round((time.perf_counter() - start) * 1000, 2)
+            ttfb_ms: float = round((time.perf_counter() - start) * 1000, 2)
+            content: bytes | Any = response.content
+            total_ms: float = round((time.perf_counter() - start) * 1000, 2)
 
-        headers = dict(response.headers) if include_headers else {}
+        headers: dict[str, str] = dict(response.headers) if include_headers else {}
         final = str(response.url)
 
         return HttpPingResult(

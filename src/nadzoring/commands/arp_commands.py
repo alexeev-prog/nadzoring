@@ -1,13 +1,18 @@
 """ARP-related CLI commands."""
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, NoReturn
 
 import click
 from scapy.all import ARP, Ether, sniff
 from tqdm import tqdm
 
-from nadzoring.arp import ARPCache, ARPCacheRetrievalError, ARPSpoofingDetector
+from nadzoring.arp import (
+    ARPCache,
+    ARPCacheRetrievalError,
+    ARPEntry,
+    ARPSpoofingDetector,
+)
 from nadzoring.arp.realtime import ARPRealtimeDetector
 from nadzoring.logger import get_logger
 from nadzoring.utils.decorators import common_cli_options
@@ -26,7 +31,7 @@ def show_cache(*, quiet: bool) -> list[dict[str, Any]]:
     """Show current ARP cache table."""
     try:
         cache = ARPCache()
-        entries = cache.get_cache()
+        entries: list[ARPEntry] = cache.get_cache()
     except ARPCacheRetrievalError as e:
         raise click.ClickException(str(e)) from e
 
@@ -54,12 +59,12 @@ def detect_spoofing(
     """
     try:
         cache = ARPCache()
-        all_entries = cache.get_cache()
+        all_entries: list[ARPEntry] = cache.get_cache()
     except ARPCacheRetrievalError as e:
         raise click.ClickException(str(e)) from e
 
     if interfaces:
-        entries = [e for e in all_entries if e.interface in interfaces]
+        entries: list[ARPEntry] = [e for e in all_entries if e.interface in interfaces]
         if not entries and not quiet:
             click.echo(
                 f"No ARP entries found for interfaces: {', '.join(interfaces)}",
@@ -69,16 +74,18 @@ def detect_spoofing(
         entries = all_entries
 
     detector = ARPSpoofingDetector(cache)
-    interfaces_to_check = list({e.interface for e in entries})
+    interfaces_to_check: list[str] = list({e.interface for e in entries})
 
     total = len(interfaces_to_check)
-    pbar = (
+    pbar: tqdm[NoReturn] | None = (
         None if quiet else tqdm(total=total, desc="Analyzing interfaces", unit="iface")
     )
 
-    all_alerts = []
+    all_alerts: list[dict[str, str]] = []
     for interface in interfaces_to_check:
-        interface_entries = [e for e in entries if e.interface == interface]
+        interface_entries: list[ARPEntry] = [
+            e for e in entries if e.interface == interface
+        ]
         alerts = detector.detect_on_interface(interface_entries, interface)
 
         all_alerts.extend(
@@ -146,9 +153,9 @@ def monitor_spoofing(
 
         def packet_callback(packet: Any) -> None:
             """Process packet and collect alerts."""
-            alert = detector.process_packet(packet)
+            alert: str | None = detector.process_packet(packet)
             if alert:
-                alert_dict = {
+                alert_dict: dict[str, str | Any] = {
                     "timestamp": datetime.now(UTC).isoformat(),
                     "interface": interface or "all",
                     "message": alert,

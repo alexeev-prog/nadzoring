@@ -24,11 +24,11 @@ def _normalize_address(addr: str) -> str:
 
     """
     if addr.startswith(("http://", "https://")):
-        host = addr.split("//", maxsplit=1)[1].split("/", maxsplit=1)[0]
+        host: str = addr.split("//", maxsplit=1)[1].split("/", maxsplit=1)[0]
     else:
         host = addr
 
-    parts = host.split(".", maxsplit=1)
+    parts: list[str] = host.split(".", maxsplit=1)
     if len(parts) > 2 and parts[0] == "www":
         host = ".".join(parts[1:])
 
@@ -54,7 +54,7 @@ def ping_addr(addr: str) -> bool:
         ``False`` otherwise (unreachable, blocked, or error).
 
     """
-    target = _normalize_address(addr)
+    target: str = _normalize_address(addr)
 
     try:
         return ping(target) is not None

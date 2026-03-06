@@ -60,7 +60,7 @@ def _apply_rtype_specific_checks(
         Updated score after applying type-specific validations.
 
     """
-    records = record_result.get("records")
+    records: Any | None = record_result.get("records")
     if not records:
         return record_score
 
@@ -247,13 +247,11 @@ def validate_mx_records(mx_records: list[str]) -> dict[str, bool | list[str]]:
             priority = int(mx.split()[0])
         except (IndexError, ValueError):
             validation["valid"] = False
-            # type: ignore[union-attr]
             validation["issues"].append(f"Invalid MX record format: {mx}")
             continue
 
         if priority in priorities:
             validation["valid"] = False
-            # type: ignore[union-attr]
             validation["issues"].append(f"Duplicate priority: {priority}")
         else:
             priorities.append(priority)
@@ -291,12 +289,8 @@ def validate_txt_records(txt_records: list[str]) -> dict[str, bool | list[str]]:
     for txt in txt_records:
         if txt.startswith("v=spf1"):
             if "~all" not in txt and "-all" not in txt:
-                validation["warnings"].append(
-                    # type: ignore[union-attr]
-                    "SPF missing softfail/hardfail"
-                )
+                validation["warnings"].append("SPF missing softfail/hardfail")
         elif txt.startswith("v=DKIM1") and "p=" not in txt:
-            # type: ignore[union-attr]
             validation["issues"].append("DKIM missing public key")
             validation["valid"] = False
 

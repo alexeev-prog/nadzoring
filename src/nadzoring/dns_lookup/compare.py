@@ -86,7 +86,7 @@ def compare_dns_servers(
 
     for i, server in enumerate(servers):
         server_results: dict[str, DNSResult] = {}
-        is_baseline = i == 0
+        is_baseline: bool = i == 0
 
         for rtype in record_types:
             query_result: DNSResult = resolve_with_timer(

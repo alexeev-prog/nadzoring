@@ -153,7 +153,7 @@ def _grab_banner(sock: socket.socket, target_ip: str, port: int) -> str | None:
         else:
             sock.send(b"\r\n")
 
-        banner = sock.recv(1024).decode("utf-8", errors="ignore").strip()
+        banner: str = sock.recv(1024).decode("utf-8", errors="ignore").strip()
         return banner[:200] if banner else None
     except Exception:
         logger.debug("Banner grab failed for %s:%d", target_ip, port)
@@ -309,7 +309,7 @@ def _scan_target_ports(
                     completed,
                     total_ports,
                 )
-                last_update = completed
+                last_update: int = completed
 
     result.end_time = datetime.now(tz=UTC)
 

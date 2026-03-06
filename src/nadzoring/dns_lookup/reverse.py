@@ -7,7 +7,7 @@ import dns.exception
 import dns.resolver
 import dns.reversename
 from dns.name import Name
-from dns.resolver import Answer
+from dns.resolver import Answer, Resolver
 
 from nadzoring.dns_lookup.utils import create_resolver
 from nadzoring.logger import get_logger
@@ -58,7 +58,7 @@ def reverse_dns(
     }
 
     try:
-        resolver = create_resolver(nameserver)
+        resolver: Resolver = create_resolver(nameserver)
         reverse_name: Name = dns.reversename.from_address(ip_address)
         start_time: float = time()
         answers: Answer = resolver.resolve(reverse_name, "PTR")
