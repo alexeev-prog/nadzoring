@@ -24,11 +24,11 @@ def _normalize_address(addr: str) -> str:
 
     """
     if addr.startswith(("http://", "https://")):
-        host = addr.split("//", 1)[1].split("/")[0]
+        host = addr.split("//", maxsplit=1)[1].split("/", maxsplit=1)[0]
     else:
         host = addr
 
-    parts = host.split(".")
+    parts = host.split(".", maxsplit=1)
     if len(parts) > 2 and parts[0] == "www":
         host = ".".join(parts[1:])
 

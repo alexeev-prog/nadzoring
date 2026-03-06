@@ -1,3 +1,9 @@
+commit 63caf0d1d6fde6022cafb111cc80ebf590ca5ebc
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 6 16:46:34 2026 +0700
+
+    refactor: update code api, improve code quality
+
 commit 5eb28060375709a805e33f2467b7d5fa1392d4a8
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Fri Mar 6 15:50:16 2026 +0700

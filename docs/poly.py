@@ -19,8 +19,7 @@ PIP_ARGS: list[str] = ["-e", ".[dev]", "sphinx", "furo", "sphinx-polyversion"]
 
 MOCK_DATA: dict[str, list[GitRef]] = {
     "revisions": [
-        GitRef("main", "", "", GitRefType.BRANCH,
-               datetime.fromtimestamp(0, tz=UTC)),
+        GitRef("main", "", "", GitRefType.BRANCH, datetime.fromtimestamp(0, tz=UTC)),
     ],
     "current": GitRef(
         "main", "", "", GitRefType.BRANCH, datetime.fromtimestamp(0, tz=UTC)
