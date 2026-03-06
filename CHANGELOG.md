@@ -1,3 +1,16 @@
+commit ac6fdc9dd3f1e91299d96fc39adee918a0e53b47
+Merge: f06f741 c43a99a
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 6 23:18:27 2026 +0700
+
+    Merge pull request #14 from alexeev-prog/refactor/typing-improvements
+
+commit c43a99a1cf153c99e40786af28992bee862cd55d
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 6 23:17:35 2026 +0700
+
+    fix lint error
+
 commit ee34a9883477ecc7cfa7c763f919f8e1705c4a70
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Fri Mar 6 23:15:36 2026 +0700
