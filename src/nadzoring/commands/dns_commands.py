@@ -20,7 +20,13 @@ from nadzoring.dns_lookup import (
 )
 from nadzoring.dns_lookup.compare import ServerComparisonResult
 from nadzoring.dns_lookup.health import DetailedCheckResult, HealthCheckResult
-from nadzoring.dns_lookup.monitor import AlertEvent, DNSMonitor, MonitorConfig, load_log
+from nadzoring.dns_lookup.monitor import (
+    AlertEvent,
+    CycleResult,
+    DNSMonitor,
+    MonitorConfig,
+    load_log,
+)
 from nadzoring.dns_lookup.types import BenchmarkResult, DNSResult, PoisoningCheckResult
 from nadzoring.logger import get_logger
 from nadzoring.utils.decorators import common_cli_options
@@ -232,7 +238,7 @@ def monitor_command(
     monitor = DNSMonitor(config)
 
     if cycles > 0:
-        results = monitor.run_cycles(cycles)
+        results: list[CycleResult] = monitor.run_cycles(cycles)
     else:
         monitor.run()
         results = monitor.history()
@@ -279,7 +285,7 @@ def monitor_report_command(
 
     """
     try:
-        cycles = load_log(log_file)
+        cycles: list[dict[str, Any]] = load_log(log_file)
     except FileNotFoundError:
         raise click.ClickException(f"Log file not found: {log_file}") from None
 
@@ -329,7 +335,7 @@ def _aggregate_log(
 
     rows: list[dict[str, Any]] = []
     for srv, rt_list in rts.items():
-        ok_list = successes.get(srv, [])
+        ok_list: list[float] = successes.get(srv, [])
         rows.append(
             {
                 "server": srv,

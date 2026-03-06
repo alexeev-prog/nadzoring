@@ -14,8 +14,8 @@ from statistics import mean, stdev
 from typing import Any
 
 from nadzoring.dns_lookup.benchmark import benchmark_single_server
-from nadzoring.dns_lookup.health import health_check_dns
-from nadzoring.dns_lookup.types import RecordType
+from nadzoring.dns_lookup.health import HealthCheckResult, health_check_dns
+from nadzoring.dns_lookup.types import BenchmarkResult, DNSResult, RecordType
 from nadzoring.dns_lookup.utils import resolve_with_timer
 from nadzoring.logger import get_logger
 
@@ -340,7 +340,7 @@ class DNSMonitor:
         if not self._history:
             return "No monitoring data collected yet."
 
-        lines = [
+        lines: list[str] = [
             "=" * 60,
             f"DNS Monitor Report — {self.config.domain}",
             f"Cycles : {self._cycle}",
@@ -353,7 +353,7 @@ class DNSMonitor:
         for server in self.config.nameservers:
             lines.extend(self._server_report_lines(server))
 
-        health_scores = [
+        health_scores: list[int] = [
             c.health_score for c in self._history if c.health_score is not None
         ]
         if health_scores:
@@ -368,16 +368,20 @@ class DNSMonitor:
 
     def _tick(self) -> None:
         self._cycle += 1
-        result = self._build_cycle_result()
+        result: CycleResult = self._build_cycle_result()
         self._history.append(result)
         self._append_log(result)
         self._print_summary(result)
 
     def _build_cycle_result(self) -> CycleResult:
-        ts = datetime.now(UTC)
-        samples = [self._sample_server(srv, ts) for srv in self.config.nameservers]
+        ts: datetime = datetime.now(UTC)
+        samples: list[ServerSample] = [
+            self._sample_server(srv, ts) for srv in self.config.nameservers
+        ]
         health_score, health_status = self._run_health_check()
-        alerts = evaluate_thresholds(samples, health_score, health_status, self.config)
+        alerts: list[AlertEvent] = evaluate_thresholds(
+            samples, health_score, health_status, self.config
+        )
         self._dispatch_alerts(alerts)
         return CycleResult(
             cycle=self._cycle,
@@ -391,14 +395,14 @@ class DNSMonitor:
 
     def _sample_server(self, server: str, ts: datetime) -> ServerSample:
         try:
-            bench = benchmark_single_server(
+            bench: BenchmarkResult = benchmark_single_server(
                 server=server,
                 domain=self.config.domain,
                 record_type=self.config.record_type,
                 queries=self.config.queries_per_sample,
                 delay=0.0,
             )
-            resolved = resolve_with_timer(
+            resolved: DNSResult = resolve_with_timer(
                 self.config.domain,
                 self.config.record_type,
                 server,
@@ -432,7 +436,7 @@ class DNSMonitor:
         if not self.config.run_health_check:
             return None, None
         try:
-            result = health_check_dns(
+            result: HealthCheckResult = health_check_dns(
                 self.config.domain,
                 self.config.nameservers[0],
             )
@@ -460,10 +464,12 @@ class DNSMonitor:
             logger.warning("Could not write to log file %s", self._log_path)
 
     def _print_summary(self, result: CycleResult) -> None:
-        ts = result.timestamp.strftime("%H:%M:%S")
+        ts: str = result.timestamp.strftime("%H:%M:%S")
         for i, s in enumerate(result.samples):
-            rt = f"{s.avg_response_time_ms:.1f}ms" if s.avg_response_time_ms else "N/A"
-            health = (
+            rt: str = (
+                f"{s.avg_response_time_ms:.1f}ms" if s.avg_response_time_ms else "N/A"
+            )
+            health: str = (
                 f"  health={result.health_score}/{result.health_status}"
                 if i == 0 and result.health_score is not None
                 else ""
@@ -477,7 +483,7 @@ class DNSMonitor:
             print(f"  ⚠  [{alert.alert_type}] {alert.message}", flush=True)
 
     def _interruptible_sleep(self, seconds: float) -> None:
-        deadline = time.monotonic() + seconds
+        deadline: float = time.monotonic() + seconds
         while self._running and time.monotonic() < deadline:
             time.sleep(min(1.0, deadline - time.monotonic()))
 
@@ -486,18 +492,22 @@ class DNSMonitor:
         self._running = False
 
     def _server_report_lines(self, server: str) -> list[str]:
-        samples = [s for c in self._history for s in c.samples if s.server == server]
+        samples: list[ServerSample] = [
+            s for c in self._history for s in c.samples if s.server == server
+        ]
         if not samples:
             return []
 
-        rts = [s.avg_response_time_ms for s in samples if s.avg_response_time_ms]
-        success_rates = [s.success_rate for s in samples]
-        alert_count = sum(
+        rts: list[float] = [
+            s.avg_response_time_ms for s in samples if s.avg_response_time_ms
+        ]
+        success_rates: list[float] = [s.success_rate for s in samples]
+        alert_count: int = sum(
             1 for c in self._history for a in c.alerts if a.server == server
         )
-        lines = [f"\nServer : {server}", f"  Samples : {len(samples)}"]
+        lines: list[str] = [f"\nServer : {server}", f"  Samples : {len(samples)}"]
         if rts:
-            sd = f" ± {stdev(rts):.2f}" if len(rts) > 1 else ""
+            sd: str = f" ± {stdev(rts):.2f}" if len(rts) > 1 else ""
             lines += [
                 f"  Avg RT  : {mean(rts):.2f}ms{sd}",
                 f"  Min RT  : {min(rts):.2f}ms",
@@ -531,7 +541,7 @@ def evaluate_thresholds(
 
     """
     alerts: list[AlertEvent] = []
-    ts = datetime.now(UTC)
+    ts: datetime = datetime.now(UTC)
 
     for s in samples:
         if s.success_rate == 0.0:
@@ -630,7 +640,7 @@ def load_log(path: str | Path) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     with p.open(encoding="utf-8") as fh:
         for lineno, raw in enumerate(fh, 1):
-            line = raw.strip()
+            line: str = raw.strip()
             if not line:
                 continue
             try:
