@@ -49,4 +49,4 @@ def get_service_on_port(port: int) -> str:
     try:
         return getservbyport(port)
     except (OSError, OverflowError, TypeError):
-        return _FALLBACK_SERVICES.get(port, "unknown")
+        return _FALLBACK_SERVICES.get(port, "Unknown")
