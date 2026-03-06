@@ -38,16 +38,13 @@ class ARPEntry:
     """
     Represents a single ARP cache entry.
 
-    Contains information about an IP-to-MAC address mapping from the system's
-    ARP cache.
-
     Attributes:
-        ip_address: IP address in string format (e.g., "192.168.1.1").
-        mac_address: MAC address in string format (e.g., "00:11:22:33:44:55").
-            May be None for incomplete entries.
-        interface: Network interface name (e.g., "eth0", "wlan0").
+        ip_address: IP address string (e.g. ``"192.168.1.1"``).
+        mac_address: MAC address string (e.g. ``"00:11:22:33:44:55"``),
+            or ``None`` for incomplete entries.
+        interface: Network interface name (e.g. ``"eth0"``).
         state: Current state of the ARP entry.
-        flags: Additional flags or attributes (platform-specific).
+        flags: Optional platform-specific flags or attributes.
 
     """
 
@@ -60,10 +57,11 @@ class ARPEntry:
     @property
     def has_mac(self) -> bool:
         """
-        Check if entry has MAC address.
+        Check whether the entry has a resolved MAC address.
 
         Returns:
-            True if entry has a valid MAC address, False for incomplete entries.
+            ``True`` if entry has a valid MAC address, ``False`` for
+            incomplete entries.
 
         """
         return self.mac_address is not None and self.mac_address != "(incomplete)"
@@ -74,13 +72,11 @@ class SpoofingAlert:
     """
     Represents a potential ARP spoofing alert.
 
-    Generated when suspicious patterns are detected in ARP cache entries.
-
     Attributes:
-        alert_type: Type of alert ("duplicate_mac" or "duplicate_ip").
+        alert_type: Type of alert — ``"duplicate_mac"`` or ``"duplicate_ip"``.
         ip_address: IP address involved in the alert.
         mac_address: MAC address involved in the alert.
-        interfaces: List of network interfaces where the issue was detected.
+        interfaces: Network interfaces where the issue was detected.
         description: Human-readable description of the alert.
 
     """

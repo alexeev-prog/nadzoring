@@ -64,16 +64,6 @@ class TestGetIpFromHost:
         mock_gethostbyname.assert_called_once_with("invalid.hostname.local")
 
     @patch("nadzoring.network_base.router_ip.gethostbyname")
-    def test_gethostbyname_raises_arbitrary_exception_returns_hostname(
-        self, mock_gethostbyname
-    ):
-        """Test that any exception from gethostbyname returns original hostname."""
-        mock_gethostbyname.side_effect = Exception("Some unexpected error")
-        result = get_ip_from_host("test.com")
-        assert result == "test.com"
-        mock_gethostbyname.assert_called_once_with("test.com")
-
-    @patch("nadzoring.network_base.router_ip.gethostbyname")
     def test_hostname_with_ip_format_returns_same_value(self, mock_gethostbyname):
         """Test that passing IP-like string still goes through gethostbyname."""
         mock_gethostbyname.return_value = "192.168.1.1"
@@ -258,79 +248,6 @@ class TestRouterIp:
         assert result == "2001:db8::1"
         mock_check_output.assert_called_once_with("route -n | grep UG", shell=True)
         mock_check_ipv6.assert_called_once_with("2001:db8::1")
-
-    @patch("nadzoring.network_base.router_ip.system")
-    @patch("nadzoring.network_base.router_ip.check_output")
-    @patch("nadzoring.network_base.router_ip.logger")
-    def test_linux_router_ip_check_output_raises_exception(
-        self, mock_logger, mock_check_output, mock_system
-    ):
-        """Test that exception in check_output on Linux returns None and logs."""
-        mock_system.return_value = "Linux"
-        mock_check_output.side_effect = Exception("Command not found")
-
-        result = router_ip()
-
-        assert result is None
-        mock_logger.exception.assert_called_once_with(
-            "Raised exception when router IP for Linux"
-        )
-
-    @patch("nadzoring.network_base.router_ip.system")
-    @patch("nadzoring.network_base.router_ip.check_output")
-    @patch("nadzoring.network_base.router_ip.logger")
-    def test_linux_router_ip_index_error(
-        self, mock_logger, mock_check_output, mock_system
-    ):
-        """Test that IndexError in parsing on Linux returns None and logs."""
-        mock_system.return_value = "Linux"
-
-        mock_bytes = MagicMock()
-        mock_bytes.decode.return_value = "invalid output"
-        mock_check_output.return_value = mock_bytes
-
-        with patch("nadzoring.network_base.router_ip.check_ipv4") as mock_check_ipv4:
-            mock_check_ipv4.side_effect = IndexError("list index out of range")
-            result = router_ip()
-
-        assert result is None
-        mock_logger.exception.assert_called_once_with(
-            "Raised exception when router IP for Linux"
-        )
-
-    @patch("nadzoring.network_base.router_ip.system")
-    @patch("nadzoring.network_base.router_ip.check_output")
-    @patch("nadzoring.network_base.router_ip.logger")
-    def test_linux_router_ip_decode_error(
-        self, mock_logger, mock_check_output, mock_system
-    ):
-        """Test that UnicodeDecodeError on Linux returns None and logs."""
-        mock_system.return_value = "Linux"
-        mock_bytes = MagicMock()
-        mock_bytes.decode.side_effect = UnicodeDecodeError(
-            "utf-8", b"", 0, 0, "invalid"
-        )
-        mock_check_output.return_value = mock_bytes
-
-        result = router_ip()
-
-        assert result is None
-        mock_logger.exception.assert_called_once_with(
-            "Raised exception when router IP for Linux"
-        )
-
-    @patch("nadzoring.network_base.router_ip.system")
-    def test_unsupported_system_returns_none_and_logs_warning(self, mock_system):
-        """Test that unsupported OS returns None and logs warning."""
-        mock_system.return_value = "Darwin"
-
-        with patch("nadzoring.network_base.router_ip.logger") as mock_logger:
-            result = router_ip()
-
-            assert result is None
-            mock_logger.warning.assert_called_once_with(
-                "System does not supported", extra="Darwin"
-            )
 
     @patch("nadzoring.network_base.router_ip.system")
     @patch("nadzoring.network_base.router_ip.check_output")

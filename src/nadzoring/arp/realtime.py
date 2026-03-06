@@ -1,17 +1,4 @@
-"""
-Real-time ARP spoofing detection using packet sniffing.
-
-This module provides real-time monitoring of network traffic to detect
-ARP spoofing attacks by analyzing ARP packets and tracking IP-to-MAC
-address mappings.
-
-Example:
-    >>> detector = ARPRealtimeDetector()
-    >>> alerts = detector.monitor(interface="eth0", count=100)
-    >>> for alert in alerts:
-    ...     print(alert["message"])
-
-"""
+"""Real-time ARP spoofing detection using packet sniffing."""
 
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -31,20 +18,23 @@ class ARPRealtimeDetector:
     Monitors network traffic for ARP packets and detects potential spoofing
     attacks by tracking IP-to-MAC mappings and identifying inconsistencies.
 
-    The detector maintains a mapping of MAC addresses to their associated IPs.
-    When a packet is received, it checks if the MAC address already has a
-    different IP associated with it, which would indicate a potential spoofing
-    attack.
+    When a packet arrives, the detector checks whether the source MAC already
+    maps to a *different* IP — if so, a spoofing alert is generated.
 
     Attributes:
-        ip_mac_map: Dictionary mapping MAC addresses to their associated IPs.
-            Format: {mac_address: ip_address}
-        stats: Dictionary with monitoring statistics.
+        ip_mac_map: Dict mapping MAC addresses to their most recently seen IP.
+        stats: Monitoring statistics (packets processed, alerts, unique MACs).
+
+    Examples:
+        >>> detector = ARPRealtimeDetector()
+        >>> alerts = detector.monitor(interface="eth0", count=100)
+        >>> for alert in alerts:
+        ...     print(alert["message"])
 
     """
 
     def __init__(self) -> None:
-        """Initialize the real-time ARP spoofing detector."""
+        """Initialise the real-time ARP spoofing detector."""
         self.ip_mac_map: dict[str, str] = {}
         self.stats: dict[str, int] = {
             "packets_processed": 0,
@@ -57,13 +47,13 @@ class ARPRealtimeDetector:
         Process a single network packet for ARP spoofing detection.
 
         Args:
-            packet: Scapy packet object to analyze. Must contain ARP and
-                Ethernet layers.
+            packet: Scapy packet object. Must contain both ARP and Ethernet
+                layers; packets missing either layer are silently ignored.
 
         Returns:
-            Alert message if ARP spoofing detected, None otherwise.
-            The message format:
-                "ARP attack detected from machine with IP {old_ip} for {new_ip}"
+            Alert message string when spoofing is detected, ``None`` otherwise.
+            Format: ``"ARP attack detected from machine with IP {old_ip} for
+            {new_ip}"``.
 
         """
         if not packet.haslayer(ARP) or not packet.haslayer(Ether):
@@ -78,7 +68,7 @@ class ARPRealtimeDetector:
             known_ip: str = self.ip_mac_map[src_mac]
             if known_ip != src_ip:
                 self.stats["alerts_generated"] += 1
-                message: str = (
+                message = (
                     f"ARP attack detected from machine with IP {known_ip} for {src_ip}"
                 )
                 logger.warning(message)
@@ -97,22 +87,21 @@ class ARPRealtimeDetector:
         packet_callback: Callable[[Ether, str | None], None] | None = None,
     ) -> list[dict[str, Any]]:
         """
-        Monitor network for ARP spoofing attacks and return alerts.
+        Monitor network traffic for ARP spoofing attacks.
 
         Args:
-            interface: Network interface to monitor (None for all interfaces).
-            count: Number of packets to capture (0 for infinite).
-            timeout: Timeout in seconds (0 for no timeout).
-            packet_callback: Optional callback function that receives
-                the packet and alert message for custom handling.
+            interface: Network interface to monitor. ``None`` monitors all
+                interfaces.
+            count: Number of packets to capture. ``0`` captures indefinitely.
+            timeout: Capture timeout in seconds. ``0`` disables the timeout.
+            packet_callback: Optional callback receiving ``(packet, alert)``
+                for each processed packet. When ``None``, detected alerts are
+                collected internally and returned.
 
         Returns:
-            List of alert dictionaries, each containing:
-                - timestamp: ISO format timestamp
-                - interface: Interface being monitored
-                - message: Alert message text
-                - src_ip: Source IP address
-                - src_mac: Source MAC address
+            List of alert dicts, each with ``timestamp``, ``interface``,
+            ``message``, ``src_ip``, and ``src_mac`` keys. Always empty when
+            a custom *packet_callback* is supplied.
 
         Raises:
             RuntimeError: If packet sniffing fails.
@@ -121,7 +110,6 @@ class ARPRealtimeDetector:
         alerts: list[dict[str, Any]] = []
 
         def _default_callback(packet: Ether, alert: str | None) -> None:
-            """Default packet callback that collects alerts."""
             if alert:
                 alerts.append(
                     {
@@ -143,7 +131,6 @@ class ARPRealtimeDetector:
         )
 
         def _packet_handler(packet: Ether) -> None:
-            """Handle incoming packet and invoke callback."""
             alert: str | None = self.process_packet(packet)
             callback(packet, alert)
 
@@ -156,20 +143,18 @@ class ARPRealtimeDetector:
                 count=count if count > 0 else None,
                 timeout=timeout if timeout > 0 else None,
             )
-        except Exception as e:
-            raise RuntimeError(f"Failed to sniff packets: {e}") from e
+        except Exception as exc:
+            raise RuntimeError(f"Failed to sniff packets: {exc}") from exc
 
         return alerts
 
     def get_stats(self) -> dict[str, int]:
         """
-        Get monitoring statistics.
+        Return a copy of the current monitoring statistics.
 
         Returns:
-            Dictionary with statistics:
-                - packets_processed: Total packets analyzed
-                - alerts_generated: Number of alerts detected
-                - unique_macs_seen: Number of unique MAC addresses seen
+            Dict with ``packets_processed``, ``alerts_generated``, and
+            ``unique_macs_seen`` keys.
 
         """
         return self.stats.copy()

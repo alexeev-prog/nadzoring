@@ -1,13 +1,5 @@
-"""
-Ping address using ping3 library.
+"""ICMP ping utility using the ping3 library."""
 
-This script performs a standard ping of a specific address or domain name.
-It works in the same way as the standard OS module. It does not ping addresses that
-are protected from pinging, such as "codeby.net".
-It can be used for a shallow check of addresses.
-"""
-
-from ipaddress import IPv4Address
 from logging import Logger
 
 from ping3 import ping
@@ -17,32 +9,55 @@ from nadzoring.logger import get_logger
 logger: Logger = get_logger(__name__)
 
 
-def ping_addr(addr: str) -> bool:
+def _normalize_address(addr: str) -> str:
     """
-    A normal ping of a specific ip address or domain.
+    Normalise a raw address or URL into a bare hostname / IP string.
 
-    The original function returns if the domain or address is unavailable None.
-    If successful, the time for which ping is being performed.
-    This function returns Boolean values in the case of
-    success or failure.
+    Strips ``http://`` and ``https://`` scheme prefixes and removes any
+    leading ``www.`` subdomain so that ``ping3`` receives a plain hostname.
 
     Args:
-        addr (str): address
+        addr: Raw address, URL, or hostname to normalise.
 
     Returns:
-        bool: is pinged
+        Bare hostname or IP address string.
 
     """
-    try:
-        IPv4Address(addr)
-    except Exception:
-        if addr.startswith("http"):
-            addr = addr.split("/")[2]
-            if len(addr.split(".")) > 2:
-                addr = ".".join(addr.split(".")[1:])
+    if addr.startswith(("http://", "https://")):
+        host = addr.split("//", maxsplit=1)[1].split("/", maxsplit=1)[0]
+    else:
+        host = addr
+
+    parts = host.split(".", maxsplit=1)
+    if len(parts) > 2 and parts[0] == "www":
+        host = ".".join(parts[1:])
+
+    return host
+
+
+def ping_addr(addr: str) -> bool:
+    """
+    Check reachability of an IP address or hostname using ICMP ping.
+
+    Normalises URLs before pinging so that values like
+    ``https://example.com`` are handled transparently.
+
+    Note:
+        Some hosts block ICMP requests and will always return ``False``
+        regardless of their actual availability.
+
+    Args:
+        addr: IP address, hostname, or URL to ping.
+
+    Returns:
+        ``True`` if the host replied within the default timeout,
+        ``False`` otherwise (unreachable, blocked, or error).
+
+    """
+    target = _normalize_address(addr)
 
     try:
-        return ping(addr) is not None
+        return ping(target) is not None
     except Exception:
-        logger.exception("Raised exception when ping address")
+        logger.exception("Unexpected error while pinging %s", target)
         return False

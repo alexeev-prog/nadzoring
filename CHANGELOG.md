@@ -1,3 +1,33 @@
+commit fc0ffc9af0bc884b6ef38ab0e4e8456d1560c194
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 6 16:57:44 2026 +0700
+
+    fix lint errors
+
+commit 8df04afeea0c21d3e03ee4351fb243c0b94cb4ca
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 6 16:53:05 2026 +0700
+
+    fix lint errors
+
+commit b49de8ac513ca68bd8d156f55fab8277dcb6b8d0
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 6 16:51:43 2026 +0700
+
+    fix lint errors
+
+commit 63caf0d1d6fde6022cafb111cc80ebf590ca5ebc
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 6 16:46:34 2026 +0700
+
+    refactor: update code api, improve code quality
+
+commit 5eb28060375709a805e33f2467b7d5fa1392d4a8
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 6 15:50:16 2026 +0700
+
+    update docs config
+
 commit 9e116bee346eb7a4893fe6a0fc898052e3412ff9
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Fri Mar 6 15:42:35 2026 +0700

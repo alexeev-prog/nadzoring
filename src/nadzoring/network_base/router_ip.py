@@ -1,16 +1,17 @@
 """
-Returns the default router(gateway) ip address on Linux and Windows machines.
+Default gateway (router) IP address resolution for Linux and Windows.
 
-On some Linux machines, it requires the net-tools package to be installed, as the
-`route` command does not work without it (example: Ubuntu):
- $ sudo apt install net-tools
+On some Linux distributions the ``net-tools`` package must be installed
+because the ``route`` command is not available by default::
+
+    sudo apt install net-tools
 """
 
-from ipaddress import IPv4Address, IPv6Address
+from ipaddress import AddressValueError, IPv4Address, IPv6Address
 from logging import Logger
 from platform import system
-from socket import gethostbyname
-from subprocess import check_output
+from socket import gaierror, gethostbyname
+from subprocess import CalledProcessError, check_output
 
 from nadzoring.logger import get_logger
 
@@ -19,109 +20,133 @@ logger: Logger = get_logger(__name__)
 
 def get_ip_from_host(hostname: str) -> str:
     """
-    Attempts to retrieve an IP address from a domain name.
-
-    If unsuccessful, returns the value passed to the function.
+    Resolve a hostname to an IP address, returning the input on failure.
 
     Args:
-        hostname (str): hostname address
+        hostname: Hostname or IP address string to resolve.
 
     Returns:
-        str: host
+        Resolved IP address string, or ``hostname`` unchanged if resolution
+        fails.
 
     """
     try:
-        sock: str = gethostbyname(hostname)
-    except Exception:
+        return gethostbyname(hostname)
+    except gaierror:
         return hostname
-    else:
-        return sock
+
+
+def _is_valid_ipv4(value: str) -> bool:
+    """Return ``True`` if *value* is a syntactically valid IPv4 address."""
+    try:
+        IPv4Address(value)
+    except (AddressValueError, ValueError):
+        return False
+    return True
+
+
+def _is_valid_ipv6(value: str) -> bool:
+    """Return ``True`` if *value* is a syntactically valid IPv6 address."""
+    try:
+        IPv6Address(value)
+    except (AddressValueError, ValueError):
+        return False
+    return True
 
 
 def check_ipv4(hostname: str) -> str:
     """
-    Checking whether the received value is an ip address.
+    Return a resolved IPv4 address for *hostname*, or the input unchanged.
 
-    If the received value is not an ip address, an exception is thrown and the received
-    value is passed to the function to obtain the address from the domain name. If the
-    check is successful, the address is returned from the function.
+    If *hostname* is already a valid IPv4 address it is returned as-is.
+    Otherwise a DNS lookup is attempted via :func:`get_ip_from_host`.
 
     Args:
-        hostname (str): hostname address
+        hostname: Hostname or IPv4 address string.
 
     Returns:
-        str: hostname
+        IPv4 address string, or *hostname* unchanged when resolution fails.
 
     """
-    try:
-        IPv4Address(hostname)
-    except Exception:
-        return get_ip_from_host(hostname)
-    else:
+    if _is_valid_ipv4(hostname):
         return hostname
+    return get_ip_from_host(hostname)
 
 
 def check_ipv6(hostname: str) -> str:
     """
-    Checking whether the received value is an ip address.
+    Return a resolved IPv6 address for *hostname*, or the input unchanged.
 
-    If the received value is not an ip address, an exception is thrown and the received
-    value is passed to the function to obtain the address from the domain name. If the
-    check is successful, the address is returned from the function.
+    If *hostname* is already a valid IPv6 address it is returned as-is.
+    Otherwise a DNS lookup is attempted via :func:`get_ip_from_host`.
 
     Args:
-        hostname (str): hostname address
+        hostname: Hostname or IPv6 address string.
 
     Returns:
-        str: hostname
+        IPv6 address string, or *hostname* unchanged when resolution fails.
 
     """
-    try:
-        IPv6Address(hostname)
-    except Exception:
-        return get_ip_from_host(hostname)
-    else:
+    if _is_valid_ipv6(hostname):
         return hostname
+    return get_ip_from_host(hostname)
+
+
+def _get_linux_router_ip(*, ipv6: bool) -> str | None:
+    """Retrieve the default gateway address on Linux via ``route -n``."""
+    try:
+        raw: str = (
+            check_output("route -n | grep UG", shell=True).decode().split()[1]  # noqa: S602, S607
+        )
+    except (CalledProcessError, IndexError, OSError):
+        logger.exception("Failed to retrieve router IP on Linux")
+        return None
+
+    return check_ipv6(raw) if ipv6 else check_ipv4(raw)
+
+
+def _get_windows_router_ip(*, ipv6: bool) -> str | None:
+    """Retrieve the default gateway address on Windows via ``route PRINT``."""
+    try:
+        raw: str = (
+            check_output(  # noqa: S602
+                "route PRINT 0* -4 | findstr 0.0.0.0",  # noqa: S607
+                shell=True,
+            )
+            .decode("cp866")
+            .split()[-3]
+        )
+    except (CalledProcessError, IndexError, OSError, UnicodeDecodeError):
+        logger.exception("Failed to retrieve router IP on Windows")
+        return None
+
+    return check_ipv6(raw) if ipv6 else check_ipv4(raw)
 
 
 def router_ip(*, ipv6: bool = False) -> str | None:
     """
-    The OS version is determined, then determine the router address.
+    Return the default router (gateway) IP address for the current system.
 
-    Then the received value is sent to check if it matches the address. If the received
-    address is IPv4, it is returned from the function.
-    If the address is a domain name, and there may be such cases,
-    the received name is passed to the function where the attempt is performed.
-    getting an ip address by domain name. For example, if the system
-    uses pfsence.
+    Supports Linux (via ``route -n``) and Windows (via ``route PRINT``).
+    The raw gateway value is validated and, if necessary, resolved from a
+    hostname to an IP address.
 
     Args:
-        ipv6 (bool, optional): use IPv6 instead of IPv4. Defaults to False.
+        ipv6: When ``True``, treat the gateway value as an IPv6 address.
+            Defaults to ``False`` (IPv4).
 
     Returns:
-        str | None: ip route result or None
+        Gateway IP address string, or ``None`` when the gateway cannot be
+        determined or the operating system is not supported.
 
     """
-    if system() == "Linux":
-        try:
-            ip_route: str = str(
-                check_output("route -n | grep UG", shell=True).decode().split()[1]  # noqa: S602, S607
-            )
-            return check_ipv4(ip_route) if not ipv6 else check_ipv6(ip_route)
-        except Exception:
-            logger.exception("Raised exception when router IP for Linux")
-            return None
-    elif system() == "Windows":
-        try:
-            ip_route: str = (
-                check_output("route PRINT 0* -4 | findstr 0.0.0.0", shell=True)  # noqa: S602, S607
-                .decode("cp866")
-                .split()[-3]
-            )
-            return check_ipv4(ip_route) if not ipv6 else check_ipv6(ip_route)
-        except Exception:
-            logger.exception("Raised exception when router IP for Windows")
-            return None
-    else:
-        logger.warning("System does not supported", extra=system())
+    os_name = system()
+
+    if os_name == "Linux":
+        return _get_linux_router_ip(ipv6=ipv6)
+
+    if os_name == "Windows":
+        return _get_windows_router_ip(ipv6=ipv6)
+
+    logger.warning("Unsupported operating system for router IP detection: %s", os_name)
     return None

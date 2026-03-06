@@ -2,20 +2,40 @@
 
 from socket import getservbyport
 
+_FALLBACK_SERVICES: dict[int, str] = {
+    21: "ftp",
+    22: "ssh",
+    25: "smtp",
+    53: "dns",
+    80: "http",
+    110: "pop3",
+    143: "imap",
+    443: "https",
+    993: "imaps",
+    995: "pop3s",
+    3306: "mysql",
+    5432: "postgresql",
+    6379: "redis",
+    8080: "http-alt",
+    8443: "https-alt",
+    27017: "mongodb",
+}
+
 
 def get_service_on_port(port: int) -> str:
     """
-    Get the service name associated with a given port number.
+    Return the service name associated with a given port number.
 
-    Attempts to determine the standard service name (e.g., 'http', 'https', 'ssh')
-    for the specified port number using the system's service database.
+    First queries the system service database via ``socket.getservbyport``.
+    Falls back to a built-in mapping of common ports when the system lookup
+    fails, and returns ``"unknown"`` if the port is not recognised by either.
 
     Args:
-        port: The port number to look up. Must be in range 0-65535.
+        port: Port number to look up. Expected range is 0-65535.
 
     Returns:
-        The service name if found, otherwise returns "unknown".
-        Service names are typically lowercase strings like 'http', 'ssh', etc.
+        Lowercase service name (e.g. ``"http"``, ``"ssh"``), or
+        ``"unknown"`` when the port is not recognised.
 
     Examples:
         >>> get_service_on_port(80)
@@ -29,22 +49,4 @@ def get_service_on_port(port: int) -> str:
     try:
         return getservbyport(port)
     except (OSError, OverflowError, TypeError):
-        common_services: dict[int, str] = {
-            80: "http",
-            443: "https",
-            22: "ssh",
-            21: "ftp",
-            25: "smtp",
-            53: "dns",
-            110: "pop3",
-            143: "imap",
-            993: "imaps",
-            995: "pop3s",
-            3306: "mysql",
-            5432: "postgresql",
-            6379: "redis",
-            27017: "mongodb",
-            8080: "http-alt",
-            8443: "https-alt",
-        }
-        return common_services.get(port, "Unknown")
+        return _FALLBACK_SERVICES.get(port, "Unknown")

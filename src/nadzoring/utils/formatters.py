@@ -21,14 +21,32 @@ type OutputFormat = Literal["table", "json", "csv", "html", "html_table"]
 type RecordData = dict[str, Any]
 """Type alias for DNS record data structures."""
 
+_HTML_STYLES = """\
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #4CAF50; color: white; }
+    tr:nth-child(even) { background-color: #f2f2f2; }
+    .critical { color: red; font-weight: bold; }
+    .high { color: red; }
+    .medium { color: orange; }
+    .low { color: green; }"""
+
+_CRITICAL_TERMS = {"CRITICAL", "HIGH", "POISONED", "ERROR", "NXDOMAIN"}
+_WARNING_TERMS = {"MEDIUM", "WARNING", "MISMATCH", "TTL_DIFF"}
+_INFO_TERMS = {"LOW", "INFO", "REFERENCE", "CLEAN"}
+_POSITIVE_TERMS = {"yes", "up", "passed", "good", "healthy"}
+
 
 def get_terminal_width() -> int:
     """
-    Get the current terminal width in columns.
+    Return the current terminal width in columns.
+
+    Falls back to a sensible default when the terminal size cannot be
+    determined.
 
     Returns:
-        int: Number of columns available in the terminal. Falls back to a
-            reasonable default if terminal size cannot be determined.
+        Number of columns available in the terminal.
 
     """
     return shutil.get_terminal_size().columns
@@ -36,21 +54,22 @@ def get_terminal_width() -> int:
 
 def truncate_string(s: str, max_width: int, placeholder: str = "...") -> str:
     """
-    Truncate a string to fit within a specified width.
+    Truncate *s* to fit within *max_width* characters.
 
-    If the string exceeds the maximum width, it is truncated and the placeholder
-    is appended to indicate truncation.
+    If *s* is already within the limit it is returned unchanged. Otherwise
+    it is shortened and *placeholder* is appended to signal truncation.
 
     Args:
         s: The string to truncate.
-        max_width: Maximum allowed width in characters.
-        placeholder: String to append when truncated (default: "...").
+        max_width: Maximum allowed length in characters.
+        placeholder: Suffix appended to truncated strings. Defaults to
+            ``"..."``.
 
     Returns:
-        str: Original string if within limits, otherwise truncated version
-            with placeholder appended.
+        Original string when within limits; truncated string with
+        placeholder otherwise.
 
-    Example:
+    Examples:
         >>> truncate_string("very long string", 10)
         'very lo...'
 
@@ -62,40 +81,43 @@ def truncate_string(s: str, max_width: int, placeholder: str = "...") -> str:
 
 def colorize_value(value: Any, *, no_color: bool = False) -> str:
     r"""
-    Apply color formatting to values based on content and severity.
+    Apply ANSI colour formatting to a value based on its semantic meaning.
 
-    Colors are applied based on keywords in the string value:
-        - Red/bold: Critical/high severity terms
-        - Yellow/bold: Medium severity/warning terms
-        - Green: Low severity/positive terms
-        - No color: Other values
+    Colours are chosen by matching the uppercased string against severity
+    keyword sets:
+
+    * Red/bold — critical/error terms (``CRITICAL``, ``HIGH``, …)
+    * Yellow/bold — warning terms (``MEDIUM``, ``WARNING``, …)
+    * Green — informational/positive terms (``LOW``, ``yes``, ``up``, …)
 
     Args:
-        value: The value to colorize.
-        no_color: If True, disable color formatting (default: False).
+        value: Value to format. Converted to ``str`` before matching.
+        no_color: When ``True`` colours are disabled and the plain string
+            is returned. Defaults to ``False``.
 
     Returns:
-        str: Colorized string if colors enabled, otherwise plain string.
+        ANSI-coloured string, or a plain string when *no_color* is ``True``
+        or the value does not match any keyword set.
 
-    Example:
+    Examples:
         >>> colorize_value("CRITICAL")
-        '\x1b[1;31mCRITICAL\x1b[0m'  # Red bold text
+        '\x1b[1;31mCRITICAL\x1b[0m'
 
     """
-    if no_color:
-        return str(value)
-
     value_str = str(value)
 
-    if isinstance(value, str):
-        if value.upper() in ["CRITICAL", "HIGH", "POISONED", "ERROR", "NXDOMAIN"]:
-            return click.style(value_str, fg="red", bold=True)
-        if value.upper() in ["MEDIUM", "WARNING", "MISMATCH", "TTL_DIFF"]:
-            return click.style(value_str, fg="yellow", bold=True)
-        if value.upper() in ["LOW", "INFO", "REFERENCE", "CLEAN"]:
-            return click.style(value_str, fg="green")
-        if value.lower() in ["yes", "up", "passed", "good", "healthy"]:
-            return click.style(value_str, fg="green")
+    if no_color or not isinstance(value, str):
+        return value_str
+
+    upper = value.upper()
+    lower = value.lower()
+
+    if upper in _CRITICAL_TERMS:
+        return click.style(value_str, fg="red", bold=True)
+    if upper in _WARNING_TERMS:
+        return click.style(value_str, fg="yellow", bold=True)
+    if upper in _INFO_TERMS or lower in _POSITIVE_TERMS:
+        return click.style(value_str, fg="green")
 
     return value_str
 
@@ -107,28 +129,17 @@ def print_results_table(
     no_color: bool = False,
 ) -> None:
     """
-    Print results as a formatted table that fits terminal width.
+    Print a formatted table that fits the current terminal width.
 
-    Automatically adjusts column widths based on terminal size and content.
-    Special handling for DNS record types (TXT, AAAA, etc.) with predefined
-    maximum widths.
+    Column widths are calculated automatically; special DNS record type
+    columns (``TXT``, ``AAAA``, etc.) have predefined maximum widths.
 
     Args:
-        data: List of dictionaries containing the results to display.
-        tablefmt: Tabulate table format string (default: "simple_grid").
-        no_color: If True, disable color formatting (default: False).
-
-    Returns:
-        None: Results are printed directly to console.
-
-    Example:
-        >>> data = [{"domain": "example.com", "A": "192.168.1.1"}]
-        >>> print_results_table(data)
-        +-------------+-------------+
-        | domain      | A           |
-        +-------------+-------------+
-        | example.com | 192.168.1.1 |
-        +-------------+-------------+
+        data: Rows to display. Each dict must have the same keys.
+        tablefmt: ``tabulate`` format string. Defaults to
+            ``"simple_grid"``.
+        no_color: Disable colour formatting when ``True``. Defaults to
+            ``False``.
 
     """
     if not data:
@@ -140,8 +151,8 @@ def print_results_table(
             {key: colorize_value(value) for key, value in row.items()} for row in data
         ]
 
-    term_width: int = get_terminal_width()
-    headers: list[str] = list(data[0].keys())
+    term_width = get_terminal_width()
+    headers = list(data[0].keys())
 
     min_widths: dict[str, int] = {h: len(h) for h in headers}
     max_widths: dict[str, int] = dict.fromkeys(headers, 80)
@@ -158,18 +169,17 @@ def print_results_table(
         if h in max_widths:
             max_widths[h] = w
 
-    borders: int = len(headers) * 3 + 1
-    available: int = term_width - borders
+    borders = len(headers) * 3 + 1
+    available = term_width - borders
 
-    if available <= 0:
-        widths = [min_widths[h] for h in headers]
-    else:
-        widths: list[int] = _calculate_column_widths(
-            headers, min_widths, max_widths, available
-        )
+    widths: list[int] = (
+        [min_widths[h] for h in headers]
+        if available <= 0
+        else _calculate_column_widths(headers, min_widths, max_widths, available)
+    )
 
     try:
-        output: str = tabulate(
+        output = tabulate(
             data,
             headers="keys",
             tablefmt=tablefmt,
@@ -178,7 +188,7 @@ def print_results_table(
             numalign="left",
         )
     except Exception:
-        output: str = tabulate(data, headers="keys", tablefmt="simple")
+        output = tabulate(data, headers="keys", tablefmt="simple")
 
     click.echo(output)
 
@@ -190,66 +200,56 @@ def _calculate_column_widths(
     available: int,
 ) -> list[int]:
     """
-    Calculate optimal column widths within available space.
+    Distribute *available* width across columns, respecting per-column limits.
 
-    Distributes extra space proportionally while respecting minimum and
-    maximum constraints for each column.
+    Extra space beyond the minimum widths is divided equally; the result is
+    clamped to each column's maximum. If the total still exceeds *available*,
+    the widest columns are trimmed first.
 
     Args:
-        headers: List of column header names.
-        min_widths: Dictionary mapping headers to minimum required widths.
-        max_widths: Dictionary mapping headers to maximum allowed widths.
-        available: Total available width for all columns combined.
+        headers: Column header names (defines ordering).
+        min_widths: Minimum character width per column.
+        max_widths: Maximum character width per column.
+        available: Total character budget for all columns combined.
 
     Returns:
-        list[int]: Calculated width for each column in header order.
+        List of integer column widths in the same order as *headers*.
 
     """
-    total_min: Literal[0] | int = sum(min_widths.values())
+    total_min = sum(min_widths.values())
 
     if total_min >= available:
         return [min_widths[h] for h in headers]
 
-    extra: float = (available - total_min) / len(headers)
-    col_widths: dict[str, int] = {}
+    extra = (available - total_min) / len(headers)
+    col_widths: dict[str, int] = {
+        h: min(int(min_widths[h] + extra), max_widths[h]) for h in headers
+    }
 
-    for h in headers:
-        new = int(min_widths[h] + extra)
-        col_widths[h] = min(new, max_widths[h])
-
-    total: Literal[0] | int = sum(col_widths.values())
-    if total <= available:
-        return [col_widths[h] for h in headers]
-
-    overflow: int = total - available
-    sorted_cols: list[str] = sorted(headers, key=lambda h: col_widths[h], reverse=True)
-
-    for h in sorted_cols:
-        if overflow <= 0:
-            break
-        reduction: int = min(overflow, col_widths[h] - min_widths[h])
-        col_widths[h] -= reduction
-        overflow -= reduction
+    overflow = sum(col_widths.values()) - available
+    if overflow > 0:
+        for h in sorted(headers, key=lambda h: col_widths[h], reverse=True):
+            if overflow <= 0:
+                break
+            reduction = min(overflow, col_widths[h] - min_widths[h])
+            col_widths[h] -= reduction
+            overflow -= reduction
 
     return [col_widths[h] for h in headers]
 
 
 def print_csv_table(data: Sequence[dict[str, Any]]) -> None:
     """
-    Print data as CSV format to console.
+    Print *data* in CSV format to standard output.
 
     Args:
-        data: List of dictionaries to convert to CSV format. All dictionaries
-            should have the same keys for proper CSV formatting.
+        data: Rows to format. All dicts should share the same keys for
+            well-formed CSV output.
 
-    Returns:
-        None: CSV data is printed directly to console.
-
-    Example:
-        >>> data = [{"domain": "example.com", "ip": "192.168.1.1"}]
-        >>> print_csv_table(data)
+    Examples:
+        >>> print_csv_table([{"domain": "example.com", "ip": "1.2.3.4"}])
         domain,ip
-        example.com,192.168.1.1
+        example.com,1.2.3.4
 
     """
     if not data:
@@ -263,85 +263,79 @@ def print_csv_table(data: Sequence[dict[str, Any]]) -> None:
     click.echo(output.getvalue())
 
 
+def _build_html_page(title: str, html_table: str) -> str:
+    """
+    Wrap an HTML table fragment in a complete, styled HTML page.
+
+    Args:
+        title: Page ``<title>`` and ``<h1>`` heading text.
+        html_table: Raw HTML ``<table>`` string to embed.
+
+    Returns:
+        Complete HTML document as a string.
+
+    """
+    timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>{title}</title>
+    <style>
+{_HTML_STYLES}
+    </style>
+</head>
+<body>
+    <h1>{title}</h1>
+    <p>Generated: {timestamp}</p>
+    {html_table}
+</body>
+</html>"""
+
+
 def print_html_table(
     data: Sequence[dict[str, Any]], *, full_page: bool = False
 ) -> None:
     """
-    Print results as HTML table or complete HTML page.
+    Print results as an HTML table or complete HTML page.
 
     Args:
-        data: List of dictionaries containing the results to format.
-        full_page: If True, generate complete HTML page with styling and
-            timestamp. If False, generate only the HTML table (default: False).
-
-    Returns:
-        None: HTML content is printed directly to console.
-
-    Example:
-        >>> data = [{"domain": "example.com", "status": "OK"}]
-        >>> print_html_table(data)
-        <table>...
+        data: Rows to render as an HTML table.
+        full_page: When ``True`` a complete HTML document with inline CSS
+            styling is generated. When ``False`` only the ``<table>``
+            element is printed. Defaults to ``False``.
 
     """
     if not data:
         return
 
-    html_table: str = tabulate(data, headers="keys", tablefmt="html")
+    html_table = tabulate(data, headers="keys", tablefmt="html")
 
     if not full_page:
         click.echo(html_table)
     else:
-        html: str = f"""<!DOCTYPE html>
-<html>
-<head>
-    <title>DNS Results</title>
-    <style>
-        body {{ font-family: Arial, sans-serif; margin: 20px; }}
-        table {{ border-collapse: collapse; width: 100%; }}
-        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-        th {{ background-color: #4CAF50; color: white; }}
-        tr:nth-child(even) {{ background-color: #f2f2f2; }}
-        .critical {{ color: red; font-weight: bold; }}
-        .high {{ color: red; }}
-        .medium {{ color: orange; }}
-        .low {{ color: green; }}
-    </style>
-</head>
-<body>
-    <h1>DNS Poisoning Check Results</h1>
-    <p>Generated: {datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")}</p>
-    {html_table}
-</body>
-</html>"""
-        click.echo(html)
+        click.echo(_build_html_page("Nadzoring Results", html_table))
 
 
 def save_results(
-    data: Any, filename: str, fileformat: Literal["json", "csv", "html", "html_table"]
+    data: Any,
+    filename: str,
+    fileformat: str,
 ) -> None:
     """
-    Save results to a file in the specified format.
+    Save command results to a file in the specified format.
 
-    Creates parent directories if they don't exist. Handles various file formats
-    with appropriate formatting and error handling.
+    Creates parent directories automatically when they do not exist.
+    Errors are reported to stderr via :func:`click.secho` rather than
+    raising exceptions so that the CLI remains user-friendly.
 
     Args:
-        data: The data to save. Format depends on fileformat:
-            - JSON: Any JSON-serializable data
-            - CSV: List of dictionaries with consistent keys
-            - HTML/HTML_TABLE: List of dictionaries for tabulate formatting
-        filename: Path where the file should be saved.
-        fileformat: Output format:
-            - "json": JSON format with indentation
-            - "csv": CSV format with headers
-            - "html": Complete HTML page with styling
-            - "html_table": Raw HTML table only
-
-    Returns:
-        None: Results are saved to file, success/error messages printed to console.
-
-    Raises:
-        Prints error messages to console but does not raise exceptions.
+        data: Data to persist. Structure depends on *fileformat*:
+            JSON — any JSON-serialisable object; CSV / HTML — list of
+            dicts with consistent keys.
+        filename: Destination file path.
+        fileformat: One of ``"json"``, ``"csv"``, ``"html"``,
+            ``"html_table"``, or any other value (falls back to plain
+            ``tabulate`` grid output).
 
     """
     try:
@@ -351,7 +345,6 @@ def save_results(
         if fileformat == "json":
             with file_path.open("w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False, default=str)
-            click.secho(f"JSON results saved to {file_path}", fg="green")
 
         elif fileformat == "csv":
             with file_path.open("w", encoding="utf-8", newline="") as f:
@@ -359,107 +352,75 @@ def save_results(
                     writer = csv.DictWriter(f, fieldnames=data[0].keys())
                     writer.writeheader()
                     writer.writerows(data)
-            click.secho(f"CSV results saved to {file_path}", fg="green")
 
         elif fileformat == "html":
+            html_table = tabulate(data, headers="keys", tablefmt="html")
             with file_path.open("w", encoding="utf-8") as f:
-                html_table = tabulate(data, headers="keys", tablefmt="html")
-                html = f"""<!DOCTYPE html>
-<html>
-<head>
-    <title>DNS Results</title>
-    <style>
-        body {{ font-family: Arial, sans-serif; margin: 20px; }}
-        table {{ border-collapse: collapse; width: 100%; }}
-        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-        th {{ background-color: #4CAF50; color: white; }}
-        tr:nth-child(even) {{ background-color: #f2f2f2; }}
-    </style>
-</head>
-<body>
-    <h1>DNS Analysis Results</h1>
-    <p>Generated: {datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")}</p>
-    {html_table}
-</body>
-</html>"""
-                f.write(html)
-            click.secho(f"HTML results saved to {file_path}", fg="green")
+                f.write(_build_html_page("Nadzoring Analysis Results", html_table))
 
         elif fileformat == "html_table":
             with file_path.open("w", encoding="utf-8") as f:
                 f.write(tabulate(data, headers="keys", tablefmt="html"))
-            click.secho(f"HTML table results saved to {file_path}", fg="green")
 
         else:
             with file_path.open("w", encoding="utf-8") as f:
                 f.write(tabulate(data, headers="keys", tablefmt="grid"))
-            click.secho(f"Table results saved to {file_path}", fg="green")
+
+        click.secho(f"Results saved to {file_path}", fg="green")
 
     except PermissionError:
         click.secho(
-            f"Permission denied: Cannot write to {filename}", fg="red", err=True
+            f"Permission denied: cannot write to {filename}", fg="red", err=True
         )
-    except OSError as e:
-        click.secho(f"OS error while saving results: {e}", fg="red", err=True)
-    except Exception as e:
-        click.secho(f"Failed to save results: {e}", fg="red", err=True)
+    except OSError as exc:
+        click.secho(f"OS error while saving results: {exc}", fg="red", err=True)
+    except Exception as exc:
+        click.secho(f"Failed to save results: {exc}", fg="red", err=True)
 
 
 def format_dns_record(
     results: Sequence[dict[str, Any]],
-    style: Literal["standard", "short"] = "standard",
+    style: str = "standard",
     *,
     show_ttl: bool = False,
 ) -> list[dict[str, Any]]:
     """
-    Format DNS records in different display styles.
-
-    Transforms raw DNS record data into human-readable formats suitable for
-    different display contexts.
+    Format DNS records into a display-ready list of dicts.
 
     Args:
-        results: List of DNS query results. Each result should contain:
-            - domain: The queried domain name
-            - records: Dictionary mapping record types to their data
-        style: Output style:
-            - "standard": One row per domain with all record types
-            - "short": One row per individual record (flattened)
-        show_ttl: If True, include TTL values in record display (default: False).
+        results: Raw DNS query results. Each item must contain
+            ``domain`` and ``records`` keys.
+        style: Output style — ``"short"`` produces one row per record
+            value; any other value produces one row per domain.
+        show_ttl: When ``True``, TTL values are appended to each record
+            string in standard style. Defaults to ``False``.
 
     Returns:
-        list[dict]: Formatted records ready for display. Structure depends on style.
+        Formatted records ready for display.
 
-    Example (standard style):
+    Examples:
         >>> data = [
         ...     {"domain": "example.com", "records": {"A": {"records": ["1.2.3.4"]}}}
         ... ]
         >>> format_dns_record(data, style="standard")
-        [{"domain": "example.com", "A": "1.2.3.4"}]
-
-    Example (short style):
+        [{'domain': 'example.com', 'A': '1.2.3.4'}]
         >>> format_dns_record(data, style="short")
-        [{"domain": "example.com", "type": "A", "value": "1.2.3.4"}]
+        [{'domain': 'example.com', 'type': 'A', 'value': '1.2.3.4'}]
 
     """
+    if style == "short":
+        return [
+            {"domain": result["domain"], "type": rtype, "value": record}
+            for result in results
+            for rtype, rdata in result["records"].items()
+            for record in rdata.get("records", [])
+        ]
+
     formatted: list[dict[str, Any]] = []
 
     for result in results:
-        if style == "short":
-            transformed_list: list[dict[str, str | int]] = []
-            transformed_list.extend(
-                [
-                    {
-                        "domain": result["domain"],
-                        "type": rtype,
-                        "value": record,
-                    }
-                    for result in results
-                    for rtype, records in result["records"].items()
-                    for record in records.get("records", [])
-                ]
-            )
-            return transformed_list
         row: dict[str, Any] = {"domain": result["domain"]}
+
         for rtype, data in result["records"].items():
             if data.get("records"):
                 if show_ttl and data.get("ttl"):
@@ -473,16 +434,50 @@ def format_dns_record(
                 row[rtype] = f"[{data['error']}]"
             else:
                 row[rtype] = "None"
+
         formatted.append(row)
 
     return formatted
 
 
+def format_scan_results(
+    results: list[ScanResult], *, show_closed: bool
+) -> list[dict[str, Any]]:
+    """
+    Convert :class:`ScanResult` objects into CLI-displayable dicts.
+
+    Public alias for the internal formatter used by network commands.
+
+    Args:
+        results: Port scan results to format.
+        show_closed: When ``True``, closed/filtered ports are included
+            alongside open ones.
+
+    Returns:
+        List of flat dicts with ``target``, ``ip``, ``port``, ``state``,
+        ``service``, ``banner``, and ``response_time_ms`` keys.
+
+    """
+    return _format_scan_results(results, show_closed=show_closed)
+
+
 def _format_scan_results(
     results: list[ScanResult], *, show_closed: bool
 ) -> list[dict[str, Any]]:
-    """Format scan results for CLI output."""
-    formatted: list[dict[str, str]] = []
+    """
+    Convert :class:`ScanResult` objects into CLI-displayable dicts.
+
+    Args:
+        results: Port scan results to format.
+        show_closed: When ``True``, closed/filtered ports are included
+            alongside open ones.
+
+    Returns:
+        List of flat dicts with ``target``, ``ip``, ``port``, ``state``,
+        ``service``, ``banner``, and ``response_time_ms`` keys.
+
+    """
+    formatted: list[dict[str, Any]] = []
 
     for result in results:
         if not result.open_ports and not show_closed:
@@ -522,36 +517,28 @@ def _format_scan_results(
 
 def format_dns_trace(trace_result: dict[str, Any]) -> list[dict[str, Any]]:
     """
-    Format DNS trace route results for tabular display.
-
-    Converts a DNS trace result into a list of dictionaries suitable for
-    table formatting, showing each hop in the resolution path.
+    Format a DNS trace result for tabular display.
 
     Args:
-        trace_result: Dictionary containing trace results with:
-            - hops: List of intermediate DNS server responses
-            - final_answer: Optional final authoritative response
+        trace_result: Raw trace dict with ``hops`` (list) and optional
+            ``final_answer`` keys.
 
     Returns:
-        list[dict]: Formatted trace data with columns:
-            - hop: Hop number in the trace
-            - nameserver: Server that responded
-            - response_time: Response time in ms or "timeout"
-            - records: DNS records returned (joined with newlines)
-            - next: Next nameserver to query
+        List of dicts with ``hop``, ``nameserver``, ``response_time``,
+        ``records``, and ``next`` columns.
 
-    Example:
+    Examples:
         >>> trace = {"hops": [{"nameserver": "8.8.8.8", "response_time": 42}]}
-        >>> format_dns_trace(trace)
-        [{"hop": 0, "nameserver": "8.8.8.8", "response_time": "42.00ms", ...}]
+        >>> format_dns_trace(trace)[0]["nameserver"]
+        '8.8.8.8'
 
     """
-    formatted: list[dict[str, int | str]] = []
-
-    hops = trace_result.get("hops", [])
+    formatted: list[dict[str, Any]] = []
+    hops: list[dict[str, Any]] = trace_result.get("hops", [])
 
     for i, hop in enumerate(hops):
         response_time = hop.get("response_time")
+
         if response_time is None:
             time_str = "timeout"
         elif isinstance(response_time, int | float):
@@ -560,10 +547,11 @@ def format_dns_trace(trace_result: dict[str, Any]) -> list[dict[str, Any]]:
             time_str = str(response_time)
 
         records = hop.get("records", [])
-        if records:
-            records_str: str = "\n".join(str(r) for r in records)
-        else:
-            records_str = hop.get("error", "No records")
+        records_str = (
+            "\n".join(str(r) for r in records)
+            if records
+            else hop.get("error", "No records")
+        )
 
         formatted.append(
             {
@@ -575,19 +563,18 @@ def format_dns_trace(trace_result: dict[str, Any]) -> list[dict[str, Any]]:
             }
         )
 
-    final: Any | None = trace_result.get("final_answer")
+    final: dict[str, Any] | None = trace_result.get("final_answer")
     if final and final not in hops:
         response_time = final.get("response_time")
-        time_str: str = f"{response_time:.2f}ms" if response_time else "N/A"
+        time_str = f"{response_time:.2f}ms" if response_time else "N/A"
+        final_records = final.get("records", ["Answer received"])
 
         formatted.append(
             {
                 "hop": len(hops),
                 "nameserver": final.get("nameserver", "N/A"),
                 "response_time": time_str,
-                "records": "\n".join(
-                    str(r) for r in final.get("records", ["Answer received"])
-                ),
+                "records": "\n".join(str(r) for r in final_records),
                 "next": "Complete",
             }
         )
@@ -597,139 +584,116 @@ def format_dns_trace(trace_result: dict[str, Any]) -> list[dict[str, Any]]:
 
 def format_dns_comparison(comparison_result: dict[str, Any]) -> list[dict[str, Any]]:
     """
-    Format DNS server comparison results for display.
-
-    Transforms comparison results showing differences between multiple DNS servers
-    into a tabular format.
+    Format DNS comparison results for tabular display.
 
     Args:
-        comparison_result: Dictionary containing:
-            - servers: Dictionary mapping server names to their response data
+        comparison_result: Dict with a ``servers`` key mapping server
+            names to per-type response data.
 
     Returns:
-        list[dict]: Formatted comparison data with columns:
-            - server: DNS server name/identifier
-            - type: Record type (A, AAAA, MX, etc.)
-            - response_time_ms: Response time in milliseconds
-            - records: Records returned (joined with newlines)
-            - differs: "✓" if record differs from reference, else " "
+        List of dicts with ``server``, ``type``, ``response_time_ms``,
+        ``records``, and ``differs`` columns.
 
-    Example:
+    Examples:
         >>> comp = {"servers": {"8.8.8.8": {"A": {"records": ["1.2.3.4"]}}}}
-        >>> format_dns_comparison(comp)
-        [{"server": "8.8.8.8", "type": "A", "response_time_ms": "N/A", ...}]
+        >>> format_dns_comparison(comp)[0]["server"]
+        '8.8.8.8'
 
     """
-    formatted: list[dict[str, str | int]] = []
-
-    for server, results in comparison_result.get("servers", {}).items():
-        for rtype, data in results.items():
-            row: dict[str, str | int] = {
-                "server": server,
-                "type": rtype,
-                "response_time_ms": data.get("response_time", "N/A"),
-                "records": "\n".join(data.get("records", ["None"])),
-                "differs": "✓" if data.get("differs") else " ",
-            }
-            formatted.append(row)
-
-    return formatted
+    return [
+        {
+            "server": server,
+            "type": rtype,
+            "response_time_ms": data.get("response_time", "N/A"),
+            "records": "\n".join(data.get("records", ["None"])),
+            "differs": "✓" if data.get("differs") else " ",
+        }
+        for server, results in comparison_result.get("servers", {}).items()
+        for rtype, data in results.items()
+    ]
 
 
 def format_dns_health(health_result: dict[str, Any]) -> list[dict[str, Any]]:
     """
     Format DNS health check results for tabular display.
 
-    Converts health check results showing overall domain health and
-    per-record-type scores into a readable format.
-
     Args:
-        health_result: Dictionary containing:
-            - domain: Domain name that was checked
-            - score: Overall health score (0-100)
-            - status: Overall status (healthy, warning, critical)
-            - issues: List of detected issues
-            - warnings: List of warnings
-            - record_scores: Dictionary mapping record types to scores
+        health_result: Dict with ``domain``, ``score``, ``status``,
+            ``issues``, ``warnings``, and ``record_scores`` keys.
 
     Returns:
-        list[dict]: Formatted health data with:
-            - domain: Domain name (indented for record types)
-            - overall_score: Score as "X/100"
-            - status: Uppercase status
-            - issues: Issues (joined with newlines)
-            - warnings: Warnings (joined with newlines)
+        List of dicts: one summary row followed by per-record-type rows.
 
-    Example:
-        >>> health = {"domain": "example.com", "score": 85, "status": "healthy"}
-        >>> format_dns_health(health)
-        [{"domain": "example.com", "overall_score": "85/100", ...}]
+    Examples:
+        >>> health = {
+        ...     "domain": "example.com",
+        ...     "score": 85,
+        ...     "status": "healthy",
+        ...     "issues": [],
+        ...     "warnings": [],
+        ...     "record_scores": {},
+        ... }
+        >>> format_dns_health(health)[0]["overall_score"]
+        '85/100'
 
     """
-    formatted: list[dict[str, str | int]] = [
-        {
-            "domain": health_result.get("domain"),
-            "overall_score": f"{health_result.get('score', 0)}/100",
-            "status": health_result.get("status", "unknown").upper(),
-            "issues": "\n".join(health_result.get("issues", ["None"])),
-            "warnings": "\n".join(health_result.get("warnings", ["None"])),
-        }
-    ]
+    score = health_result.get("score", 0)
+    summary: dict[str, Any] = {
+        "domain": health_result.get("domain"),
+        "overall_score": f"{score}/100",
+        "status": health_result.get("status", "unknown").upper(),
+        "issues": "\n".join(health_result.get("issues", ["None"])),
+        "warnings": "\n".join(health_result.get("warnings", ["None"])),
+    }
 
-    for record_type, score in health_result.get("record_scores", {}).items():
-        formatted.append(
+    rows: list[dict[str, Any]] = [summary]
+
+    for record_type, record_score in health_result.get("record_scores", {}).items():
+        status = (
+            "GOOD" if record_score >= 80 else "WARN" if record_score >= 50 else "BAD"
+        )
+        rows.append(
             {
                 "domain": f"  {record_type}:",
-                "overall_score": f"{score}/100",
-                "status": "GOOD" if score >= 80 else "WARN" if score >= 50 else "BAD",
+                "overall_score": f"{record_score}/100",
+                "status": status,
                 "issues": "",
                 "warnings": "",
             }
         )
 
-    return formatted
+    return rows
 
 
 def format_dns_poisoning(  # noqa: C901
     poisoning_result: dict[str, Any],
 ) -> list[dict[str, Any]]:
     """
-    Format DNS poisoning check results with detailed analysis.
+    Build a detailed, human-readable breakdown of a DNS poisoning check.
 
-    Creates a comprehensive, human-readable breakdown of DNS poisoning test
-    results, including server analysis, CDN detection, and verdict.
+    The result is organised into logical sections (DNS ANALYSIS, CONTROL
+    SERVER, SUMMARY, CDN DETECTION, IP DIVERSITY, CONSENSUS, ANALYSIS,
+    DETAILS, VERDICT) and returned as a flat list of rows suitable for
+    table rendering.
 
     Args:
-        poisoning_result: Dictionary containing poisoning check results with:
-            - domain: Domain that was tested
-            - record_type: DNS record type tested
-            - poisoning_level: Detected poisoning level
-            - confidence: Confidence percentage in detection
-            - cdn_detected: Whether CDN was detected
-            - control_server: Control server used
-            - test_servers_count: Number of servers tested
-            - mismatches: Count of mismatching responses
-            - inconsistencies: List of detected inconsistencies
-            - and many other detailed metrics
+        poisoning_result: Poisoning check result dict as returned by
+            :func:`nadzoring.dns_lookup.check_dns_poisoning`.
 
     Returns:
-        list[dict]: Formatted analysis data with columns:
-            - section: Section header or detail prefix
-            - detail: Primary information
-            - value: Secondary value/metric
-            - note: Additional context or explanation
+        List of dicts with ``section``, ``detail``, ``value``, and
+        ``note`` columns.
 
-    The output is organized into logical sections:
-        - DNS ANALYSIS: Basic test info
-        - CONTROL SERVER: Reference server details
-        - SUMMARY: Overall statistics
-        - CDN DETECTION: If CDN detected
-        - VERDICT: Final determination
-
-    Example:
-        >>> result = {"domain": "example.com", "poisoning_level": "NONE"}
-        >>> format_dns_poisoning(result)
-        [{"section": "DNS ANALYSIS", "detail": "example.com (A)", ...}]
+    Examples:
+        >>> result = {
+        ...     "domain": "example.com",
+        ...     "poisoning_level": "NONE",
+        ...     "confidence": 100,
+        ...     "cdn_detected": False,
+        ...     "poisoned": False,
+        ... }
+        >>> format_dns_poisoning(result)[-1]["detail"]
+        'CLEAN'
 
     """
     formatted: list[dict[str, str]] = []
@@ -742,20 +706,16 @@ def format_dns_poisoning(  # noqa: C901
     cdn_owner = poisoning_result.get("cdn_owner", "Unknown")
     cdn_percentage = poisoning_result.get("cdn_percentage", 0)
 
-    # Header
-    status_text: Literal["CDN DETECTED", "POISONING CHECK"] = (
-        "CDN DETECTED" if cdn_detected else "POISONING CHECK"
-    )
+    status_text = "CDN DETECTED" if cdn_detected else "POISONING CHECK"
     formatted.append(
         {
             "section": "DNS ANALYSIS",
             "detail": f"{domain} ({record_type})",
             "value": f"{level} (confidence: {confidence}%)",
-            "note": f"{status_text}",
+            "note": status_text,
         }
     )
 
-    # Control server info
     control = poisoning_result.get("control_server", "")
     control_name = poisoning_result.get("control_name", "Unknown")
     control_country = poisoning_result.get("control_country", "Unknown")
@@ -771,21 +731,26 @@ def format_dns_poisoning(  # noqa: C901
         }
     )
 
-    # IP analysis
     control_analysis = poisoning_result.get("control_analysis", {})
     if control_analysis:
         owners: set[str] = set(control_analysis.get("owners", []))
-        owner_str: Literal["Unknown"] | str = ", ".join(owners) if owners else "Unknown"
+        owner_str = ", ".join(owners) if owners else "Unknown"
         formatted.append(
             {
                 "section": "CONTROL IP ANALYSIS",
-                "detail": f"Unique: {control_analysis.get('unique', 0)} | IPv4: {control_analysis.get('ipv4', 0)} | IPv6: {control_analysis.get('ipv6', 0)}",  # noqa: E501
+                "detail": (
+                    f"Unique: {control_analysis.get('unique', 0)} | "
+                    f"IPv4: {control_analysis.get('ipv4', 0)} | "
+                    f"IPv6: {control_analysis.get('ipv6', 0)}"
+                ),
                 "value": f"Owner: {owner_str}",
-                "note": f"Private: {control_analysis.get('private', 0)} | Reserved: {control_analysis.get('reserved', 0)}",  # noqa: E501
+                "note": (
+                    f"Private: {control_analysis.get('private', 0)} | "
+                    f"Reserved: {control_analysis.get('reserved', 0)}"
+                ),
             }
         )
 
-    # Summary stats
     total = poisoning_result.get("test_servers_count", 0)
     mismatches = poisoning_result.get("mismatches", 0)
     cdn_variations = poisoning_result.get("cdn_variations", 0)
@@ -797,11 +762,15 @@ def format_dns_poisoning(  # noqa: C901
             "section": "SUMMARY",
             "detail": f"Servers tested: {total}",
             "value": f"Mismatches: {mismatches} | CDN variations: {cdn_variations}",
-            "note": f"High: {severity.get('high', 0)} Med: {severity.get('medium', 0)} Low: {severity.get('low', 0)} Info: {severity.get('info', 0)}",  # noqa: E501
+            "note": (
+                f"High: {severity.get('high', 0)} "
+                f"Med: {severity.get('medium', 0)} "
+                f"Low: {severity.get('low', 0)} "
+                f"Info: {severity.get('info', 0)}"
+            ),
         }
     )
 
-    # CDN detection
     if cdn_detected:
         formatted.append(
             {
@@ -812,7 +781,6 @@ def format_dns_poisoning(  # noqa: C901
             }
         )
 
-    # IP diversity
     ip_diversity = poisoning_result.get("ip_diversity", 0)
     formatted.append(
         {
@@ -823,7 +791,6 @@ def format_dns_poisoning(  # noqa: C901
         }
     )
 
-    # Consensus
     consensus = poisoning_result.get("consensus_top", [])
     if consensus:
         top = consensus[0]
@@ -832,11 +799,13 @@ def format_dns_poisoning(  # noqa: C901
                 "section": "CONSENSUS",
                 "detail": f"Most common IP: {top['ip']}",
                 "value": f"{top['percentage']}% of servers",
-                "note": f"Owner: {top.get('owner', 'Unknown')} | Consensus rate: {poisoning_result.get('consensus_rate', 0)}%",  # noqa: E501
+                "note": (
+                    f"Owner: {top.get('owner', 'Unknown')} | "
+                    f"Consensus rate: {poisoning_result.get('consensus_rate', 0)}%"
+                ),
             }
         )
 
-    # Analysis verdict
     if poisoning_result.get("cdn_likely"):
         formatted.append(
             {
@@ -865,56 +834,46 @@ def format_dns_poisoning(  # noqa: C901
             }
         )
 
-    # Detailed inconsistencies
-    if poisoning_result.get("inconsistencies"):
-        formatted.append(
-            {
-                "section": "DETAILS",
-                "detail": "",
-                "value": "",
-                "note": "",
-            }
-        )
+    inconsistencies = poisoning_result.get("inconsistencies", [])
+    if inconsistencies:
+        formatted.append({"section": "DETAILS", "detail": "", "value": "", "note": ""})
 
-        for inc in poisoning_result["inconsistencies"][:5]:
+        for inc in inconsistencies[:5]:
             server = inc["server"]
             sname = inc.get("server_name", "Unknown")
             country = inc.get("server_country", "??")
             itype = inc["type"].replace("_", " ").title()
-            severity = inc["severity"].upper()
+            inc_severity = inc["severity"].upper()
 
             if itype == "Cdn Variation":
-                note: str = (
+                note = (
                     f"CDN node variation - same provider: {inc.get('owner', 'Unknown')}"
                 )
             elif itype == "Record Mismatch":
-                control_owner = inc.get("control_owner", "Unknown")
-                test_owner = inc.get("test_owner", "Unknown")
-                note: str = f"Control owner: {control_owner} | Test owner: {test_owner}"
+                note = f"Control owner: {inc.get('control_owner', 'Unknown')} | Test owner: {inc.get('test_owner', 'Unknown')}"  # noqa: E501
             elif itype == "Error Mismatch":
-                note: str = f"Control error: {inc['control_error']} | Test error: {inc['test_error']}"  # noqa: E501
+                note = f"Control error: {inc['control_error']} | Test error: {inc['test_error']}"  # noqa: E501
             else:
-                note: str = f"TTL diff: {inc['diff']}s"
+                note = f"TTL diff: {inc['diff']}s"
 
             formatted.append(
                 {
                     "section": f"  -> {server} ({sname}, {country})",
-                    "detail": f"[{severity}] {itype}",
+                    "detail": f"[{inc_severity}] {itype}",
                     "value": "",
                     "note": note[:60] + "..." if len(note) > 60 else note,
                 }
             )
 
-    # Final verdict
     if poisoning_result.get("cdn_detected"):
         verdict = "CLEAN (CDN DETECTED)"
-        explanation: str = f"Different {cdn_owner} CDN nodes - normal behavior"
+        explanation = f"Different {cdn_owner} CDN nodes - normal behavior"
     elif not poisoning_result.get("poisoned"):
         verdict = "CLEAN"
-        explanation: str = "No inconsistencies detected"
+        explanation = "No inconsistencies detected"
     else:
         verdict = "POISONED"
-        explanation: str = f"{mismatches}/{total} servers show inconsistencies"
+        explanation = f"{mismatches}/{total} servers show inconsistencies"
 
     formatted.append(
         {

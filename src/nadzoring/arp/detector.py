@@ -10,35 +10,37 @@ class ARPSpoofingDetector:
     """
     Detects potential ARP spoofing attacks.
 
-    Analyzes ARP cache entries to identify potential spoofing attempts by
-    detecting duplicate MAC addresses across different IPs or duplicate IP
-    addresses across different MACs.
+    Analyses ARP cache entries to identify spoofing attempts by detecting
+    duplicate MAC addresses across different IPs or duplicate IP addresses
+    across different MACs.
 
     Attributes:
-        cache: ARPCache instance used to retrieve ARP entries.
+        cache: :class:`ARPCache` instance used to retrieve ARP entries.
 
     """
 
     def __init__(self, cache: ARPCache) -> None:
         """
-        Initialize detector with ARP cache.
+        Initialise the detector with an ARP cache.
 
         Args:
-            cache: ARPCache instance for retrieving ARP entries.
+            cache: :class:`ARPCache` instance for retrieving ARP entries.
 
         """
         self.cache = cache
 
     def detect(self) -> list[SpoofingAlert]:
         """
-        Detect potential ARP spoofing in current cache.
+        Detect potential ARP spoofing in the current cache.
 
-        Analyzes all ARP entries and generates alerts for suspicious patterns:
-        - Same MAC address associated with multiple IPs (duplicate_mac)
-        - Same IP address associated with multiple MACs (duplicate_ip)
+        Analyses all ARP entries and generates alerts for two suspicious
+        patterns:
+
+        * **duplicate_mac** — same MAC address associated with multiple IPs
+        * **duplicate_ip** — same IP address associated with multiple MACs
 
         Returns:
-            List of SpoofingAlert objects for each detected anomaly.
+            List of :class:`SpoofingAlert` objects for each detected anomaly.
 
         """
         entries: list[ARPEntry] = self.cache.get_cache()
