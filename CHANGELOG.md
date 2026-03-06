@@ -1,3 +1,16 @@
+commit 1083449f88fbf0a164f6f945112a33910eba07ca
+Merge: 13c8dbd 0b1763b
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 6 15:31:13 2026 +0700
+
+    Merge pull request #12 from alexeev-prog/dependabot/github_actions/actions/upload-pages-artifact-4
+
+commit 13c8dbdfa64cb93464d29c474f6be94895353cd2
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 6 15:29:18 2026 +0700
+
+    update docs templates
+
 commit b1b078990f10512ddc4bef8de3c2d9f886f5ed1d
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Fri Mar 6 08:50:36 2026 +0700
@@ -15,6 +28,26 @@ Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Fri Mar 6 08:40:36 2026 +0700
 
     update docs (versioning and context7 widget)
+
+commit 0b1763b6ae0786a171a0fc77ed46bf7024a65cec
+Author: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+Date:   Thu Mar 5 18:38:40 2026 +0000
+
+    Bump actions/upload-pages-artifact from 3 to 4
+    
+    Bumps [actions/upload-pages-artifact](https://github.com/actions/upload-pages-artifact) from 3 to 4.
+    - [Release notes](https://github.com/actions/upload-pages-artifact/releases)
+    - [Commits](https://github.com/actions/upload-pages-artifact/compare/v3...v4)
+    
+    ---
+    updated-dependencies:
+    - dependency-name: actions/upload-pages-artifact
+      dependency-version: '4'
+      dependency-type: direct:production
+      update-type: version-update:semver-major
+    ...
+    
+    Signed-off-by: dependabot[bot] <support@github.com>
 
 commit 396e873aaf98d07a8710019b0554495834cf123e
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>

@@ -43,6 +43,12 @@ pygments_style = "gruvbox-dark"
 
 html_theme = "furo"
 html_static_path: list[str] = ["_static"]
+html_js_files: list[tuple[str, dict]] = [
+    (
+        "https://context7.com/widget.js",
+        {"data-library": "/alexeev-prog/nadzoring"},
+    ),
+]
 todo_include_todos = True
 auto_doc_default_options: dict[str, bool] = {"autosummary": True}
 
