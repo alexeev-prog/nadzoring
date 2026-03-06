@@ -3,15 +3,31 @@
 <div class="sidebar-tree">
   <p class="caption" role="heading"><span>Versions</span></p>
   <ul>
-    {%- for rev in revisions | sort(attribute="date") | reverse %}
-    {%- set rev_name = rev['name'] if rev is mapping else rev.name %}
-    <li class="toctree-l1 {%- if rev_name == current_name %} current{% endif %}">
-      <a class="reference" href="{{ pathto('', 1) }}{{ rev_name }}/">
-        {{ rev_name }}
-        {%- if loop.first %} <em>(latest)</em>{% endif %}
+    <li class="toctree-l1">
+      <a class="reference" href="https://alexeev-prog.github.io/nadzoring/main/">
+        <em>(latest)</em>
       </a>
     </li>
-    {%- endfor %}
+    <li class="toctree-l1">
+      <a class="reference" href="https://alexeev-prog.github.io/nadzoring/v0.1.4/">
+        <em>v0.1.4</em>
+      </a>
+    </li>
+    <li class="toctree-l1">
+      <a class="reference" href="https://alexeev-prog.github.io/nadzoring/v0.1.3/">
+        <em>v0.1.3</em>
+      </a>
+    </li>
+    <li class="toctree-l1">
+      <a class="reference" href="https://alexeev-prog.github.io/nadzoring/v0.1.2/">
+        <em>v0.1.2</em>
+      </a>
+    </li>
+    <li class="toctree-l1">
+      <a class="reference" href="https://alexeev-prog.github.io/nadzoring/v0.1.1/">
+        <em>v0.1.1</em>
+      </a>
+    </li>
   </ul>
 </div>
 {%- endif %}

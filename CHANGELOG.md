@@ -1,3 +1,9 @@
+commit 396e873aaf98d07a8710019b0554495834cf123e
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 6 00:07:19 2026 +0700
+
+    remove pylint workflow
+
 commit 4cf78c09dab6bbbd453949af9c15ae5ca1f9f056
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Fri Mar 6 00:06:52 2026 +0700

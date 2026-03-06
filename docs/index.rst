@@ -35,9 +35,6 @@ Versions
    * - `v0.1.1 </nadzoring/v0.1.1/>`_
      - Initial public release with network base
      - Stable
-   * - `v0.1.0 </nadzoring/v0.1.0/>`_
-     - First release
-     - Stable
 
 .. toctree::
    :maxdepth: 2
