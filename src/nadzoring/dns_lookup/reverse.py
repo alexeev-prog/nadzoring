@@ -106,7 +106,7 @@ def reverse_dns(
             result = reverse_dns("8.8.8.8", nameserver="1.1.1.1")
 
     """
-    result = _make_result(ip_address)
+    result: dict[str, float | str | None] = _make_result(ip_address)
 
     try:
         resolver: Resolver = create_resolver(nameserver)

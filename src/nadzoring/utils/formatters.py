@@ -32,10 +32,10 @@ _HTML_STYLES = """\
     .medium { color: orange; }
     .low { color: green; }"""
 
-_CRITICAL_TERMS = {"CRITICAL", "HIGH", "POISONED", "ERROR", "NXDOMAIN"}
-_WARNING_TERMS = {"MEDIUM", "WARNING", "MISMATCH", "TTL_DIFF"}
-_INFO_TERMS = {"LOW", "INFO", "REFERENCE", "CLEAN"}
-_POSITIVE_TERMS = {"yes", "up", "passed", "good", "healthy"}
+_CRITICAL_TERMS: set[str] = {"CRITICAL", "HIGH", "POISONED", "ERROR", "NXDOMAIN"}
+_WARNING_TERMS: set[str] = {"MEDIUM", "WARNING", "MISMATCH", "TTL_DIFF"}
+_INFO_TERMS: set[str] = {"LOW", "INFO", "REFERENCE", "CLEAN"}
+_POSITIVE_TERMS: set[str] = {"yes", "up", "passed", "good", "healthy"}
 
 
 def get_terminal_width() -> int:
@@ -109,8 +109,8 @@ def colorize_value(value: Any, *, no_color: bool = False) -> str:
     if no_color or not isinstance(value, str):
         return value_str
 
-    upper = value.upper()
-    lower = value.lower()
+    upper: str = value.upper()
+    lower: str = value.lower()
 
     if upper in _CRITICAL_TERMS:
         return click.style(value_str, fg="red", bold=True)
@@ -151,8 +151,8 @@ def print_results_table(
             {key: colorize_value(value) for key, value in row.items()} for row in data
         ]
 
-    term_width = get_terminal_width()
-    headers = list(data[0].keys())
+    term_width: int = get_terminal_width()
+    headers: list[str] = list(data[0].keys())
 
     min_widths: dict[str, int] = {h: len(h) for h in headers}
     max_widths: dict[str, int] = dict.fromkeys(headers, 80)
@@ -169,8 +169,8 @@ def print_results_table(
         if h in max_widths:
             max_widths[h] = w
 
-    borders = len(headers) * 3 + 1
-    available = term_width - borders
+    borders: int = len(headers) * 3 + 1
+    available: int = term_width - borders
 
     widths: list[int] = (
         [min_widths[h] for h in headers]
@@ -188,7 +188,7 @@ def print_results_table(
             numalign="left",
         )
     except Exception:
-        output = tabulate(data, headers="keys", tablefmt="simple")
+        output: str = tabulate(data, headers="keys", tablefmt="simple")
 
     click.echo(output)
 
@@ -216,22 +216,22 @@ def _calculate_column_widths(
         List of integer column widths in the same order as *headers*.
 
     """
-    total_min = sum(min_widths.values())
+    total_min: Literal[0] | int = sum(min_widths.values())
 
     if total_min >= available:
         return [min_widths[h] for h in headers]
 
-    extra = (available - total_min) / len(headers)
+    extra: float = (available - total_min) / len(headers)
     col_widths: dict[str, int] = {
         h: min(int(min_widths[h] + extra), max_widths[h]) for h in headers
     }
 
-    overflow = sum(col_widths.values()) - available
+    overflow: int = sum(col_widths.values()) - available
     if overflow > 0:
         for h in sorted(headers, key=lambda h: col_widths[h], reverse=True):
             if overflow <= 0:
                 break
-            reduction = min(overflow, col_widths[h] - min_widths[h])
+            reduction: int = min(overflow, col_widths[h] - min_widths[h])
             col_widths[h] -= reduction
             overflow -= reduction
 
@@ -275,7 +275,7 @@ def _build_html_page(title: str, html_table: str) -> str:
         Complete HTML document as a string.
 
     """
-    timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
+    timestamp: str = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
     return f"""<!DOCTYPE html>
 <html>
 <head>
@@ -308,7 +308,7 @@ def print_html_table(
     if not data:
         return
 
-    html_table = tabulate(data, headers="keys", tablefmt="html")
+    html_table: str = tabulate(data, headers="keys", tablefmt="html")
 
     if not full_page:
         click.echo(html_table)
@@ -537,7 +537,7 @@ def format_dns_trace(trace_result: dict[str, Any]) -> list[dict[str, Any]]:
     hops: list[dict[str, Any]] = trace_result.get("hops", [])
 
     for i, hop in enumerate(hops):
-        response_time = hop.get("response_time")
+        response_time: Any | None = hop.get("response_time")
 
         if response_time is None:
             time_str = "timeout"
@@ -547,7 +547,7 @@ def format_dns_trace(trace_result: dict[str, Any]) -> list[dict[str, Any]]:
             time_str = str(response_time)
 
         records = hop.get("records", [])
-        records_str = (
+        records_str: str | Any = (
             "\n".join(str(r) for r in records)
             if records
             else hop.get("error", "No records")
@@ -566,7 +566,7 @@ def format_dns_trace(trace_result: dict[str, Any]) -> list[dict[str, Any]]:
     final: dict[str, Any] | None = trace_result.get("final_answer")
     if final and final not in hops:
         response_time = final.get("response_time")
-        time_str = f"{response_time:.2f}ms" if response_time else "N/A"
+        time_str: str = f"{response_time:.2f}ms" if response_time else "N/A"
         final_records = final.get("records", ["Answer received"])
 
         formatted.append(
@@ -649,7 +649,7 @@ def format_dns_health(health_result: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = [summary]
 
     for record_type, record_score in health_result.get("record_scores", {}).items():
-        status = (
+        status: Literal["BAD", "GOOD", "WARN"] = (
             "GOOD" if record_score >= 80 else "WARN" if record_score >= 50 else "BAD"
         )
         rows.append(
@@ -706,7 +706,9 @@ def format_dns_poisoning(  # noqa: C901
     cdn_owner = poisoning_result.get("cdn_owner", "Unknown")
     cdn_percentage = poisoning_result.get("cdn_percentage", 0)
 
-    status_text = "CDN DETECTED" if cdn_detected else "POISONING CHECK"
+    status_text: Literal["CDN DETECTED", "POISONING CHECK"] = (
+        "CDN DETECTED" if cdn_detected else "POISONING CHECK"
+    )
     formatted.append(
         {
             "section": "DNS ANALYSIS",
@@ -734,7 +736,7 @@ def format_dns_poisoning(  # noqa: C901
     control_analysis = poisoning_result.get("control_analysis", {})
     if control_analysis:
         owners: set[str] = set(control_analysis.get("owners", []))
-        owner_str = ", ".join(owners) if owners else "Unknown"
+        owner_str: str = ", ".join(owners) if owners else "Unknown"
         formatted.append(
             {
                 "section": "CONTROL IP ANALYSIS",
@@ -846,7 +848,7 @@ def format_dns_poisoning(  # noqa: C901
             inc_severity = inc["severity"].upper()
 
             if itype == "Cdn Variation":
-                note = (
+                note: str = (
                     f"CDN node variation - same provider: {inc.get('owner', 'Unknown')}"
                 )
             elif itype == "Record Mismatch":
@@ -867,7 +869,7 @@ def format_dns_poisoning(  # noqa: C901
 
     if poisoning_result.get("cdn_detected"):
         verdict = "CLEAN (CDN DETECTED)"
-        explanation = f"Different {cdn_owner} CDN nodes - normal behavior"
+        explanation: str = f"Different {cdn_owner} CDN nodes - normal behavior"
     elif not poisoning_result.get("poisoned"):
         verdict = "CLEAN"
         explanation = "No inconsistencies detected"

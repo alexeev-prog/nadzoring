@@ -1,3 +1,9 @@
+commit c475b39fd33bfd9cf40d81de80ed11f55f808f60
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Mar 7 16:23:59 2026 +0700
+
+    update docs & changelog.md
+
 commit 67a9f152603e98d1c315fc37db1c19f4a0851a90
 Merge: dc28de7 5ef1d68
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>

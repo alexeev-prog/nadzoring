@@ -129,16 +129,18 @@ def validate_mx_records(
     seen_priorities: list[int] = []
 
     for mx in mx_records:
-        priority = _parse_mx_priority(mx)
+        priority: int | None = _parse_mx_priority(mx)
 
         if priority is None:
             validation["valid"] = False
-            validation["issues"].append(f"Invalid MX record format: {mx}")  # type: ignore[union-attr]
+            # type: ignore[union-attr]
+            validation["issues"].append(f"Invalid MX record format: {mx}")
             continue
 
         if priority in seen_priorities:
             validation["valid"] = False
-            validation["issues"].append(f"Duplicate priority: {priority}")  # type: ignore[union-attr]
+            # type: ignore[union-attr]
+            validation["issues"].append(f"Duplicate priority: {priority}")
         else:
             seen_priorities.append(priority)
 
