@@ -1,3 +1,9 @@
+commit 1a18bbae1a5f19410dcc0fa3b5bd5d5400311368
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Mar 7 16:38:40 2026 +0700
+
+    update docs and upload new version: 0.1.6
+
 commit 5fe6a9e993a9b025e5ec46550bf8831782190e32
 Merge: c475b39 77d8adf
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
