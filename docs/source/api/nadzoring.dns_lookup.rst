@@ -15,6 +15,7 @@ Submodules
    nadzoring.dns_lookup.benchmark
    nadzoring.dns_lookup.compare
    nadzoring.dns_lookup.health
+   nadzoring.dns_lookup.monitor
    nadzoring.dns_lookup.poisoning
    nadzoring.dns_lookup.reverse
    nadzoring.dns_lookup.trace

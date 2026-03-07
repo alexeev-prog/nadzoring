@@ -13,5 +13,6 @@ Submodules
    :maxdepth: 4
 
    nadzoring.utils.decorators
+   nadzoring.utils.errors
    nadzoring.utils.formatters
    nadzoring.utils.validators

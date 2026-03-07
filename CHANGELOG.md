@@ -1,3 +1,16 @@
+commit 67a9f152603e98d1c315fc37db1c19f4a0851a90
+Merge: dc28de7 5ef1d68
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Mar 7 16:23:23 2026 +0700
+
+    Merge pull request #16 from alexeev-prog/refactor+docs/refactor-core
+
+commit 5ef1d68c29f93c4f52d2e826e5a1d53ab4f69c10
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Mar 7 16:20:48 2026 +0700
+
+    refactor: core-modules (dns_lookup, utils, network_base) and improve docs (add more documentation)
+
 commit dc28de700936bcbc91b8ca78569a88511d344463
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Sat Mar 7 01:40:40 2026 +0700
