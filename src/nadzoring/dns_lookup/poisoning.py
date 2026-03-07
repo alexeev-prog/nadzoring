@@ -790,7 +790,7 @@ def _calculate_metrics(
         (top_consensus[0][1] / total * 100) if top_consensus and total > 0 else 0.0
     )
 
-    geo_diversity = len({SERVER_COUNTRIES.get(s, "Unknown") for s in test_results})
+    geo_diversity: int = len({SERVER_COUNTRIES.get(s, "Unknown") for s in test_results})
 
     return {
         "total_tested": total,
@@ -883,10 +883,10 @@ def _build_result(
         Complete :class:`PoisoningCheckResult`.
 
     """
-    control_analysis = _analyze_ip_patterns(control_result.get("records", []))
-    control_owners = control_analysis.get("owners", [])
+    control_analysis: IPAnalysisResult = _analyze_ip_patterns(control_result.get("records", []))
+    control_owners: list[str] | list[int] = control_analysis.get("owners", [])
 
-    formatted_consensus = [
+    formatted_consensus: list[dict[str, float | int | str]] = [
         {
             "ip": ip,
             "count": count,

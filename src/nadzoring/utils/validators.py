@@ -11,17 +11,16 @@ import socket
 from ipaddress import AddressValueError, ip_address
 from re import Pattern
 
-# ---------------------------------------------------------------------------
-# Domain validation
-# ---------------------------------------------------------------------------
-
 _DOMAIN_PATTERN: Pattern[str] = re.compile(
     r"^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z0-9-]{1,63})*$",
     re.IGNORECASE,
 )
 
-_MAX_DOMAIN_LENGTH = 255
-_MAX_LABEL_LENGTH = 63
+_MAX_DOMAIN_LENGTH: int = 255
+_MAX_LABEL_LENGTH: int = 63
+
+_PORT_MIN: int = 1
+_PORT_MAX: int = 65535
 
 
 def validate_domain(domain: str) -> bool:
@@ -52,11 +51,6 @@ def validate_domain(domain: str) -> bool:
 
     domain = domain.removesuffix(".")
     return bool(_DOMAIN_PATTERN.match(domain))
-
-
-# ---------------------------------------------------------------------------
-# IP address validation
-# ---------------------------------------------------------------------------
 
 
 def validate_ip(ip: str) -> bool:
@@ -137,14 +131,6 @@ def validate_ipv6(ip: str) -> bool:
         return False
 
 
-# ---------------------------------------------------------------------------
-# Port validation
-# ---------------------------------------------------------------------------
-
-_PORT_MIN = 1
-_PORT_MAX = 65535
-
-
 def validate_port(port: int) -> bool:
     """
     Check whether an integer is a valid TCP/UDP port number.
@@ -165,11 +151,6 @@ def validate_port(port: int) -> bool:
 
     """
     return _PORT_MIN <= port <= _PORT_MAX
-
-
-# ---------------------------------------------------------------------------
-# Hostname resolution
-# ---------------------------------------------------------------------------
 
 
 def resolve_hostname(hostname: str) -> str | None:
