@@ -1,3 +1,22 @@
+commit 5fe6a9e993a9b025e5ec46550bf8831782190e32
+Merge: c475b39 77d8adf
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Mar 7 16:35:41 2026 +0700
+
+    Merge pull request #17 from alexeev-prog/refactor/typing-and-codestyle
+
+commit 77d8adf944a14fb97f30b1e96cf598906eab9363
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Mar 7 16:34:52 2026 +0700
+
+    fix linter errors
+
+commit 4cc42c9c0f5ca44eee69fa52b100c0588d6d46dd
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Mar 7 16:30:05 2026 +0700
+
+    update codestyle and typing annotations
+
 commit c475b39fd33bfd9cf40d81de80ed11f55f808f60
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Sat Mar 7 16:23:59 2026 +0700

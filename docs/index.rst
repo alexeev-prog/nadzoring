@@ -23,6 +23,9 @@ Versions
    * - `main </nadzoring/main/>`_
      - Latest development version from the main branch
      - **Latest**
+   * - `v0.1.6 </nadzoring/v0.1.5/>`_
+     - Stable release — refactor core modules, improve library-mode
+     - Stable
    * - `v0.1.5 </nadzoring/v0.1.5/>`_
      - Stable release — small code API redesigning, typing improvements, UX improved
      - Stable

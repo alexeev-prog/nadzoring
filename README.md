@@ -13,7 +13,7 @@
     ·
     <a href="#-usage-examples">Basic Usage</a>
     ·
-    <a href="https://alexeev-prog.github.io/nadzoring/v0.1.5">Stable Documentation</a>
+    <a href="https://alexeev-prog.github.io/nadzoring/v0.1.6">Stable Documentation</a>
     ·
     <a href="https://alexeev-prog.github.io/nadzoring/main">Latest Documentation</a>
     ·
@@ -57,6 +57,8 @@ Nadzoring (from Russian "надзор" — supervision/oversight + English "-ing
       - [dns health](#dns-health)
       - [dns benchmark](#dns-benchmark)
       - [dns poisoning](#dns-poisoning)
+      - [dns monitor](#dns-monitor)
+      - [dns monitor-report](#dns-monitor-report)
     - [Network Base Commands](#network-base-commands)
       - [ping](#ping)
       - [http-ping](#http-ping)
@@ -76,6 +78,7 @@ Nadzoring (from Russian "надзор" — supervision/oversight + English "-ing
   - [Output Formats](#output-formats)
   - [Saving Results](#saving-results)
   - [Logging Levels](#logging-levels)
+  - [Error Handling](#error-handling)
   - [Python API](#python-api)
     - [DNS Lookup API](#dns-lookup-api)
     - [Reverse DNS API](#reverse-dns-api)
@@ -197,13 +200,24 @@ nadzoring dns resolve --show-ttl --type A cloudflare.com
 from nadzoring.dns_lookup.utils import resolve_with_timer
 
 result = resolve_with_timer("example.com", "A")
-if not result["error"]:
+if result["error"]:
+    # Possible values:
+    # "Domain does not exist"  — NXDOMAIN
+    # "No A records"           — record type not found
+    # "Query timeout"          — nameserver did not respond
+    print("DNS error:", result["error"])
+else:
     print(result["records"])       # ['93.184.216.34']
     print(result["response_time"]) # milliseconds
 
-# With TTL
-result = resolve_with_timer("example.com", "MX", include_ttl=True)
-print(result["ttl"])  # e.g. 3600
+# With TTL and custom nameserver
+result = resolve_with_timer(
+    "example.com", "MX",
+    nameserver="8.8.8.8",
+    include_ttl=True,
+)
+print(result["records"])  # ['10 mail.example.com']
+print(result["ttl"])      # e.g. 3600
 ```
 
 ---
@@ -241,18 +255,23 @@ from nadzoring.dns_lookup.reverse import reverse_dns
 
 # IPv4 reverse lookup
 result = reverse_dns("8.8.8.8")
-print(result["hostname"])       # 'dns.google'
-print(result["response_time"])  # milliseconds
-print(result["error"])          # None on success
+if result["error"]:
+    # Possible values:
+    # "No PTR record"          — IP has no reverse entry
+    # "No reverse DNS"         — NXDOMAIN on reverse zone
+    # "Query timeout"          — resolver timed out
+    # "Invalid IP address: …"  — malformed input
+    print("Lookup failed:", result["error"])
+else:
+    print(result["hostname"])       # 'dns.google'
+    print(result["response_time"])  # milliseconds
 
 # IPv6 reverse lookup
 result = reverse_dns("2001:4860:4860::8888")
 print(result["hostname"])  # 'dns.google'
 
-# Handle lookup failure
-result = reverse_dns("192.168.1.1")
-if result["error"]:
-    print(result["error"])  # 'No PTR record' or 'No reverse DNS'
+# Compact error-safe pattern
+hostname = result["hostname"] or f"[{result['error']}]"
 
 # Custom nameserver
 result = reverse_dns("8.8.8.8", nameserver="1.1.1.1")
@@ -273,13 +292,15 @@ nadzoring dns check [OPTIONS] DOMAINS...
 |--------|-------|-------------|---------|
 | `--nameserver` | `-n` | Nameserver IP | System default |
 | `--types` | `-t` | Record types to check | ALL |
+| `--validate-mx` | | Validate MX priority uniqueness | `False` |
+| `--validate-txt` | | Validate SPF and DKIM TXT records | `False` |
 
 ```bash
 # Full DNS check
 nadzoring dns check example.com
 
-# Check MX and TXT only
-nadzoring dns check -t MX -t TXT gmail.com
+# Check MX and TXT only with validation
+nadzoring dns check -t MX -t TXT --validate-mx --validate-txt gmail.com
 
 # Multiple domains
 nadzoring dns check -n 9.9.9.9 google.com cloudflare.com
@@ -296,10 +317,10 @@ result = check_dns(
     validate_mx=True,
     validate_txt=True,
 )
-print(result["records"])      # {'MX': ['10 mail.example.com']}
-print(result["errors"])       # {'AAAA': 'No AAAA records'} if any
+print(result["records"])        # {'MX': ['10 mail.example.com']}
+print(result["errors"])         # {'AAAA': 'No AAAA records'} — only failed types
 print(result["response_times"]) # per-type timing in ms
-print(result["validations"])  # {'mx': {'valid': True, 'issues': []}}
+print(result["validations"])    # {'mx': {'valid': True, 'issues': [], 'warnings': []}}
 ```
 
 ---
@@ -333,14 +354,19 @@ nadzoring dns trace -v github.com
 from nadzoring.dns_lookup.trace import trace_dns
 
 result = trace_dns("example.com")
-for hop in result["hops"]:
-    print(f"Hop: {hop['nameserver']}  time: {hop['response_time']}ms")
-    if hop.get("records"):
-        print(f"  Records: {hop['records']}")
-    if hop.get("error"):
-        print(f"  Error: {hop['error']}")
 
-print("Final answer:", result["final_answer"])
+for hop in result["hops"]:
+    ns = hop["nameserver"]
+    rtt = f"{hop['response_time']} ms" if hop["response_time"] else "timeout"
+    err = f" ERROR: {hop['error']}" if hop.get("error") else ""
+    print(f"  {ns}  {rtt}{err}")
+    for rec in hop.get("records", []):
+        print(f"    {rec}")
+
+if result["final_answer"]:
+    print("Final answer:", result["final_answer"]["records"])
+else:
+    print("No authoritative answer found")
 ```
 
 ---
@@ -379,13 +405,15 @@ result = compare_dns_servers(
     servers=["8.8.8.8", "1.1.1.1", "9.9.9.9"],
     record_types=["A", "MX"],
 )
-if result["differences"]:
+if not result["differences"]:
+    print("All servers agree")
+else:
     for diff in result["differences"]:
         print(f"Server {diff['server']} — {diff['type']} mismatch")
-        print(f"  Expected: {diff['expected']}")
-        print(f"  Got:      {diff['got']}")
-else:
-    print("All servers agree.")
+        print(f"  Expected (baseline): {diff['expected']}")
+        print(f"  Got:                 {diff['got']}")
+        if diff["ttl_difference"] is not None:
+            print(f"  TTL delta: {diff['ttl_difference']}s")
 ```
 
 ---
@@ -407,6 +435,7 @@ Health score: **80–100** = Healthy · **50–79** = Degraded · **0–49** = U
 ```bash
 nadzoring dns health example.com
 nadzoring dns health -n 1.1.1.1 google.com
+nadzoring dns health -o json --save health.json example.com
 ```
 
 **Python API:**
@@ -415,12 +444,16 @@ nadzoring dns health -n 1.1.1.1 google.com
 from nadzoring.dns_lookup.health import health_check_dns
 
 result = health_check_dns("example.com")
-print(result["score"])   # 0–100
-print(result["status"])  # 'healthy' | 'degraded' | 'unhealthy'
-print(result["issues"])  # critical problems
-print(result["warnings"]) # non-critical issues
+
+print(f"Score: {result['score']}/100")
+print(f"Status: {result['status']}")  # 'healthy' | 'degraded' | 'unhealthy'
+
+for issue in result["issues"]:
+    print("  CRITICAL:", issue)
+for warn in result["warnings"]:
+    print("  WARN:", warn)
 for rtype, score in result["record_scores"].items():
-    print(f"  {rtype}: {score}")
+    print(f"  {rtype}: {score}/100")
 ```
 
 ---
@@ -492,6 +525,108 @@ nadzoring dns poisoning -c 1.1.1.1 -a MX -a TXT google.com
 nadzoring dns poisoning -o html --save poisoning_report.html twitter.com
 ```
 
+**Python API:**
+
+```python
+from nadzoring.dns_lookup.poisoning import check_dns_poisoning
+
+result = check_dns_poisoning("example.com")
+
+level = result.get("poisoning_level", "NONE")
+confidence = result.get("confidence", 0.0)
+print(f"Level: {level}  Confidence: {confidence:.0f}%")
+
+if result.get("poisoned"):
+    for inc in result.get("inconsistencies", []):
+        print("Inconsistency:", inc)
+
+if result.get("cdn_detected"):
+    print(f"CDN: {result['cdn_owner']} ({result['cdn_percentage']:.0f}%)")
+```
+
+---
+
+#### dns monitor
+
+Continuously monitor DNS health and performance for a domain. Logs each cycle to a structured JSONL file and fires configurable alerts when response time or success rate thresholds are breached.
+
+```bash
+nadzoring dns monitor [OPTIONS] DOMAIN
+```
+
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--nameserver` | `-n` | Nameserver to monitor (repeatable) | `8.8.8.8`, `1.1.1.1` |
+| `--interval` | | Seconds between check cycles | `60` |
+| `--cycles` | | Number of cycles to run (0 = infinite) | `0` |
+| `--max-rt` | | Alert threshold: max response time (ms) | `300` |
+| `--min-success` | | Alert threshold: minimum success rate (0–1) | `0.95` |
+| `--log-file` | | Path to JSONL log file | None |
+
+```bash
+# Monitor with default servers, save log
+nadzoring dns monitor example.com \
+    --interval 60 \
+    --log-file dns_monitor.jsonl
+
+# Strict thresholds — alert above 150 ms or below 99 % success
+nadzoring dns monitor example.com \
+    -n 8.8.8.8 -n 1.1.1.1 -n 9.9.9.9 \
+    --interval 30 \
+    --max-rt 150 --min-success 0.99 \
+    --log-file dns_monitor.jsonl
+
+# Run exactly 10 cycles and save a JSON report (great for CI)
+nadzoring dns monitor example.com --cycles 10 -o json --save report.json
+
+# Quiet mode for cron / systemd
+nadzoring dns monitor example.com \
+    --quiet --log-file /var/log/nadzoring/dns_monitor.jsonl
+```
+
+After Ctrl-C (or after `--cycles` completes), a statistical summary is printed automatically.
+
+**Python API:**
+
+```python
+from nadzoring.dns_lookup.monitor import AlertEvent, DNSMonitor, MonitorConfig
+
+
+def my_alert_handler(alert: AlertEvent) -> None:
+    print(f"ALERT [{alert.alert_type}]: {alert.message}")
+
+
+config = MonitorConfig(
+    domain="example.com",
+    nameservers=["8.8.8.8", "1.1.1.1"],
+    interval=60.0,
+    queries_per_sample=3,
+    max_response_time_ms=300.0,
+    min_success_rate=0.95,
+    log_file="dns_monitor.jsonl",
+    alert_callback=my_alert_handler,
+)
+
+monitor = DNSMonitor(config)
+monitor.run()
+print(monitor.report())
+```
+
+---
+
+#### dns monitor-report
+
+Analyse a JSONL log file produced by `dns monitor`.
+
+```bash
+nadzoring dns monitor-report [OPTIONS] LOG_FILE
+```
+
+```bash
+nadzoring dns monitor-report dns_monitor.jsonl
+nadzoring dns monitor-report dns_monitor.jsonl --server 8.8.8.8 -o json
+```
+
 ---
 
 ### Network Base Commands
@@ -518,6 +653,8 @@ from nadzoring.network_base.ping_address import ping_addr
 print(ping_addr("8.8.8.8"))            # True
 print(ping_addr("https://google.com")) # True — URLs are normalised automatically
 print(ping_addr("192.0.2.1"))          # False — unreachable
+
+# Note: ICMP may be blocked by firewalls even for reachable hosts
 ```
 
 ---
@@ -552,13 +689,17 @@ nadzoring network-base http-ping -o csv --save http_metrics.csv https://api.gith
 from nadzoring.network_base.http_ping import http_ping
 
 result = http_ping("https://example.com", timeout=10.0, include_headers=True)
-print(result.status_code)    # 200
-print(result.dns_ms)         # DNS resolution time in ms
-print(result.ttfb_ms)        # time-to-first-byte in ms
-print(result.total_ms)       # total download time in ms
-print(result.content_length) # bytes
+
 if result.error:
-    print("Error:", result.error)
+    print("HTTP probe failed:", result.error)
+else:
+    print(f"Status:  {result.status_code}")
+    print(f"DNS:     {result.dns_ms} ms")
+    print(f"TTFB:    {result.ttfb_ms} ms")
+    print(f"Total:   {result.total_ms} ms")
+    print(f"Size:    {result.content_length} bytes")
+    if result.final_url:
+        print(f"Redirect → {result.final_url}")
 ```
 
 ---
@@ -579,14 +720,24 @@ nadzoring network-base host-to-ip -o csv --save resolutions.csv example.com
 **Python API:**
 
 ```python
-from nadzoring.network_base.router_ip import check_ipv4, check_ipv6
+from nadzoring.utils.validators import resolve_hostname
 
-ipv4 = check_ipv4("google.com")  # '142.250.x.x'
-ipv6 = check_ipv6("google.com")  # '2607:f8b0:...' or hostname unchanged on failure
+ip = resolve_hostname("example.com")
+if ip is None:
+    print("Resolution failed")
+else:
+    print(ip)  # "93.184.216.34"
+
+# Validate IP format before resolving
+from nadzoring.utils.validators import validate_ip, validate_ipv4, validate_ipv6
+
+validate_ip("8.8.8.8")    # True
+validate_ipv4("::1")      # False
+validate_ipv6("::1")      # True
 
 # Get router/gateway IP
 from nadzoring.network_base.router_ip import router_ip
-gateway = router_ip()        # '192.168.1.1' on most home networks
+gateway = router_ip()         # '192.168.1.1' on most home networks
 gateway6 = router_ip(ipv6=True)
 ```
 
@@ -613,11 +764,17 @@ nadzoring network-base geolocation --save locations.json 8.8.8.8
 from nadzoring.network_base.geolocation_ip import geo_ip
 
 result = geo_ip("8.8.8.8")
-print(result["country"])  # 'United States'
-print(result["city"])     # 'Mountain View'
-print(result["lat"])      # '37.386'
-print(result["lon"])      # '-122.0838'
+
+if not result:
+    # Empty dict returned on failure (private IP, rate-limit, network error)
+    print("Geolocation unavailable")
+else:
+    print(f"{result['city']}, {result['country']}")
+    print(f"Coordinates: {result['lat']}, {result['lon']}")
 ```
+
+> **Note:** ip-api.com rate-limits free callers to 45 requests per minute.
+> Private/reserved IP addresses (e.g. `192.168.x.x`) return an empty dict.
 
 ---
 
@@ -678,6 +835,29 @@ nadzoring network-base port-scan --protocol udp --mode fast example.com
 nadzoring network-base port-scan -o json --save scan.json example.com
 ```
 
+**Python API:**
+
+```python
+from nadzoring.network_base.port_scanner import ScanConfig, scan_ports
+
+config = ScanConfig(
+    targets=["example.com"],
+    mode="fast",
+    protocol="tcp",
+    timeout=2.0,
+)
+results = scan_ports(config)
+
+for scan in results:
+    print(f"Target: {scan.target}  ({scan.target_ip})")
+    print(f"Open ports: {scan.open_ports}")
+    for port in scan.open_ports:
+        r = scan.results[port]
+        print(f"  {port}/tcp  {r.service}  {r.response_time}ms")
+        if r.banner:
+            print(f"  Banner: {r.banner[:80]}")
+```
+
 ---
 
 #### port-service
@@ -736,7 +916,7 @@ print(result["creation_date"])  # '1995-08-14T04:00:00Z'
 print(result["expiry_date"])
 print(result["name_servers"])
 if result.get("error"):
-    print("Error:", result["error"])  # whois not installed, etc.
+    print("Error:", result["error"])  # whois not installed, lookup failed, etc.
 ```
 
 ---
@@ -861,12 +1041,21 @@ nadzoring arp cache -o json
 **Python API:**
 
 ```python
-from nadzoring.arp.cache import ARPCache
+from nadzoring.arp.cache import ARPCache, ARPCacheRetrievalError
 
-cache = ARPCache()
-entries = cache.get_cache()
-for entry in entries:
-    print(f"{entry.ip_address} -> {entry.mac_address}  [{entry.interface}]  {entry.state.value}")
+try:
+    cache = ARPCache()
+    entries = cache.get_cache()
+except ARPCacheRetrievalError as exc:
+    print("Cannot read ARP cache:", exc)
+else:
+    for entry in entries:
+        print(
+            f"{entry.ip_address}  "
+            f"{entry.mac_address or '(incomplete)'}  "
+            f"{entry.interface}  "
+            f"{entry.state.value}"
+        )
 ```
 
 ---
@@ -890,14 +1079,20 @@ nadzoring arp detect-spoofing -o json --save spoofing_alerts.json
 **Python API:**
 
 ```python
-from nadzoring.arp.cache import ARPCache
+from nadzoring.arp.cache import ARPCache, ARPCacheRetrievalError
 from nadzoring.arp.detector import ARPSpoofingDetector
 
-cache = ARPCache()
-detector = ARPSpoofingDetector(cache)
-alerts = detector.detect()
-for alert in alerts:
-    print(f"[{alert.alert_type}] {alert.description}")
+try:
+    cache = ARPCache()
+    detector = ARPSpoofingDetector(cache)
+    alerts = detector.detect()
+except ARPCacheRetrievalError as exc:
+    print("ARP cache error:", exc)
+else:
+    if not alerts:
+        print("No spoofing detected")
+    for alert in alerts:
+        print(f"[{alert.alert_type}] {alert.description}")
 ```
 
 ---
@@ -936,6 +1131,13 @@ for alert in alerts:
 # Get monitoring stats
 stats = detector.get_stats()
 print(f"Processed: {stats['packets_processed']}  Alerts: {stats['alerts_generated']}")
+
+# Custom callback for integration with external systems
+def on_packet(packet, alert):
+    if alert:
+        print("ALERT:", alert)  # integrate with your alerting pipeline here
+
+detector.monitor(interface=None, count=0, timeout=0, packet_callback=on_packet)
 ```
 
 ---
@@ -978,6 +1180,60 @@ nadzoring arp cache -o csv --save arp.csv
 
 ---
 
+## Error Handling
+
+Every public Python API function follows a consistent error contract — functions never raise on expected DNS or network failures. All errors are returned as structured data so that scripts can handle them uniformly.
+
+**DNS result-dict pattern** — check `result["error"]` before using `result["records"]`:
+
+```python
+from nadzoring.dns_lookup.utils import resolve_with_timer
+
+result = resolve_with_timer("example.com", "A")
+if result["error"]:
+    # "Domain does not exist"  — NXDOMAIN
+    # "No A records"           — record type not present
+    # "Query timeout"          — nameserver did not respond
+    print("DNS error:", result["error"])
+else:
+    print(result["records"])
+    print(f"RTT: {result['response_time']} ms")
+```
+
+**Return-None / empty-dict pattern** — used where a result cannot be partially valid:
+
+```python
+from nadzoring.network_base.geolocation_ip import geo_ip
+
+result = geo_ip("8.8.8.8")
+if not result:
+    print("Geolocation unavailable")
+else:
+    print(f"{result['city']}, {result['country']}")
+```
+
+**Exception pattern** — used only for system-level failures (missing commands, unsupported OS):
+
+```python
+from nadzoring.arp.cache import ARPCache, ARPCacheRetrievalError
+
+try:
+    cache = ARPCache()
+    entries = cache.get_cache()
+except ARPCacheRetrievalError as exc:
+    print("Cannot read ARP cache:", exc)
+```
+
+All library exceptions inherit from `nadzoring.utils.errors.NadzorингError` and can be caught at any granularity:
+
+```python
+from nadzoring.utils.errors import NadzorингError, DNSError, NetworkError, ARPError
+```
+
+For a complete reference of all error patterns and possible error values, see the [Error Handling guide](https://alexeev-prog.github.io/nadzoring/main/error_handling.html) in the documentation.
+
+---
+
 ## Python API
 
 Nadzoring can be used as a Python library — all functionality is accessible programmatically without invoking the CLI.
@@ -989,9 +1245,12 @@ from nadzoring.dns_lookup.utils import resolve_with_timer, get_public_dns_server
 
 # Resolve any record type
 result = resolve_with_timer("example.com", "MX", include_ttl=True)
-print(result["records"])       # ['10 mail.example.com']
-print(result["ttl"])           # 3600
-print(result["response_time"]) # 45.2
+if result["error"]:
+    print("Error:", result["error"])
+else:
+    print(result["records"])       # ['10 mail.example.com']
+    print(result["ttl"])           # 3600
+    print(result["response_time"]) # 45.2
 
 # List built-in public servers
 servers = get_public_dns_servers()  # ['8.8.8.8', '1.1.1.1', ...]
@@ -1004,18 +1263,19 @@ from nadzoring.dns_lookup.reverse import reverse_dns
 
 # Standard reverse lookup
 result = reverse_dns("8.8.8.8")
-print(result["hostname"])  # 'dns.google'
+if result["error"]:
+    # Possible values: 'No PTR record', 'No reverse DNS',
+    # 'Query timeout', 'Invalid IP address: ...'
+    print("Failed:", result["error"])
+else:
+    print(result["hostname"])  # 'dns.google'
 
 # With a custom nameserver
 result = reverse_dns("1.1.1.1", nameserver="8.8.8.8")
 print(result["hostname"])  # 'one.one.one.one'
 
-# Error handling
-result = reverse_dns("192.168.0.1")
-if result["error"]:
-    # possible values: 'No PTR record', 'No reverse DNS',
-    # 'Query timeout', 'Invalid IP address: ...'
-    print(result["error"])
+# Compact error-safe pattern
+hostname = result["hostname"] or f"[{result['error']}]"
 ```
 
 ### Network Base API
@@ -1031,16 +1291,18 @@ from nadzoring.network_base.network_params import network_param
 from nadzoring.network_base.whois_lookup import whois_lookup
 from nadzoring.network_base.port_scanner import ScanConfig, scan_ports
 
-# Ping
-alive = ping_addr("8.8.8.8")  # bool
+# Ping — returns bool
+alive = ping_addr("8.8.8.8")
 
-# HTTP probe
+# HTTP probe — check .error before reading timing fields
 r = http_ping("https://example.com")
-print(r.ttfb_ms, r.status_code)
+if not r.error:
+    print(r.ttfb_ms, r.status_code)
 
-# Geolocation
+# Geolocation — returns {} on failure
 loc = geo_ip("8.8.8.8")
-print(loc["country"], loc["city"])
+if loc:
+    print(loc["country"], loc["city"])
 
 # Traceroute
 for hop in traceroute("8.8.8.8", max_hops=10):
@@ -1059,14 +1321,17 @@ for result in scan_ports(config):
 ### ARP API
 
 ```python
-from nadzoring.arp.cache import ARPCache
+from nadzoring.arp.cache import ARPCache, ARPCacheRetrievalError
 from nadzoring.arp.detector import ARPSpoofingDetector
 from nadzoring.arp.realtime import ARPRealtimeDetector
 
-# ARP cache
-cache = ARPCache()
-for entry in cache.get_cache():
-    print(entry.ip_address, entry.mac_address, entry.state.value)
+# ARP cache — raises ARPCacheRetrievalError on system failure
+try:
+    cache = ARPCache()
+    for entry in cache.get_cache():
+        print(entry.ip_address, entry.mac_address, entry.state.value)
+except ARPCacheRetrievalError as exc:
+    print("ARP cache unavailable:", exc)
 
 # Static spoofing detection
 detector = ARPSpoofingDetector(cache)
@@ -1076,6 +1341,7 @@ for alert in detector.detect():
 # Real-time monitoring
 rt = ARPRealtimeDetector()
 alerts = rt.monitor(interface="eth0", count=50, timeout=30)
+print(rt.get_stats())
 ```
 
 ---
@@ -1419,6 +1685,7 @@ rts = [
 alerts = [a for c in cycles for a in c.get("alerts", [])]
 print(f"Cycles: {len(cycles)}  Mean RT: {mean(rts):.1f}ms  Alerts: {len(alerts)}")
 ```
+
 ### Quick Website Block Check
 
 ```bash
@@ -1463,11 +1730,18 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 | Version | Link | Status |
 |---------|------|--------|
 | **main** | [Latest (development)](https://alexeev-prog.github.io/nadzoring/main) | 🟡 Development |
-| **v0.1.5** | [Stable release](https://alexeev-prog.github.io/nadzoring/v0.1.5) | 🟢 Stable |
+| **v0.1.6** | [Stable release](https://alexeev-prog.github.io/nadzoring/v0.1.6) | 🟢 Stable |
+| v0.1.5 | [Previous release](https://alexeev-prog.github.io/nadzoring/v0.1.5) | ⚪ Legacy |
 | v0.1.4 | [Previous release](https://alexeev-prog.github.io/nadzoring/v0.1.4) | ⚪ Legacy |
 | v0.1.3 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.3) | ⚪ Legacy |
 | v0.1.2 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.2) | ⚪ Legacy |
 | v0.1.1 | [First version](https://alexeev-prog.github.io/nadzoring/v0.1.1) | ⚪ Legacy |
+
+The documentation site includes:
+- [Error Handling guide](https://alexeev-prog.github.io/nadzoring/main/error_handling.html) — complete reference of all error patterns and return values
+- [Architecture overview](https://alexeev-prog.github.io/nadzoring/main/architecture.html) — layer design, SRP/DRY/KISS principles applied
+- [DNS command reference](https://alexeev-prog.github.io/nadzoring/main/commands/dns.html) — full CLI + Python API per command
+- [DNS monitoring guide](https://alexeev-prog.github.io/nadzoring/main/monitoring_dns.html) — systemd, cron, trend analysis
 
 ---
 
