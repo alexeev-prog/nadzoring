@@ -3,13 +3,9 @@
 Welcome to Nadzoring's Documentation!
 ======================================
 
-**Nadzoring** (from Russian "надзор" — supervision/oversight + English "-ing" suffix)
-is a free and open-source command-line tool for detecting website blocks,
-monitoring service availability, and performing comprehensive network analysis.
-
-It helps you investigate connectivity issues, check whether websites are accessible,
-detect DNS poisoning and censorship, analyze ARP spoofing, and run automated
-network diagnostics — all from a single CLI.
+**Nadzoring** (от русского «надзор» + английский суффикс «-ing») —
+свободный инструмент командной строки для обнаружения блокировок
+сайтов, мониторинга доступности сервисов и комплексного сетевого анализа.
 
 .. code-block:: bash
 
@@ -21,13 +17,13 @@ network diagnostics — all from a single CLI.
 Key Features
 ------------
 
-- **DNS Analysis** — resolve, trace, compare, health-check, and benchmark DNS servers
-- **Reverse DNS** — PTR record lookups for IPv4 and IPv6 addresses
+- **DNS Analysis** — resolve, trace, compare, health-check, benchmark DNS servers
+- **Reverse DNS** — PTR record lookups for IPv4 and IPv6
 - **DNS Poisoning Detection** — detect censorship, CDN routing, or manipulation
 - **Network Diagnostics** — ping, traceroute, port scanning, HTTP probing, WHOIS
 - **ARP Security** — cache inspection, spoofing detection, real-time monitoring
-- **Multiple Output Formats** — table, JSON, CSV, HTML, html_table
-- **Cross-Platform** — Linux, Windows, and macOS support
+- **Multiple Output Formats** — ``table``, ``json``, ``csv``, ``html``, ``html_table``
+- **Cross-Platform** — Linux, Windows, macOS
 
 ----
 
@@ -37,6 +33,7 @@ Key Features
 
    installation
    quickstart
+   error_handling
    monitoring_dns
 
 .. toctree::
@@ -54,14 +51,14 @@ Key Features
    api/dns_lookup
    api/network_base
    api/arp
+   api/utils
 
 .. toctree::
    :maxdepth: 1
-   :caption: Project
+   :caption: Developer Guide
 
-   changelog
+   architecture
    contributing
-   license
 
 ----
 
@@ -75,9 +72,13 @@ Command Groups at a Glance
    * - Group
      - Commands
    * - ``dns``
-     - ``resolve``, ``reverse``, ``check``, ``trace``, ``compare``, ``health``, ``benchmark``, ``poisoning``
+     - ``resolve``, ``reverse``, ``check``, ``trace``, ``compare``,
+       ``health``, ``benchmark``, ``poisoning``, ``monitor``,
+       ``monitor-report``
    * - ``network-base``
-     - ``ping``, ``http-ping``, ``host-to-ip``, ``geolocation``, ``params``, ``port-scan``, ``port-service``, ``whois``, ``connections``, ``traceroute``, ``route``
+     - ``ping``, ``http-ping``, ``host-to-ip``, ``geolocation``,
+       ``params``, ``port-scan``, ``port-service``, ``whois``,
+       ``connections``, ``traceroute``, ``route``
    * - ``arp``
      - ``cache``, ``detect-spoofing``, ``monitor-spoofing``
 

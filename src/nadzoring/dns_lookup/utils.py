@@ -1,4 +1,21 @@
-"""Utility functions for DNS lookup module."""
+"""
+Utility functions for the DNS lookup module.
+
+This module provides the low-level building blocks used by the rest of
+``nadzoring.dns_lookup``:
+
+- :func:`create_resolver` — build a configured ``dnspython`` resolver
+- :func:`extract_records` — format raw resolver answers into strings
+- :func:`resolve_with_timer` — single-query entry point with timing and
+  structured error handling
+- :func:`get_public_dns_servers` — return the built-in list of well-known
+  public resolvers
+
+None of the functions in this module raise on DNS errors; all failures are
+surfaced through the ``"error"`` field of the returned :class:`~.types.DNSResult`
+dict.  Callers that prefer exceptions should wrap the result themselves or
+use :mod:`nadzoring.utils.errors`.
+"""
 
 from logging import Logger
 from time import time
@@ -14,40 +31,44 @@ from nadzoring.logger import get_logger
 
 logger: Logger = get_logger(__name__)
 
+_DEFAULT_TIMEOUT: float = 5.0
+_DEFAULT_LIFETIME: float = 10.0
+
 _PUBLIC_DNS_SERVERS: list[str] = [
-    "8.8.8.8",
-    "8.8.4.4",
-    "1.1.1.1",
-    "1.0.0.1",
-    "208.67.222.222",
-    "208.67.220.220",
-    "9.9.9.9",
-    "149.112.112.112",
-    "64.6.64.6",
-    "64.6.65.6",
+    "8.8.8.8",  # Google
+    "8.8.4.4",  # Google
+    "1.1.1.1",  # Cloudflare
+    "1.0.0.1",  # Cloudflare
+    "208.67.222.222",  # OpenDNS
+    "208.67.220.220",  # OpenDNS
+    "9.9.9.9",  # Quad9
+    "149.112.112.112",  # Quad9
+    "64.6.64.6",  # Verisign
+    "64.6.65.6",  # Verisign
 ]
 
 
 def create_resolver(
     nameserver: str | None = None,
-    timeout: float = 5.0,
-    lifetime: float = 10.0,
+    timeout: float = _DEFAULT_TIMEOUT,
+    lifetime: float = _DEFAULT_LIFETIME,
 ) -> Resolver:
     """
-    Create and configure a DNS resolver instance.
+    Create and configure a ``dnspython`` resolver instance.
 
     Args:
-        nameserver: Optional nameserver IP address. When ``None`` the system
-            default resolvers are used.
-        timeout: Per-nameserver query timeout in seconds. Defaults to ``5.0``.
-        lifetime: Total query lifetime in seconds, including retries across
-            nameservers. Defaults to ``10.0``.
+        nameserver: Optional nameserver IP address.  When ``None`` the
+            system default resolvers are used.
+        timeout: Per-nameserver query timeout in seconds.
+            Defaults to ``5.0``.
+        lifetime: Total query lifetime in seconds, including retries
+            across nameservers.  Defaults to ``10.0``.
 
     Returns:
         Configured :class:`dns.resolver.Resolver` ready for queries.
 
     Examples:
-        >>> resolver = create_resolver("8.8.8.8", timeout=3.0, lifetime=8.0)
+        >>> resolver = create_resolver("8.8.8.8", timeout=3.0)
         >>> answers = resolver.resolve("example.com", "A")
 
     """
@@ -59,16 +80,58 @@ def create_resolver(
     return resolver
 
 
+def _extract_mx_records(answers: Answer) -> list[str]:
+    """Extract and format MX records from a resolver answer."""
+    return [
+        f"{answer.preference} {str(answer.exchange).rstrip('.')}" for answer in answers
+    ]
+
+
+def _extract_txt_records(answers: Answer) -> list[str]:
+    """Extract and format TXT records, joining multi-part strings."""
+    records: list[str] = []
+    for answer in answers:
+        parts: list[str] = [
+            part.decode("utf-8") if isinstance(part, bytes) else str(part)
+            for part in answer.strings
+        ]
+        records.append("".join(parts))
+    return records
+
+
+def _extract_soa_records(answers: Answer) -> list[str]:
+    """Extract and format SOA records into a single space-joined string."""
+    return [
+        (
+            f"{soa.mname} {soa.rname} {soa.serial} "
+            f"{soa.refresh} {soa.retry} {soa.expire} {soa.minimum}"
+        )
+        for soa in answers
+    ]
+
+
+def _extract_default_records(answers: Answer) -> list[str]:
+    """Extract generic DNS records, stripping trailing dots."""
+    return [str(answer).rstrip(".") for answer in answers]
+
+
+_EXTRACTORS: dict[str, object] = {
+    "MX": _extract_mx_records,
+    "TXT": _extract_txt_records,
+    "SOA": _extract_soa_records,
+}
+
+
 def extract_records(answers: Answer, record_type: str) -> list[str]:
     """
     Extract and format DNS records from a resolver answer.
 
     Applies record-type-specific formatting:
 
-    * **MX** — ``"priority mailserver"``
-    * **TXT** — all string parts joined into one string
-    * **SOA** — space-joined SOA fields
-    * **other** — plain ``str()`` with trailing dot stripped
+    - **MX** — ``"priority mailserver"``
+    - **TXT** — all string parts joined into one string
+    - **SOA** — space-joined SOA fields
+    - **other** — plain ``str()`` with trailing dot stripped
 
     Args:
         answers: :class:`dns.resolver.Answer` returned by
@@ -84,27 +147,23 @@ def extract_records(answers: Answer, record_type: str) -> list[str]:
         ['10 mail.example.com', '20 backup.example.com']
 
     """
-    records: list[str] = []
+    extractor: object = _EXTRACTORS.get(record_type, _extract_default_records)
+    return extractor(answers)  # type: ignore[operator]
 
-    for answer in answers:
-        if record_type == "MX":
-            records.append(f"{answer.preference} {answer.exchange}".rstrip("."))
-        elif record_type == "TXT":
-            txt_parts: list[str] = [
-                part.decode("utf-8") if isinstance(part, bytes) else str(part)
-                for part in answer.strings
-            ]
-            records.append("".join(txt_parts))
-        elif record_type == "SOA":
-            soa = answer
-            records.append(
-                f"{soa.mname} {soa.rname} {soa.serial} {soa.refresh} "
-                f"{soa.retry} {soa.expire} {soa.minimum}",
-            )
-        else:
-            records.append(str(answer).rstrip("."))
 
-    return records
+def _make_empty_result(
+    domain: str,
+    record_type: RecordType,
+) -> DNSResult:
+    """Return a zeroed :class:`~.types.DNSResult` dict."""
+    return {
+        "domain": domain,
+        "record_type": record_type,
+        "records": [],
+        "ttl": None,
+        "error": None,
+        "response_time": None,
+    }
 
 
 def resolve_with_timer(
@@ -113,42 +172,64 @@ def resolve_with_timer(
     nameserver: str | None = None,
     *,
     include_ttl: bool = False,
-    timeout: float = 5.0,
-    lifetime: float = 10.0,
+    timeout: float = _DEFAULT_TIMEOUT,
+    lifetime: float = _DEFAULT_LIFETIME,
 ) -> DNSResult:
     """
     Perform DNS resolution with timing and structured error handling.
 
-    Resolves *domain* for *record_type*, measuring response time and optionally
-    capturing TTL. All DNS errors are surfaced through the ``error`` field rather
-    than raised.
+    Resolves *domain* for *record_type*, measuring response time and
+    optionally capturing TTL.  All DNS errors are surfaced through the
+    ``"error"`` field rather than raised as exceptions, making this safe
+    to call in automated scripts without try/except.
 
     Args:
         domain: Domain name to resolve (e.g. ``"example.com"``).
-        record_type: DNS record type to query. Defaults to ``"A"``.
-        nameserver: Optional nameserver IP; ``None`` uses the system default.
-        include_ttl: Include TTL value in result. Defaults to ``False``.
-        timeout: Per-nameserver query timeout in seconds. Defaults to ``5.0``.
-        lifetime: Total query lifetime in seconds. Defaults to ``10.0``.
+        record_type: DNS record type to query.  Defaults to ``"A"``.
+        nameserver: Optional nameserver IP; ``None`` uses the system
+            default.
+        include_ttl: Include TTL value in result.  Defaults to
+            ``False``.
+        timeout: Per-nameserver query timeout in seconds.
+            Defaults to ``5.0``.
+        lifetime: Total query lifetime in seconds.  Defaults to
+            ``10.0``.
 
     Returns:
-        :class:`DNSResult` dict with ``domain``, ``record_type``, ``records``,
-        ``ttl``, ``error``, and ``response_time`` keys.
+        :class:`~.types.DNSResult` dict.  Always check
+        ``result["error"]`` before using ``result["records"]``::
+
+            result = resolve_with_timer("example.com", "A")
+            if result["error"]:
+                # Possible values:
+                # "Domain does not exist"  — NXDOMAIN
+                # "No A records"           — NoAnswer
+                # "Query timeout"          — Timeout
+                # <arbitrary string>       — unexpected error
+                print("DNS error:", result["error"])
+            else:
+                print(result["records"])  # ['93.184.216.34']
+                print(result["response_time"])  # e.g. 42.5
 
     Examples:
-        >>> result = resolve_with_timer("example.com", "MX", include_ttl=True)
-        >>> if not result["error"]:
-        ...     print(result["records"], result["ttl"])
+        Basic A record lookup::
+
+            result = resolve_with_timer("example.com")
+            if not result["error"]:
+                print(result["records"])
+
+        MX lookup with TTL::
+
+            result = resolve_with_timer("example.com", "MX", include_ttl=True)
+            if not result["error"]:
+                print(result["records"], result["ttl"])
+
+        Using a custom nameserver::
+
+            result = resolve_with_timer("example.com", nameserver="1.1.1.1")
 
     """
-    result: DNSResult = {
-        "domain": domain,
-        "record_type": record_type,
-        "records": [],
-        "ttl": None,
-        "error": None,
-        "response_time": None,
-    }
+    result: DNSResult = _make_empty_result(domain, record_type)
 
     try:
         resolver: Resolver = create_resolver(nameserver, timeout, lifetime)
@@ -179,14 +260,18 @@ def get_public_dns_servers() -> list[str]:
     """
     Return a list of well-known public DNS server IP addresses.
 
-    Includes resolvers from Google, Cloudflare, OpenDNS, Quad9, and Verisign.
+    Includes resolvers from Google, Cloudflare, OpenDNS, Quad9, and
+    Verisign.
 
     Returns:
-        List of DNS server IP address strings.
+        A new list of DNS server IP address strings (copy of internal
+        constant, safe to mutate).
 
     Examples:
         >>> servers = get_public_dns_servers()
         >>> "8.8.8.8" in servers
+        True
+        >>> "1.1.1.1" in servers
         True
 
     """

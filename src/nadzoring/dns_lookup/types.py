@@ -1,4 +1,24 @@
-"""Type definitions for DNS lookup module."""
+"""
+Type definitions for the DNS lookup module.
+
+All public ``TypedDict`` classes and type aliases used across
+``nadzoring.dns_lookup`` are defined here so that consumers can import
+types from a single stable location.
+
+Usage example::
+
+    from nadzoring.dns_lookup.types import DNSResult, RecordType
+
+    result: DNSResult = {
+        "domain": "example.com",
+        "record_type": "A",
+        "records": ["93.184.216.34"],
+        "ttl": 3600,
+        "error": None,
+        "response_time": 45.67,
+    }
+
+"""
 
 from typing import Any, Literal, TypedDict
 
@@ -30,23 +50,39 @@ class DNSResult(TypedDict, total=False):
     Attributes:
         domain: The domain name that was queried.
         record_type: The type of DNS record that was requested.
-        records: List of resolved record strings. Format varies by record type:
-            A/AAAA — IP addresses; MX — ``"priority mailserver"`` strings;
-            TXT — concatenated text; others — string repr without trailing dots.
-        ttl: Time To Live in seconds, or ``None`` when not requested or unavailable.
-        error: Error message if resolution failed; ``None`` on success.
-        response_time: Query response time in milliseconds (2 d.p.), or ``None``
-            on timeout.
+        records: List of resolved record strings.  Format varies by type:
+
+            - ``A`` / ``AAAA`` — IP address strings
+            - ``MX`` — ``"priority mailserver"`` strings
+            - ``TXT`` — concatenated text chunks
+            - ``SOA`` — space-joined SOA fields
+            - others — ``str()`` with trailing dot stripped
+
+        ttl: Time To Live in seconds, or ``None`` when not requested or
+            unavailable.
+        error: Human-readable error message if resolution failed;
+            ``None`` on success.  Possible values:
+
+            - ``"Domain does not exist"`` — NXDOMAIN
+            - ``"No <type> records"`` — no records of this type
+            - ``"Query timeout"`` — per-query timeout exceeded
+            - arbitrary string — unexpected resolver error
+
+        response_time: Query round-trip time in milliseconds (2 d.p.), or
+            ``None`` on timeout.
 
     Examples:
-        >>> result: DNSResult = {
-        ...     "domain": "example.com",
-        ...     "record_type": "A",
-        ...     "records": ["93.184.216.34"],
-        ...     "ttl": 3600,
-        ...     "error": None,
-        ...     "response_time": 45.67,
-        ... }
+        Check for errors before using records::
+
+            from nadzoring.dns_lookup.utils import resolve_with_timer
+
+            result = resolve_with_timer("example.com", "A")
+            if result["error"]:
+                print("DNS error:", result["error"])
+            else:
+                for record in result["records"]:
+                    print(record)
+                print(f"RTT: {result['response_time']} ms")
 
     """
 
@@ -73,16 +109,20 @@ class BenchmarkResult(TypedDict):
         responses: Individual response times for successful queries.
 
     Examples:
-        >>> result: BenchmarkResult = {
-        ...     "server": "8.8.8.8",
-        ...     "avg_response_time": 42.5,
-        ...     "min_response_time": 15.2,
-        ...     "max_response_time": 156.8,
-        ...     "success_rate": 98.5,
-        ...     "total_queries": 100,
-        ...     "failed_queries": 2,
-        ...     "responses": [15.2, 23.4, 31.7],
-        ... }
+        Iterate over benchmark results sorted fastest-first::
+
+            from nadzoring.dns_lookup.benchmark import benchmark_dns_servers
+
+            results = benchmark_dns_servers(
+                servers=["8.8.8.8", "1.1.1.1"],
+                queries=5,
+            )
+            for r in results:
+                print(
+                    f"{r['server']}: "
+                    f"avg={r['avg_response_time']:.1f}ms  "
+                    f"ok={r['success_rate']}%"
+                )
 
     """
 
@@ -100,8 +140,9 @@ class PoisoningCheckResult(TypedDict, total=False):
     """
     DNS cache poisoning detection result.
 
-    Comprehensive analysis comparing responses from multiple resolvers against
-    a trusted control server to detect poisoning, censorship, or manipulation.
+    Comprehensive analysis comparing responses from multiple resolvers
+    against a trusted control server to detect poisoning, censorship, or
+    manipulation.
 
     Attributes:
         domain: The domain name tested for poisoning.
@@ -112,36 +153,49 @@ class PoisoningCheckResult(TypedDict, total=False):
         control_result: DNS resolution result from the control resolver.
         control_analysis: IP pattern analysis of control server records.
         control_owner: Inferred owner of control server IPs.
-        additional_records: Optional extra record types from the control server.
+        additional_records: Optional extra record types from the control.
         test_results: Dict mapping test resolver IPs to their DNS results.
         test_servers_count: Number of test servers queried.
         inconsistencies: Detected discrepancies between resolvers.
         poisoned: ``True`` when poisoning indicators exceed the threshold.
-        poisoning_level: Severity — NONE/LOW/MEDIUM/HIGH/CRITICAL/SUSPICIOUS.
-        confidence: Confidence score (0-100).
-        mismatches: Count of record mismatches.
+        poisoning_level: Severity string —
+            ``NONE`` / ``LOW`` / ``MEDIUM`` / ``HIGH`` / ``CRITICAL`` /
+            ``SUSPICIOUS``.
+        confidence: Confidence score from 0.0 to 100.0.
+        mismatches: Count of record mismatches across test servers.
         cdn_variations: Count of CDN-related IP variations.
         cdn_detected: Whether CDN usage was identified.
         cdn_owner: Name of the detected CDN provider.
         cdn_percentage: Percentage of IPs belonging to the CDN.
-        severity: Dict mapping severity levels to inconsistency counts.
-        unique_ips_seen: Distinct IPs across all test results.
+        severity: Dict mapping severity labels to inconsistency counts.
+        unique_ips_seen: Distinct IP count across all test results.
         ip_diversity: IPs not present in the control result.
         control_ip_count: IPs returned by the control server.
-        consensus_top: Top-3 most common IPs with count, percentage, and owner.
+        consensus_top: Top-3 most common IPs with count, percentage, owner.
         consensus_rate: Percentage of servers returning the most common IP.
-        geo_diversity: Unique countries among test servers.
+        geo_diversity: Unique country count among test servers.
         anycast_likely: ``True`` when anycast routing is probable.
         cdn_likely: ``True`` when CDN usage is probable.
-        poisoning_likely: ``True`` when deliberate poisoning pattern is probable.
+        poisoning_likely: ``True`` when deliberate poisoning pattern found.
 
     Examples:
-        >>> result: PoisoningCheckResult = {
-        ...     "domain": "example.com",
-        ...     "poisoned": False,
-        ...     "confidence": 0.0,
-        ...     "poisoning_level": "NONE",
-        ... }
+        Interpreting severity levels::
+
+            from nadzoring.dns_lookup.poisoning import check_dns_poisoning
+
+            result = check_dns_poisoning("example.com")
+
+            level = result.get("poisoning_level", "NONE")
+            # NONE     — everything looks consistent
+            # LOW      — minor variations, likely CDN/anycast
+            # MEDIUM   — notable inconsistencies, worth investigating
+            # HIGH     — strong signs of manipulation
+            # CRITICAL — near-certain poisoning or censorship
+            # SUSPICIOUS — unusual patterns that don't fit CDN
+
+            if result.get("poisoned"):
+                for inc in result.get("inconsistencies", []):
+                    print(inc)
 
     """
 

@@ -1,207 +1,56 @@
-"""DNS record validation functions."""
+"""
+DNS record validation functions.
+
+This module is split into small, single-responsibility validators:
+
+- :func:`calculate_record_score` — score one record type for a health check
+- :func:`validate_mx_records` — validate MX priority uniqueness
+- :func:`validate_txt_records` — validate SPF / DKIM TXT records
+- :func:`determine_status` — map a numeric score to a status label
+
+Each validator returns a plain dict or primitive; none raise exceptions.
+
+Typical usage via :mod:`nadzoring.dns_lookup.health`::
+
+    from nadzoring.dns_lookup.validation import (
+        validate_mx_records,
+        validate_txt_records,
+        determine_status,
+    )
+
+    mx_result = validate_mx_records(["10 mail.example.com", "20 backup.example.com"])
+    print(mx_result["valid"])  # True
+    print(mx_result["issues"])  # []
+
+    status = determine_status(85)  # "healthy"
+
+"""
 
 from typing import Any
 
+_SCORE_HEALTHY = 80
+_SCORE_DEGRADED = 50
 
-def calculate_record_score(
-    rtype: str,
-    record_result: dict[str, Any],
-    result: dict[str, list[str]],
-) -> int:
-    """
-    Calculate a health score for a single DNS record type.
-
-    Starts at 100 and deducts points for errors, missing records, or
-    type-specific issues.
-
-    Args:
-        rtype: DNS record type (e.g. ``"A"``, ``"MX"``, ``"TXT"``).
-        record_result: Dict with optional ``"error"`` and ``"records"`` keys.
-        result: Accumulator dict with ``"warnings"`` and ``"issues"`` lists
-            updated in-place.
-
-    Returns:
-        Score between 0 and 100.
-
-    """
-    record_score = 100
-
-    if record_result.get("error"):
-        error = record_result["error"]
-        if "No " in error and error.endswith("records"):
-            record_score -= 30
-            result["warnings"].append(f"No {rtype} records found")
-        else:
-            record_score -= 50
-            result["issues"].append(f"{rtype} record error: {error}")
-    elif not record_result.get("records"):
-        record_score -= 20
-        result["warnings"].append(f"Empty {rtype} records")
-
-    return _apply_rtype_specific_checks(rtype, record_result, record_score, result)
-
-
-def _apply_rtype_specific_checks(
-    rtype: str,
-    record_result: dict[str, Any],
-    record_score: int,
-    result: dict[str, list[str]],
-) -> int:
-    """
-    Apply validation rules specific to each DNS record type.
-
-    Args:
-        rtype: DNS record type to validate.
-        record_result: Dict containing the record data to validate.
-        record_score: Current score before applying type-specific checks.
-        result: Accumulator dict for issues and warnings.
-
-    Returns:
-        Updated score after applying type-specific validations.
-
-    """
-    records: Any | None = record_result.get("records")
-    if not records:
-        return record_score
-
-    if rtype == "MX":
-        return _check_mx_priorities(records, record_score, result)
-    if rtype == "TXT":
-        return _check_txt_records(records, record_score, result)
-    return record_score
-
-
-def _check_mx_priorities(
-    records: list[str],
-    record_score: int,
-    result: dict[str, list[str]],
-) -> int:
-    """
-    Deduct points for duplicate MX priorities or malformed records.
-
-    Args:
-        records: MX record strings in ``"priority mailserver"`` format.
-        record_score: Current score.
-        result: Accumulator dict for issues.
-
-    Returns:
-        Updated score; reduced by 20 for each duplicate or malformed entry.
-
-    Examples:
-        >>> r = {"issues": [], "warnings": []}
-        >>> _check_mx_priorities(["10 mail1.com", "10 mail2.com"], 100, r)
-        80
-
-    """
-    priorities: list[int] = []
-    for mx in records:
-        try:
-            priority = int(mx.split()[0])
-        except (IndexError, ValueError):
-            record_score -= 20
-            result["issues"].append(f"Invalid MX record format: {mx}")
-            continue
-
-        if priority in priorities:
-            record_score -= 20
-            result["issues"].append(f"Duplicate MX priority: {priority}")
-        else:
-            priorities.append(priority)
-
-    return record_score
-
-
-def _check_txt_records(
-    records: list[str],
-    record_score: int,
-    result: dict[str, list[str]],
-) -> int:
-    """
-    Validate TXT records for SPF and DKIM compliance.
-
-    Args:
-        records: List of TXT record strings.
-        record_score: Current score.
-        result: Accumulator dict for issues and warnings.
-
-    Returns:
-        Updated score after SPF and DKIM checks.
-
-    """
-    for txt in records:
-        if txt.startswith("v=spf1"):
-            record_score = _check_spf_record(txt, record_score, result)
-        elif txt.startswith("v=DKIM1"):
-            record_score = _check_dkim_record(txt, record_score, result)
-    return record_score
-
-
-def _check_spf_record(
-    txt: str,
-    record_score: int,
-    result: dict[str, list[str]],
-) -> int:
-    """
-    Deduct points when an SPF record lacks a ``~all`` or ``-all`` mechanism.
-
-    Args:
-        txt: SPF record string starting with ``"v=spf1"``.
-        record_score: Current score.
-        result: Accumulator dict for warnings.
-
-    Returns:
-        Updated score; reduced by 10 when termination mechanism is absent.
-
-    Examples:
-        >>> r = {"issues": [], "warnings": []}
-        >>> _check_spf_record("v=spf1 include:spf.example.com", 100, r)
-        90
-
-    """
-    if "~all" not in txt and "-all" not in txt:
-        record_score -= 10
-        result["warnings"].append("SPF record missing softfail/hardfail")
-    return record_score
-
-
-def _check_dkim_record(
-    txt: str,
-    record_score: int,
-    result: dict[str, list[str]],
-) -> int:
-    """
-    Deduct points when a DKIM record is missing the ``p=`` public-key tag.
-
-    Args:
-        txt: DKIM record string starting with ``"v=DKIM1"``.
-        record_score: Current score.
-        result: Accumulator dict for issues.
-
-    Returns:
-        Updated score; reduced by 20 when the public key is absent.
-
-    Examples:
-        >>> r = {"issues": [], "warnings": []}
-        >>> _check_dkim_record("v=DKIM1; k=rsa;", 100, r)
-        80
-
-    """
-    if "p=" not in txt:
-        record_score -= 20
-        result["issues"].append("DKIM record missing public key")
-    return record_score
+_STATUS_HEALTHY = "healthy"
+_STATUS_DEGRADED = "degraded"
+_STATUS_UNHEALTHY = "unhealthy"
 
 
 def determine_status(score: int) -> str:
     """
     Map a numeric health score to a status label.
 
+    Thresholds:
+
+    - ``score >= 80`` → ``"healthy"``
+    - ``score >= 50`` → ``"degraded"``
+    - ``score < 50``  → ``"unhealthy"``
+
     Args:
         score: Numeric score in the range 0-100.
 
     Returns:
-        ``"healthy"`` for score ≥ 80, ``"degraded"`` for 50-79, or
-        ``"unhealthy"`` for scores below 50.
+        Status label string.
 
     Examples:
         >>> determine_status(85)
@@ -212,14 +61,37 @@ def determine_status(score: int) -> str:
         'unhealthy'
 
     """
-    if score >= 80:
-        return "healthy"
-    if score >= 50:
-        return "degraded"
-    return "unhealthy"
+    if score >= _SCORE_HEALTHY:
+        return _STATUS_HEALTHY
+    if score >= _SCORE_DEGRADED:
+        return _STATUS_DEGRADED
+    return _STATUS_UNHEALTHY
 
 
-def validate_mx_records(mx_records: list[str]) -> dict[str, bool | list[str]]:
+_MX_DUPLICATE_PENALTY = 20
+_MX_FORMAT_PENALTY = 20
+
+
+def _parse_mx_priority(mx: str) -> int | None:
+    """
+    Parse the numeric priority from an MX record string.
+
+    Args:
+        mx: MX record string in ``"priority mailserver"`` format.
+
+    Returns:
+        Integer priority, or ``None`` when the format is invalid.
+
+    """
+    try:
+        return int(mx.split(maxsplit=1)[0])
+    except (IndexError, ValueError):
+        return None
+
+
+def validate_mx_records(
+    mx_records: list[str],
+) -> dict[str, bool | list[str]]:
     """
     Validate MX records for duplicate priority values.
 
@@ -227,12 +99,25 @@ def validate_mx_records(mx_records: list[str]) -> dict[str, bool | list[str]]:
         mx_records: MX record strings in ``"priority mailserver"`` format.
 
     Returns:
-        Dict with ``"valid"`` (bool), ``"issues"`` (list), and
-        ``"warnings"`` (list) keys.
+        Dict with ``"valid"`` (bool), ``"issues"`` (list[str]), and
+        ``"warnings"`` (list[str]) keys.
 
     Examples:
-        >>> validate_mx_records(["10 mail1.com", "10 mail2.com"])
-        {'valid': False, 'issues': ['Duplicate priority: 10'], 'warnings': []}
+        Valid records::
+
+            result = validate_mx_records(
+                ["10 mail.example.com", "20 backup.example.com"]
+            )
+            assert result["valid"] is True
+            assert result["issues"] == []
+
+        Duplicate priorities::
+
+            result = validate_mx_records(
+                ["10 mail1.example.com", "10 mail2.example.com"]
+            )
+            assert result["valid"] is False
+            assert "Duplicate priority: 10" in result["issues"]
 
     """
     validation: dict[str, bool | list[str]] = {
@@ -241,43 +126,94 @@ def validate_mx_records(mx_records: list[str]) -> dict[str, bool | list[str]]:
         "warnings": [],
     }
 
-    priorities: list[int] = []
+    seen_priorities: list[int] = []
+
     for mx in mx_records:
-        try:
-            priority = int(mx.split()[0])
-        except (IndexError, ValueError):
+        priority = _parse_mx_priority(mx)
+
+        if priority is None:
             validation["valid"] = False
-            validation["issues"].append(f"Invalid MX record format: {mx}")
+            validation["issues"].append(f"Invalid MX record format: {mx}")  # type: ignore[union-attr]
             continue
 
-        if priority in priorities:
+        if priority in seen_priorities:
             validation["valid"] = False
-            validation["issues"].append(f"Duplicate priority: {priority}")
+            validation["issues"].append(f"Duplicate priority: {priority}")  # type: ignore[union-attr]
         else:
-            priorities.append(priority)
+            seen_priorities.append(priority)
 
     return validation
 
 
-def validate_txt_records(txt_records: list[str]) -> dict[str, bool | list[str]]:
+_SPF_PREFIX = "v=spf1"
+_DKIM_PREFIX = "v=DKIM1"
+_SPF_SOFTFAIL = "~all"
+_SPF_HARDFAIL = "-all"
+_DKIM_KEY_TAG = "p="
+
+_SPF_MISSING_TERMINATOR_PENALTY = 10
+_DKIM_MISSING_KEY_PENALTY = 20
+
+
+def _validate_spf(txt: str) -> tuple[list[str], list[str]]:
+    """Check a single SPF record; return (issues, warnings)."""
+    issues: list[str] = []
+    warnings: list[str] = []
+    if _SPF_SOFTFAIL not in txt and _SPF_HARDFAIL not in txt:
+        warnings.append("SPF missing softfail/hardfail (~all or -all)")
+    return issues, warnings
+
+
+def _validate_dkim(txt: str) -> tuple[list[str], list[str]]:
+    """Check a single DKIM record; return (issues, warnings)."""
+    issues: list[str] = []
+    warnings: list[str] = []
+    if _DKIM_KEY_TAG not in txt:
+        issues.append("DKIM missing public key (p= tag)")
+    return issues, warnings
+
+
+def validate_txt_records(
+    txt_records: list[str],
+) -> dict[str, bool | list[str]]:
     """
     Validate TXT records for SPF and DKIM compliance.
 
-    Checks for SPF (missing ``~all``/``-all``) and DKIM (missing ``p=`` key).
+    Checks:
+
+    - **SPF** — warns when ``~all`` or ``-all`` mechanism is absent
+    - **DKIM** — marks invalid when the ``p=`` public-key tag is missing
 
     Args:
         txt_records: List of TXT record strings.
 
     Returns:
-        Dict with ``"valid"`` (bool), ``"issues"`` (list), and
-        ``"warnings"`` (list) keys.
+        Dict with ``"valid"`` (bool), ``"issues"`` (list[str]), and
+        ``"warnings"`` (list[str]) keys.
 
     Examples:
-        >>> result = validate_txt_records(["v=spf1 include:spf.com"])
-        >>> result["valid"]
-        True
-        >>> result["warnings"]
-        ['SPF missing softfail/hardfail']
+        SPF without terminator::
+
+            result = validate_txt_records(["v=spf1 include:spf.example.com"])
+            assert result["valid"] is True  # SPF warning only
+            assert result["warnings"] != []
+
+        Missing DKIM key::
+
+            result = validate_txt_records(["v=DKIM1; k=rsa;"])
+            assert result["valid"] is False
+            assert result["issues"] != []
+
+        All good::
+
+            result = validate_txt_records(
+                [
+                    "v=spf1 include:spf.example.com ~all",
+                    "v=DKIM1; k=rsa; p=MIIBIjANBg...",
+                ]
+            )
+            assert result["valid"] is True
+            assert result["issues"] == []
 
     """
     validation: dict[str, bool | list[str]] = {
@@ -287,11 +223,129 @@ def validate_txt_records(txt_records: list[str]) -> dict[str, bool | list[str]]:
     }
 
     for txt in txt_records:
-        if txt.startswith("v=spf1"):
-            if "~all" not in txt and "-all" not in txt:
-                validation["warnings"].append("SPF missing softfail/hardfail")
-        elif txt.startswith("v=DKIM1") and "p=" not in txt:
-            validation["issues"].append("DKIM missing public key")
+        if txt.startswith(_SPF_PREFIX):
+            issues, warnings = _validate_spf(txt)
+        elif txt.startswith(_DKIM_PREFIX):
+            issues, warnings = _validate_dkim(txt)
+        else:
+            continue
+
+        validation["issues"].extend(issues)  # type: ignore[union-attr]
+        validation["warnings"].extend(warnings)  # type: ignore[union-attr]
+        if issues:
             validation["valid"] = False
 
     return validation
+
+
+_ERROR_MISSING_PENALTY = 30
+_ERROR_QUERY_PENALTY = 50
+_EMPTY_RECORDS_PENALTY = 20
+
+
+def calculate_record_score(
+    rtype: str,
+    record_result: dict[str, Any],
+    accumulator: dict[str, list[str]],
+) -> int:
+    """
+    Calculate a health score for a single DNS record type.
+
+    Starts at 100 and deducts points for errors, missing records, or
+    type-specific issues.  Side-effects: appends messages to
+    ``accumulator["issues"]`` and ``accumulator["warnings"]``.
+
+    Args:
+        rtype: DNS record type (e.g. ``"A"``, ``"MX"``, ``"TXT"``).
+        record_result: Dict with optional ``"error"`` and ``"records"``
+            keys (a :class:`~.types.DNSResult`).
+        accumulator: Dict with ``"issues"`` and ``"warnings"`` lists
+            that are updated in-place.
+
+    Returns:
+        Score between 0 and 100.
+
+    """
+    score = 100
+
+    error: str | None = record_result.get("error")
+    if error:
+        if error.startswith("No ") and error.endswith("records"):
+            score -= _ERROR_MISSING_PENALTY
+            accumulator["warnings"].append(f"No {rtype} records found")
+        else:
+            score -= _ERROR_QUERY_PENALTY
+            accumulator["issues"].append(f"{rtype} record error: {error}")
+    elif not record_result.get("records"):
+        score -= _EMPTY_RECORDS_PENALTY
+        accumulator["warnings"].append(f"Empty {rtype} records")
+
+    score = _apply_type_specific_checks(rtype, record_result, score, accumulator)
+    return max(0, score)
+
+
+def _apply_type_specific_checks(
+    rtype: str,
+    record_result: dict[str, Any],
+    score: int,
+    accumulator: dict[str, list[str]],
+) -> int:
+    """
+    Apply record-type-specific scoring rules.
+
+    Args:
+        rtype: DNS record type.
+        record_result: Dict with record data.
+        score: Current score before type-specific adjustments.
+        accumulator: Issues/warnings accumulator updated in-place.
+
+    Returns:
+        Adjusted score.
+
+    """
+    records: list[str] | None = record_result.get("records")
+    if not records:
+        return score
+
+    if rtype == "MX":
+        return _score_mx(records, score, accumulator)
+    if rtype == "TXT":
+        return _score_txt(records, score, accumulator)
+    return score
+
+
+def _score_mx(
+    records: list[str],
+    score: int,
+    accumulator: dict[str, list[str]],
+) -> int:
+    """Deduct points for duplicate MX priorities or malformed records."""
+    seen: list[int] = []
+    for mx in records:
+        priority: int | None = _parse_mx_priority(mx)
+        if priority is None:
+            score -= _MX_FORMAT_PENALTY
+            accumulator["issues"].append(f"Invalid MX record format: {mx}")
+        elif priority in seen:
+            score -= _MX_DUPLICATE_PENALTY
+            accumulator["issues"].append(f"Duplicate MX priority: {priority}")
+        else:
+            seen.append(priority)
+    return score
+
+
+def _score_txt(
+    records: list[str],
+    score: int,
+    accumulator: dict[str, list[str]],
+) -> int:
+    """Deduct points for SPF / DKIM issues in TXT records."""
+    for txt in records:
+        if txt.startswith(_SPF_PREFIX):
+            if _SPF_SOFTFAIL not in txt and _SPF_HARDFAIL not in txt:
+                score -= _SPF_MISSING_TERMINATOR_PENALTY
+                accumulator["warnings"].append("SPF record missing softfail/hardfail")
+        elif txt.startswith(_DKIM_PREFIX) and _DKIM_KEY_TAG not in txt:
+            score -= _DKIM_MISSING_KEY_PENALTY
+            accumulator["issues"].append("DKIM record missing public key")
+    return score
