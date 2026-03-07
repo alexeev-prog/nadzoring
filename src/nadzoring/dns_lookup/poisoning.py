@@ -883,7 +883,9 @@ def _build_result(
         Complete :class:`PoisoningCheckResult`.
 
     """
-    control_analysis: IPAnalysisResult = _analyze_ip_patterns(control_result.get("records", []))
+    control_analysis: IPAnalysisResult = _analyze_ip_patterns(
+        control_result.get("records", [])
+    )
     control_owners: list[str] | list[int] = control_analysis.get("owners", [])
 
     formatted_consensus: list[dict[str, float | int | str]] = [
