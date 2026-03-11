@@ -6,14 +6,16 @@
   <p align="center">
     An open source tool for detecting website blocks, downdetecting and network analysis
     <br />
-    <a href="https://alexeev-prog.github.io/nadzoring/"><strong>Explore the docs »</strong></a>
+    <a href="https://alexeev-prog.github.io/nadzoring/v0.1.6"><strong>Explore the docs »</strong></a>
     <br />
     <br />
     <a href="#-getting-started">Getting Started</a>
     ·
     <a href="#-usage-examples">Basic Usage</a>
     ·
-    <a href="https://alexeev-prog.github.io/nadzoring/v0.1.6">Stable Documentation</a>
+    <a href="https://www.pitchhut.com/project/nadzoring-tool">Pitchhut</a>
+    ·
+    <a href="https://context7.com/alexeev-prog/nadzoring">Context7</a>
     ·
     <a href="https://alexeev-prog.github.io/nadzoring/main">Latest Documentation</a>
     ·
@@ -43,6 +45,10 @@
 </p>
 
 Nadzoring (from Russian "надзор" — supervision/oversight + English "-ing" suffix) is a free and open-source command-line tool for detecting website blocks, monitoring service availability, and network analysis. It helps you investigate network connectivity issues, check if websites are accessible, analyze network configurations with comprehensive DNS diagnostics — including reverse DNS, DNS poisoning detection, ARP spoofing monitoring, and much more.
+
+<p align="center">
+    <img src="https://raw.githubusercontent.com/alexeev-prog/nadzoring/refs/heads/main/docs/logo.png" width=300>
+</p>
 
 ## Table of Contents
 
