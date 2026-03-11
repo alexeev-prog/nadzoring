@@ -76,6 +76,9 @@ def detect_spoofing(
         entries = all_entries
 
     detector = ARPSpoofingDetector(cache)
+
+    all_alerts: list[SpoofingAlert] = detector.detect()
+
     interfaces_to_check: list[str] = list({e.interface for e in entries})
 
     total: int = len(interfaces_to_check)
@@ -83,14 +86,13 @@ def detect_spoofing(
         None if quiet else tqdm(total=total, desc="Analyzing interfaces", unit="iface")
     )
 
-    all_alerts: list[dict[str, str]] = []
+    results: list[dict[str, str]] = []
     for interface in interfaces_to_check:
-        interface_entries: list[ARPEntry] = [
-            e for e in entries if e.interface == interface
+        interface_alerts: list[SpoofingAlert] = [
+            alert for alert in all_alerts if interface in alert.interfaces
         ]
-        alerts: list[SpoofingAlert] = detector.detect()
 
-        all_alerts.extend(
+        results.extend(
             {
                 "alert_type": alert.alert_type,
                 "ip_address": alert.ip_address,
@@ -98,8 +100,7 @@ def detect_spoofing(
                 "interface": interface,
                 "description": alert.description,
             }
-            for alert in alerts
-            if any(e.interface == interface for e in interface_entries)
+            for alert in interface_alerts
         )
 
         if pbar:
@@ -109,7 +110,7 @@ def detect_spoofing(
     if pbar:
         pbar.close()
 
-    return all_alerts
+    return results
 
 
 @arp_group.command(name="monitor-spoofing")

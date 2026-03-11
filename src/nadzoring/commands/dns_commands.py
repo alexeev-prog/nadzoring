@@ -71,7 +71,9 @@ def _expand_record_types(record_types: tuple[str, ...]) -> list[RecordType]:
     """
     if "ALL" in record_types:
         return _QUERYABLE_RECORD_TYPES
-    return [t for t in record_types if t in _QUERYABLE_RECORD_TYPES]  # type: ignore
+
+    valid_types: list[str] = [t for t in record_types if t in _QUERYABLE_RECORD_TYPES]
+    return valid_types  # type: ignore[return-value]
 
 
 def _make_pbar(
