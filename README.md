@@ -6,7 +6,7 @@
   <p align="center">
     An open source tool for detecting website blocks, downdetecting and network analysis
     <br />
-    <a href="https://alexeev-prog.github.io/nadzoring/"><strong>Explore the docs »</strong></a>
+    <a href="https://alexeev-prog.github.io/nadzoring/v0.1.6"><strong>Explore the docs »</strong></a>
     <br />
     <br />
     <a href="#-getting-started">Getting Started</a>
@@ -16,8 +16,6 @@
     <a href="https://www.pitchhut.com/project/nadzoring-tool">Pitchhut</a>
     ·
     <a href="https://context7.com/alexeev-prog/nadzoring">Context7</a>
-    ·
-    <a href="https://alexeev-prog.github.io/nadzoring/v0.1.6">Stable Documentation</a>
     ·
     <a href="https://alexeev-prog.github.io/nadzoring/main">Latest Documentation</a>
     ·
