@@ -12,7 +12,7 @@ from ipaddress import IPv4Address, IPv6Address
 from logging import Logger
 from typing import Literal, TypedDict
 
-from nadzoring.dns_lookup.types import DNSResult, PoisoningCheckResult
+from nadzoring.dns_lookup.types import DNSResult, PoisoningCheckResult, RecordType
 from nadzoring.dns_lookup.utils import get_public_dns_servers, resolve_with_timer
 from nadzoring.logger import get_logger
 
@@ -499,30 +499,30 @@ def _compare_results(
         ``None`` when results are consistent.
 
     """
-    base: dict = {
-        "server": server,
-        "server_name": SERVER_NAMES.get(server, "Unknown"),
-        "server_country": SERVER_COUNTRIES.get(server, "Unknown"),
-        "control_error": control.get("error"),
-        "test_error": test.get("error"),
-        "control_records": control.get("records", []),
-        "test_records": test.get("records", []),
-        "control_ttl": control.get("ttl"),
-        "test_ttl": test.get("ttl"),
-        "common_records": [],
-        "control_analysis": {},
-        "test_analysis": {},
-        "owner": None,
-        "control_owner": None,
-        "test_owner": None,
-        "diff": None,
-    }
-
     if test.get("error") != control.get("error"):
         level: Literal["high", "medium"] = (
             "high" if "NXDOMAIN" in str(test.get("error")) else "medium"
         )
-        return {**base, "type": "error_mismatch", "severity": level}
+        return InconsistencyDetail(
+            server=server,
+            server_name=SERVER_NAMES.get(server, "Unknown"),
+            server_country=SERVER_COUNTRIES.get(server, "Unknown"),
+            type="error_mismatch",
+            severity=level,
+            control_error=control.get("error"),
+            test_error=test.get("error"),
+            control_records=control.get("records", []),
+            test_records=test.get("records", []),
+            control_ttl=control.get("ttl"),
+            test_ttl=test.get("ttl"),
+            diff=None,
+            common_records=[],
+            control_analysis={},
+            test_analysis={},
+            owner=None,
+            control_owner=None,
+            test_owner=None,
+        )
 
     if test.get("error") or control.get("error"):
         return None
@@ -540,46 +540,76 @@ def _compare_results(
         )
 
         if control_owners and test_owners and control_owners == test_owners:
-            return {
-                **base,
-                "type": "cdn_variation",
-                "severity": "info",
-                "diff": "cdn_nodes",
-                "common_records": list(common),
-                "control_analysis": control_analysis,
-                "test_analysis": test_analysis,
-                "owner": next(iter(control_owners), "Unknown"),
-            }
+            return InconsistencyDetail(
+                server=server,
+                server_name=SERVER_NAMES.get(server, "Unknown"),
+                server_country=SERVER_COUNTRIES.get(server, "Unknown"),
+                type="cdn_variation",
+                severity="info",
+                control_error=control.get("error"),
+                test_error=test.get("error"),
+                control_records=control.get("records", []),
+                test_records=test.get("records", []),
+                control_ttl=control.get("ttl"),
+                test_ttl=test.get("ttl"),
+                diff="cdn_nodes",
+                common_records=list(common),
+                control_analysis=control_analysis,
+                test_analysis=test_analysis,
+                owner=next(iter(control_owners), "Unknown"),
+                control_owner=None,
+                test_owner=None,
+            )
 
         mismatch_severity: Literal["high", "medium"] = "medium" if common else "high"
-        control_owners_list: list[str] | list[str] = control_analysis.get("owners", [])
-        test_owners_list: list[str] | list[str] = test_analysis.get("owners", [])
+        control_owners_list: list[str] = control_analysis.get("owners", [])
+        test_owners_list: list[str] = test_analysis.get("owners", [])
 
-        return {
-            **base,
-            "type": "record_mismatch",
-            "severity": mismatch_severity,
-            "diff": "records_differ",
-            "common_records": list(common),
-            "control_analysis": control_analysis,
-            "test_analysis": test_analysis,
-            "control_owner": (
+        return InconsistencyDetail(
+            server=server,
+            server_name=SERVER_NAMES.get(server, "Unknown"),
+            server_country=SERVER_COUNTRIES.get(server, "Unknown"),
+            type="record_mismatch",
+            severity=mismatch_severity,
+            control_error=control.get("error"),
+            test_error=test.get("error"),
+            control_records=control.get("records", []),
+            test_records=test.get("records", []),
+            control_ttl=control.get("ttl"),
+            test_ttl=test.get("ttl"),
+            diff="records_differ",
+            common_records=list(common),
+            control_analysis=control_analysis,
+            test_analysis=test_analysis,
+            owner=None,
+            control_owner=(
                 control_owners_list[0] if control_owners_list else "Unknown"
             ),
-            "test_owner": test_owners_list[0] if test_owners_list else "Unknown",
-        }
+            test_owner=test_owners_list[0] if test_owners_list else "Unknown",
+        )
 
     ttl_diff: int = abs((test.get("ttl") or 0) - (control.get("ttl") or 0))
     if ttl_diff > 3600:
-        return {
-            **base,
-            "type": "ttl_mismatch",
-            "severity": "low",
-            "diff": ttl_diff,
-            "common_records": control.get("records", []),
-            "control_analysis": control_analysis,
-            "test_analysis": test_analysis,
-        }
+        return InconsistencyDetail(
+            server=server,
+            server_name=SERVER_NAMES.get(server, "Unknown"),
+            server_country=SERVER_COUNTRIES.get(server, "Unknown"),
+            type="ttl_mismatch",
+            severity="low",
+            control_error=control.get("error"),
+            test_error=test.get("error"),
+            control_records=control.get("records", []),
+            test_records=test.get("records", []),
+            control_ttl=control.get("ttl"),
+            test_ttl=test.get("ttl"),
+            diff=ttl_diff,
+            common_records=control.get("records", []),
+            control_analysis=control_analysis,
+            test_analysis=test_analysis,
+            owner=None,
+            control_owner=None,
+            test_owner=None,
+        )
 
     return None
 
@@ -624,8 +654,10 @@ def check_dns_poisoning(
     if test_servers is None:
         test_servers = get_public_dns_servers()
 
+    record_type_literal: RecordType = "A" if record_type == "A" else record_type  # type: ignore
+
     control_result: DNSResult = resolve_with_timer(
-        domain, record_type, control_server, include_ttl=True
+        domain, record_type_literal, control_server, include_ttl=True
     )
 
     additional_results: dict[str, DNSResult] | None = _get_additional_records(
@@ -633,7 +665,7 @@ def check_dns_poisoning(
     )
 
     test_results, inconsistencies, mismatches, cdn_variations = _test_dns_servers(
-        domain, record_type, test_servers, control_result, control_server
+        domain, record_type_literal, test_servers, control_result, control_server
     )
 
     metrics: MetricsResult = _calculate_metrics(
@@ -681,15 +713,18 @@ def _get_additional_records(
     """
     if not additional_types:
         return None
-    return {
-        rtype: resolve_with_timer(domain, rtype, control_server, include_ttl=True)
-        for rtype in additional_types
-    }
+    result: dict[str, DNSResult] = {}
+    for rtype in additional_types:
+        rtype_literal: RecordType = rtype  # type: ignore
+        result[rtype] = resolve_with_timer(
+            domain, rtype_literal, control_server, include_ttl=True
+        )
+    return result
 
 
 def _test_dns_servers(
     domain: str,
-    record_type: str,
+    record_type: RecordType,
     test_servers: list[str],
     control_result: DNSResult,
     control_server: str,
@@ -886,7 +921,7 @@ def _build_result(
     control_analysis: IPAnalysisResult = _analyze_ip_patterns(
         control_result.get("records", [])
     )
-    control_owners: list[str] | list[int] = control_analysis.get("owners", [])
+    control_owners: list[str] = control_analysis.get("owners", [])
 
     formatted_consensus: list[dict[str, float | int | str]] = [
         {
@@ -902,19 +937,19 @@ def _build_result(
         for ip, count in metrics["consensus_top"]
     ]
 
-    return {
+    result: PoisoningCheckResult = {
         "domain": domain,
         "record_type": record_type,
         "control_server": control_server,
         "control_name": SERVER_NAMES.get(control_server, "Unknown"),
         "control_country": SERVER_COUNTRIES.get(control_server, "Unknown"),
         "control_result": control_result,
-        "control_analysis": control_analysis,
+        "control_analysis": dict(control_analysis),
         "control_owner": control_owners[0] if control_owners else "Unknown",
         "additional_records": additional_results,
         "test_results": test_results,
         "test_servers_count": metrics["total_tested"],
-        "inconsistencies": inconsistencies,
+        "inconsistencies": [dict(inc) for inc in inconsistencies],
         "poisoned": metrics["poisoned"],
         "poisoning_level": poisoning_level,
         "confidence": metrics["confidence"],
@@ -934,6 +969,7 @@ def _build_result(
         "cdn_likely": metrics["cdn_likely"],
         "poisoning_likely": metrics["poisoning_likely"],
     }
+    return result
 
 
 def _count_severities(inconsistencies: list[InconsistencyDetail]) -> dict[str, int]:

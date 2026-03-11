@@ -39,3 +39,9 @@ def lint(session):
 def mutants(session):
     session.install("mutmut")
     session.run("mutmut", "run")
+
+
+@nox.session
+def typing(session):
+    session.install("mypy")
+    session.run("mypy", "src/nadzoring")

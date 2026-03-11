@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from nadzoring.dns_lookup.types import DNSResult
+from nadzoring.dns_lookup.types import DNSResult, RecordType
 from nadzoring.dns_lookup.utils import resolve_with_timer
 from nadzoring.dns_lookup.validation import (
     calculate_record_score,
@@ -11,8 +11,8 @@ from nadzoring.dns_lookup.validation import (
     validate_txt_records,
 )
 
-_HEALTH_RECORD_TYPES: list[str] = ["A", "AAAA", "MX", "NS", "TXT", "CNAME"]
-_DEFAULT_CHECK_TYPES: list[str] = ["A", "AAAA", "MX", "NS", "TXT", "CNAME"]
+_HEALTH_RECORD_TYPES: list[RecordType] = ["A", "AAAA", "MX", "NS", "TXT", "CNAME"]
+_DEFAULT_CHECK_TYPES: list[RecordType] = ["A", "AAAA", "MX", "NS", "TXT", "CNAME"]
 
 
 class HealthCheckResult(dict[str, Any]):
@@ -89,7 +89,7 @@ def health_check_dns(domain: str, nameserver: str | None = None) -> HealthCheckR
         ...     print(f"  {rtype}: {score}")
 
     """
-    result: HealthCheckResult = {
+    result_dict: dict[str, Any] = {
         "domain": domain,
         "score": 0,
         "status": "healthy",
@@ -104,26 +104,28 @@ def health_check_dns(domain: str, nameserver: str | None = None) -> HealthCheckR
 
     for rtype in _HEALTH_RECORD_TYPES:
         if rtype == "CNAME" and not is_subdomain:
-            result["record_scores"][rtype] = 100
+            result_dict["record_scores"][rtype] = 100
             continue
 
         record_result: DNSResult = resolve_with_timer(domain, rtype, nameserver)
-        record_score: int = max(0, calculate_record_score(rtype, record_result, result))
+        record_score: int = max(
+            0, calculate_record_score(rtype, dict(record_result), result_dict)
+        )
 
-        result["record_scores"][rtype] = record_score
+        result_dict["record_scores"][rtype] = record_score
         total_score += record_score
         record_count += 1
 
-    result["score"] = total_score // record_count if record_count > 0 else 0
-    result["status"] = determine_status(result["score"])
+    result_dict["score"] = total_score // record_count if record_count > 0 else 0
+    result_dict["status"] = determine_status(result_dict["score"])
 
-    return result
+    return HealthCheckResult(result_dict)
 
 
 def check_dns(
     domain: str,
     nameserver: str | None = None,
-    record_types: list[str] | None = None,
+    record_types: list[RecordType] | None = None,
     *,
     validate_mx: bool = False,
     validate_txt: bool = False,
@@ -160,7 +162,7 @@ def check_dns(
     if record_types is None:
         record_types = list(_DEFAULT_CHECK_TYPES)
 
-    results: DetailedCheckResult = {
+    results_dict: dict[str, Any] = {
         "domain": domain,
         "records": {},
         "errors": {},
@@ -172,19 +174,19 @@ def check_dns(
         record_result: DNSResult = resolve_with_timer(domain, record_type, nameserver)
 
         if record_result.get("records"):
-            results["records"][record_type] = record_result["records"]
-            results["response_times"][record_type] = record_result["response_time"]
+            results_dict["records"][record_type] = record_result["records"]
+            results_dict["response_times"][record_type] = record_result["response_time"]
 
             if validate_mx and record_type == "MX":
-                results["validations"]["mx"] = validate_mx_records(
+                results_dict["validations"]["mx"] = validate_mx_records(
                     record_result["records"],
                 )
             elif validate_txt and record_type == "TXT":
-                results["validations"]["txt"] = validate_txt_records(
+                results_dict["validations"]["txt"] = validate_txt_records(
                     record_result["records"],
                 )
 
         if record_result.get("error"):
-            results["errors"][record_type] = record_result["error"]
+            results_dict["errors"][record_type] = record_result["error"]
 
-    return results
+    return DetailedCheckResult(results_dict)

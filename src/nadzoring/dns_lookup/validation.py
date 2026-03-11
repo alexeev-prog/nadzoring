@@ -133,14 +133,16 @@ def validate_mx_records(
 
         if priority is None:
             validation["valid"] = False
-            # type: ignore[union-attr]
-            validation["issues"].append(f"Invalid MX record format: {mx}")
+            issues_list = validation["issues"]
+            if isinstance(issues_list, list):
+                issues_list.append(f"Invalid MX record format: {mx}")
             continue
 
         if priority in seen_priorities:
             validation["valid"] = False
-            # type: ignore[union-attr]
-            validation["issues"].append(f"Duplicate priority: {priority}")
+            issues_list = validation["issues"]
+            if isinstance(issues_list, list):
+                issues_list.append(f"Duplicate priority: {priority}")
         else:
             seen_priorities.append(priority)
 
@@ -232,8 +234,12 @@ def validate_txt_records(
         else:
             continue
 
-        validation["issues"].extend(issues)  # type: ignore[union-attr]
-        validation["warnings"].extend(warnings)  # type: ignore[union-attr]
+        issues_list = validation["issues"]
+        if isinstance(issues_list, list):
+            issues_list.extend(issues)
+        warnings_list = validation["warnings"]
+        if isinstance(warnings_list, list):
+            warnings_list.extend(warnings)
         if issues:
             validation["valid"] = False
 

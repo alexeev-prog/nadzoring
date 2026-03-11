@@ -3,7 +3,6 @@
 import socket
 import time
 from dataclasses import dataclass, field
-from typing import Any, Literal
 from urllib.parse import ParseResult, urlparse
 
 from requests import Session
@@ -78,7 +77,7 @@ def http_ping(
         url = f"http://{url}"
 
     parsed: ParseResult = urlparse(url)
-    hostname: Literal[""] | str = parsed.hostname or ""
+    hostname: str = parsed.hostname or ""
 
     dns_ms: float | None = _measure_dns(hostname) if hostname else None
 
@@ -93,7 +92,7 @@ def http_ping(
             allow_redirects=follow_redirects,
         ) as response:
             ttfb_ms: float = round((time.perf_counter() - start) * 1000, 2)
-            content: bytes | Any = response.content
+            content: bytes = response.content
             total_ms: float = round((time.perf_counter() - start) * 1000, 2)
 
         headers: dict[str, str] = dict(response.headers) if include_headers else {}

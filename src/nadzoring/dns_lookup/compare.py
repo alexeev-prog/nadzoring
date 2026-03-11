@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from typing import Any, TypedDict
 
-from nadzoring.dns_lookup.types import DNSResult
+from nadzoring.dns_lookup.types import DNSResult, RecordType
 from nadzoring.dns_lookup.utils import resolve_with_timer
 
 
@@ -88,23 +88,24 @@ def compare_dns_servers(
         server_results: dict[str, DNSResult] = {}
         is_baseline: bool = i == 0
 
-        for rtype in record_types:
+        for rtype_str in record_types:
+            rtype: RecordType = rtype_str  # type: ignore
             query_result: DNSResult = resolve_with_timer(
                 domain, rtype, server, include_ttl=True
             )
 
             if is_baseline:
-                query_result["differs"] = False
+                query_result["differs"] = False  # type: ignore
             else:
-                base: DNSResult = result["servers"][servers[0]].get(rtype, {})
+                base: DNSResult = result["servers"][servers[0]].get(rtype_str, {})
                 differs: bool = query_result.get("records") != base.get("records")
-                query_result["differs"] = differs
+                query_result["differs"] = differs  # type: ignore
 
                 if differs:
                     result["differences"].append(
                         {
                             "server": server,
-                            "type": rtype,
+                            "type": rtype_str,
                             "expected": base.get("records", []),
                             "got": query_result.get("records", []),
                             "ttl_difference": _calculate_ttl_difference(
@@ -113,7 +114,7 @@ def compare_dns_servers(
                         }
                     )
 
-            server_results[rtype] = query_result
+            server_results[rtype_str] = query_result
 
             if progress_callback:
                 progress_callback()

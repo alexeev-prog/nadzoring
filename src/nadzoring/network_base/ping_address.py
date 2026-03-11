@@ -2,7 +2,7 @@
 
 from logging import Logger
 
-from ping3 import ping
+import ping3  # type: ignore
 
 from nadzoring.logger import get_logger
 
@@ -57,7 +57,7 @@ def ping_addr(addr: str) -> bool:
     target: str = _normalize_address(addr)
 
     try:
-        return ping(target) is not None
+        return ping3.ping(target) is not None
     except Exception:
         logger.exception("Unexpected error while pinging %s", target)
         return False

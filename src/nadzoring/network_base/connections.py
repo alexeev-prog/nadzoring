@@ -7,7 +7,6 @@ from logging import Logger
 from platform import system
 from re import Match
 from subprocess import PIPE, CalledProcessError, check_output
-from typing import Literal, LiteralString
 
 from nadzoring.logger import get_logger
 
@@ -95,21 +94,21 @@ def _parse_netstat_output(raw: str) -> list[ConnectionEntry]:
         if not parts or parts[0] not in ("TCP", "UDP"):
             continue
 
-        proto: Literal["TCP", "UDP"] = parts[0]
-        if proto == "TCP" and len(parts) >= 5:
+        proto_value: str = parts[0]
+        if proto_value == "TCP" and len(parts) >= 5:
             entries.append(
                 ConnectionEntry(
-                    protocol=proto,
+                    protocol=proto_value,
                     local_address=parts[1],
                     remote_address=parts[2],
                     state=parts[3],
                     pid=parts[4],
                 )
             )
-        elif proto == "UDP" and len(parts) >= 4:
+        elif proto_value == "UDP" and len(parts) >= 4:
             entries.append(
                 ConnectionEntry(
-                    protocol=proto,
+                    protocol=proto_value,
                     local_address=parts[1],
                     remote_address=parts[2],
                     state="",
@@ -152,7 +151,7 @@ def _get_linux_connections(
     include_process: bool,
 ) -> list[ConnectionEntry]:
     """Get active connections on Linux using ss."""
-    flags: LiteralString = "-tuna" + ("p" if include_process else "")
+    flags: str = "-tuna" + ("p" if include_process else "")
     try:
         raw: str = check_output(  # noqa: S602
             f"ss {flags}",

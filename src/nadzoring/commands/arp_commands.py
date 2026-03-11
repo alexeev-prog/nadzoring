@@ -1,10 +1,11 @@
 """ARP-related CLI commands."""
 
 from datetime import UTC, datetime
-from typing import Any, NoReturn
+from logging import Logger
+from typing import Any
 
 import click
-from scapy.all import ARP, Ether, sniff
+from scapy.all import ARP, Ether, sniff  # type: ignore
 from tqdm import tqdm
 
 from nadzoring.arp import (
@@ -12,12 +13,13 @@ from nadzoring.arp import (
     ARPCacheRetrievalError,
     ARPEntry,
     ARPSpoofingDetector,
+    SpoofingAlert,
 )
 from nadzoring.arp.realtime import ARPRealtimeDetector
 from nadzoring.logger import get_logger
 from nadzoring.utils.decorators import common_cli_options
 
-logger = get_logger(__name__)
+logger: Logger = get_logger(__name__)
 
 
 @click.group(name="arp")
@@ -74,29 +76,31 @@ def detect_spoofing(
         entries = all_entries
 
     detector = ARPSpoofingDetector(cache)
+
+    all_alerts: list[SpoofingAlert] = detector.detect()
+
     interfaces_to_check: list[str] = list({e.interface for e in entries})
 
-    total = len(interfaces_to_check)
-    pbar: tqdm[NoReturn] | None = (
+    total: int = len(interfaces_to_check)
+    pbar: tqdm | None = (
         None if quiet else tqdm(total=total, desc="Analyzing interfaces", unit="iface")
     )
 
-    all_alerts: list[dict[str, str]] = []
+    results: list[dict[str, str]] = []
     for interface in interfaces_to_check:
-        interface_entries: list[ARPEntry] = [
-            e for e in entries if e.interface == interface
+        interface_alerts: list[SpoofingAlert] = [
+            alert for alert in all_alerts if interface in alert.interfaces
         ]
-        alerts = detector.detect_on_interface(interface_entries, interface)
 
-        all_alerts.extend(
+        results.extend(
             {
                 "alert_type": alert.alert_type,
                 "ip_address": alert.ip_address,
                 "mac_address": alert.mac_address,
-                "interface": alert.interface,
+                "interface": interface,
                 "description": alert.description,
             }
-            for alert in alerts
+            for alert in interface_alerts
         )
 
         if pbar:
@@ -106,7 +110,7 @@ def detect_spoofing(
     if pbar:
         pbar.close()
 
-    return all_alerts
+    return results
 
 
 @arp_group.command(name="monitor-spoofing")
@@ -155,7 +159,7 @@ def monitor_spoofing(
             """Process packet and collect alerts."""
             alert: str | None = detector.process_packet(packet)
             if alert:
-                alert_dict: dict[str, str | Any] = {
+                alert_dict: dict[str, Any] = {
                     "timestamp": datetime.now(UTC).isoformat(),
                     "interface": interface or "all",
                     "message": alert,

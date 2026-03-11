@@ -5,8 +5,8 @@ from dataclasses import dataclass, field
 from logging import Logger
 from platform import system
 from re import Match
-from subprocess import PIPE, CalledProcessError, Popen, TimeoutExpired
-from typing import Literal
+from subprocess import PIPE, Popen, TimeoutExpired
+from typing import Any, Literal
 
 from nadzoring.logger import get_logger
 
@@ -39,16 +39,16 @@ def _parse_linux_traceroute(raw: str) -> list[TraceHop]:
     hops: list[TraceHop] = []
 
     for line in raw.strip().splitlines():
-        line: str = line.strip()  # noqa: PLW2901
-        if not line:
+        line_stripped: str = line.strip()
+        if not line_stripped:
             continue
 
-        match: Match[str] | None = re.match(r"^\s*(\d+)\s+(.+)$", line)
+        match: Match[str] | None = re.match(r"^\s*(\d+)\s+(.+)$", line_stripped)
         if not match:
             continue
 
         hop_num = int(match.group(1))
-        rest: str | None = match.group(2).strip()
+        rest: str = match.group(2)
 
         if re.match(r"^(\*\s*)+$", rest):
             hops.append(TraceHop(hop=hop_num, host=None, ip=None, rtt_ms=[None]))
@@ -58,13 +58,15 @@ def _parse_linux_traceroute(raw: str) -> list[TraceHop]:
         ip: str | None = None
         rtts: list[float | None] = []
 
-        host_match = re.match(r"^([^\s(]+)\s*\(([^)]+)\)\s*(.*)", rest)
+        host_match: Match[str] | None = re.match(
+            r"^([^\s(]+)\s*\(([^)]+)\)\s*(.*)", rest
+        )
         if host_match:
             host = host_match.group(1)
             ip = host_match.group(2)
-            rtt_str = host_match.group(3)
+            rtt_str: str | Any = host_match.group(3)
         else:
-            parts = rest.split()
+            parts: list[str] = rest.split()
             if parts:
                 ip = parts[0]
                 host = parts[0]
@@ -104,13 +106,13 @@ def _parse_windows_tracert(raw: str) -> list[TraceHop]:
     hops: list[TraceHop] = []
 
     for line in raw.strip().splitlines():
-        line = line.strip()  # noqa: PLW2901
-        match: Match[str] | None = re.match(r"^\s*(\d+)\s+(.+)$", line)
+        line_stripped: str = line.strip()
+        match: Match[str] | None = re.match(r"^\s*(\d+)\s+(.+)$", line_stripped)
         if not match:
             continue
 
         hop_num = int(match.group(1))
-        rest: str | None = match.group(2).strip()
+        rest: str = match.group(2)
 
         if re.match(r"^(\*\s*)+$", rest):
             hops.append(TraceHop(hop=hop_num, host=None, ip=None, rtt_ms=[None]))
@@ -123,10 +125,12 @@ def _parse_windows_tracert(raw: str) -> list[TraceHop]:
             except ValueError:
                 rtts.append(None)
 
-        ip_match = re.search(r"([\d.]+)\s*$", rest)
+        ip_match: Match[str] | None = re.search(r"([\d.]+)\s*$", rest)
         ip: str | None = ip_match.group(1) if ip_match else None
 
-        host_match = re.search(r"([a-zA-Z][^\s]+)\s+[\d.]+\s*$", rest)
+        host_match: Match[str] | None = re.search(
+            r"([a-zA-Z][^\s]+)\s+[\d.]+\s*$", rest
+        )
         host: str | None = host_match.group(1) if host_match else ip
 
         hops.append(
@@ -297,7 +301,7 @@ def _run_windows_tracert(
             except TimeoutExpired:
                 proc.kill()
                 stdout_b, _ = proc.communicate()
-    except (CalledProcessError, FileNotFoundError):
+    except Exception:
         logger.exception("Failed to run tracert for %s", target)
         return []
 

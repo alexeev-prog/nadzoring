@@ -27,7 +27,12 @@ from nadzoring.dns_lookup.monitor import (
     MonitorConfig,
     load_log,
 )
-from nadzoring.dns_lookup.types import BenchmarkResult, DNSResult, PoisoningCheckResult
+from nadzoring.dns_lookup.types import (
+    BenchmarkResult,
+    DNSResult,
+    PoisoningCheckResult,
+    RecordType,
+)
 from nadzoring.logger import get_logger
 from nadzoring.utils.decorators import common_cli_options
 from nadzoring.utils.formatters import (
@@ -40,7 +45,7 @@ from nadzoring.utils.formatters import (
 
 logger: Logger = get_logger(__name__)
 
-_QUERYABLE_RECORD_TYPES: list[str] = [t for t in RECORD_TYPES if t != "PTR"]
+_QUERYABLE_RECORD_TYPES: list[RecordType] = [t for t in RECORD_TYPES if t != "PTR"]  # type: ignore
 
 _DEFAULT_NAMESERVERS: tuple[str, str] = ("8.8.8.8", "1.1.1.1")
 
@@ -50,7 +55,7 @@ _RECORD_TYPE_CHOICE: Choice[str] = click.Choice(
 )
 
 
-def _expand_record_types(record_types: tuple[str, ...]) -> list[str]:
+def _expand_record_types(record_types: tuple[str, ...]) -> list[RecordType]:
     """
     Expand a tuple of CLI record type tokens into a concrete list.
 
@@ -66,7 +71,9 @@ def _expand_record_types(record_types: tuple[str, ...]) -> list[str]:
     """
     if "ALL" in record_types:
         return _QUERYABLE_RECORD_TYPES
-    return list(record_types)
+
+    valid_types: list[str] = [t for t in record_types if t in _QUERYABLE_RECORD_TYPES]
+    return valid_types  # type: ignore[return-value]
 
 
 def _make_pbar(
@@ -223,10 +230,11 @@ def monitor_command(
                 err=True,
             )
 
+    record_type_literal: RecordType = record_type  # type: ignore
     config = MonitorConfig(
         domain=domain,
         nameservers=servers,
-        record_type=record_type,  # type: ignore[arg-type]
+        record_type=record_type_literal,
         interval=interval,
         queries_per_sample=queries,
         max_response_time_ms=max_rt,
@@ -384,7 +392,7 @@ def resolve_command(
     show_ttl: bool,
 ) -> list[dict[str, Any]]:
     """Resolve DNS records for one or more domains."""
-    types_to_query: list[str] = _expand_record_types(record_types)
+    types_to_query: list[RecordType] = _expand_record_types(record_types)
     total: int = len(domains) * len(types_to_query)
 
     pbar: tqdm | None = _make_pbar(total, "Resolving DNS records", "query", quiet=quiet)
@@ -508,7 +516,7 @@ def check_command(
         or an error string.
 
     """
-    types_to_check: list[str] = _expand_record_types(record_types)
+    types_to_check: list[RecordType] = _expand_record_types(record_types)
 
     pbar: tqdm | None = _make_pbar(
         len(domains), "Performing DNS checks", "domain", quiet=quiet
@@ -648,7 +656,7 @@ def compare_command(
     if pbar:
         pbar.close()
 
-    return format_dns_comparison(result)
+    return format_dns_comparison(dict(result))
 
 
 @dns_group.command(name="health")
@@ -682,7 +690,7 @@ def health_command(
         click.echo(f"Checking DNS health for {domain}...", err=True)
 
     result: HealthCheckResult = health_check_dns(domain, nameserver)
-    return format_dns_health(result)
+    return format_dns_health(dict(result))
 
 
 @dns_group.command(name="benchmark")
@@ -767,10 +775,11 @@ def benchmark_command(
             pbar.set_description(f"Benchmarking {server}")
             pbar.update(1)
 
+    record_type_literal: RecordType = record_type  # type: ignore
     results: list[BenchmarkResult] = benchmark_dns_servers(
         domain=domain,
         servers=servers_list,
-        record_type=record_type,
+        record_type=record_type_literal,
         queries=queries,
         parallel=parallel,
         progress_callback=progress_callback if not quiet else None,
@@ -862,4 +871,4 @@ def poisoning_command(
         additional,
     )
 
-    return format_dns_poisoning(result)
+    return format_dns_poisoning(dict(result))
