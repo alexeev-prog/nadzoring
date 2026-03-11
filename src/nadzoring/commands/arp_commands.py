@@ -1,6 +1,7 @@
 """ARP-related CLI commands."""
 
 from datetime import UTC, datetime
+from logging import Logger
 from typing import Any
 
 import click
@@ -18,7 +19,7 @@ from nadzoring.arp.realtime import ARPRealtimeDetector
 from nadzoring.logger import get_logger
 from nadzoring.utils.decorators import common_cli_options
 
-logger = get_logger(__name__)
+logger: Logger = get_logger(__name__)
 
 
 @click.group(name="arp")
@@ -77,7 +78,7 @@ def detect_spoofing(
     detector = ARPSpoofingDetector(cache)
     interfaces_to_check: list[str] = list({e.interface for e in entries})
 
-    total = len(interfaces_to_check)
+    total: int = len(interfaces_to_check)
     pbar: tqdm | None = (
         None if quiet else tqdm(total=total, desc="Analyzing interfaces", unit="iface")
     )

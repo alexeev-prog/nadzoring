@@ -148,7 +148,7 @@ def port_scan_command(
         )
 
         if quiet:
-            result = scan_ports(target_config)
+            result: list[ScanResult] = scan_ports(target_config)
             if result:
                 scan_results.extend(result)
             continue
@@ -353,7 +353,7 @@ def port_service_command(
     )
 
     for port in ports:
-        service = get_service_on_port(port)
+        service: str = get_service_on_port(port)
         results.append(
             {
                 "port": port,
