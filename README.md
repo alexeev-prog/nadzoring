@@ -34,7 +34,7 @@
     <img alt="GitHub commits since latest release" src="https://img.shields.io/github/commits-since/alexeev-prog/nadzoring/latest?style=for-the-badge">
     <img alt="GitHub Release Date" src="https://img.shields.io/github/release-date-pre/alexeev-prog/nadzoring?style=for-the-badge">
     <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/alexeev-prog/nadzoring/docs.yml?style=for-the-badge&logo=github&label=docs">
-    <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/alexeev-prog/nadzoring/python-package.yml?style=for-the-badge&logo=github&label=python%20package%20lint">
+    <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/alexeev-prog/nadzoring/python-package.yml?style=for-the-badge&logo=python&label=python%20package%20lint">
     <img src="https://img.shields.io/pypi/wheel/nadzoring?style=for-the-badge">
     <img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/nadzoring?style=for-the-badge">
     <img alt="PyPI - Version" src="https://img.shields.io/pypi/v/nadzoring?style=for-the-badge">
