@@ -4,7 +4,7 @@
 
 <div align="center">
   <p align="center">
-    An open source tool for detecting website blocks, downdetecting and network analysis
+    An open source tool and python library for detecting website blocks, downdetecting and network analysis
     <br />
     <a href="https://alexeev-prog.github.io/nadzoring/v0.1.6"><strong>Explore the docs »</strong></a>
     <br />
@@ -45,6 +45,8 @@
 </p>
 
 Nadzoring (from Russian "надзор" — supervision/oversight + English "-ing" suffix) is a free and open-source command-line tool for detecting website blocks, monitoring service availability, and network analysis. It helps you investigate network connectivity issues, check if websites are accessible, analyze network configurations with comprehensive DNS diagnostics — including reverse DNS, DNS poisoning detection, ARP spoofing monitoring, and much more.
+
+This library is fully typed and have linter zero-warning policy.
 
 <p align="center">
     <img src="https://raw.githubusercontent.com/alexeev-prog/nadzoring/refs/heads/main/docs/logo.png" width=300>
