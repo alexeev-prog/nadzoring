@@ -1,10 +1,10 @@
 """ARP-related CLI commands."""
 
 from datetime import UTC, datetime
-from typing import Any, NoReturn
+from typing import Any
 
 import click
-from scapy.all import ARP, Ether, sniff
+from scapy.all import ARP, Ether, sniff  # type: ignore
 from tqdm import tqdm
 
 from nadzoring.arp import (
@@ -12,6 +12,7 @@ from nadzoring.arp import (
     ARPCacheRetrievalError,
     ARPEntry,
     ARPSpoofingDetector,
+    SpoofingAlert,
 )
 from nadzoring.arp.realtime import ARPRealtimeDetector
 from nadzoring.logger import get_logger
@@ -77,7 +78,7 @@ def detect_spoofing(
     interfaces_to_check: list[str] = list({e.interface for e in entries})
 
     total = len(interfaces_to_check)
-    pbar: tqdm[NoReturn] | None = (
+    pbar: tqdm | None = (
         None if quiet else tqdm(total=total, desc="Analyzing interfaces", unit="iface")
     )
 
@@ -86,17 +87,18 @@ def detect_spoofing(
         interface_entries: list[ARPEntry] = [
             e for e in entries if e.interface == interface
         ]
-        alerts = detector.detect_on_interface(interface_entries, interface)
+        alerts: list[SpoofingAlert] = detector.detect()
 
         all_alerts.extend(
             {
                 "alert_type": alert.alert_type,
                 "ip_address": alert.ip_address,
                 "mac_address": alert.mac_address,
-                "interface": alert.interface,
+                "interface": interface,
                 "description": alert.description,
             }
             for alert in alerts
+            if any(e.interface == interface for e in interface_entries)
         )
 
         if pbar:
@@ -155,7 +157,7 @@ def monitor_spoofing(
             """Process packet and collect alerts."""
             alert: str | None = detector.process_packet(packet)
             if alert:
-                alert_dict: dict[str, str | Any] = {
+                alert_dict: dict[str, Any] = {
                     "timestamp": datetime.now(UTC).isoformat(),
                     "interface": interface or "all",
                     "message": alert,

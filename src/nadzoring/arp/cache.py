@@ -162,11 +162,11 @@ class ARPCache:
         """
         entries: list[ARPEntry] = []
         for line in output.splitlines():
-            line: str = line.strip()  # noqa: PLW2901
-            if not line:
+            line_stripped: str = line.strip()
+            if not line_stripped:
                 continue
 
-            parts: list[str] = line.split()
+            parts: list[str] = line_stripped.split()
             if len(parts) < 3:
                 continue
 
@@ -179,7 +179,7 @@ class ARPCache:
                 if part == "dev" and i + 1 < len(parts):
                     interface = parts[i + 1]
                 elif part == "lladdr" and i + 1 < len(parts):
-                    mac: str = parts[i + 1]
+                    mac = parts[i + 1]
                 elif part in {
                     "REACHABLE",
                     "STALE",
@@ -231,7 +231,7 @@ class ARPCache:
             parts = line.split()
             if len(parts) >= 3 and _is_valid_ip(parts[0]):
                 ip: str = parts[0]
-                mac: str = parts[1].replace("-", ":")
+                mac_value: str = parts[1].replace("-", ":")
                 state: ARPEntryState = (
                     ARPEntryState.REACHABLE
                     if parts[2].lower() == "dynamic"
@@ -241,7 +241,7 @@ class ARPCache:
                 entries.append(
                     ARPEntry(
                         ip_address=ip,
-                        mac_address=mac,
+                        mac_address=mac_value,
                         interface=current_interface or "unknown",
                         state=state,
                     )

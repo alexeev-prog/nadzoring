@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import click
-from tabulate import tabulate
+import tabulate
 
 from nadzoring.network_base.port_scanner import ScanResult
 
@@ -179,7 +179,7 @@ def print_results_table(
     )
 
     try:
-        output = tabulate(
+        output_table: str = tabulate.tabulate(
             data,
             headers="keys",
             tablefmt=tablefmt,
@@ -188,9 +188,9 @@ def print_results_table(
             numalign="left",
         )
     except Exception:
-        output: str = tabulate(data, headers="keys", tablefmt="simple")
+        output_table = tabulate.tabulate(data, headers="keys", tablefmt="simple")
 
-    click.echo(output)
+    click.echo(output_table)
 
 
 def _calculate_column_widths(
@@ -216,7 +216,7 @@ def _calculate_column_widths(
         List of integer column widths in the same order as *headers*.
 
     """
-    total_min: Literal[0] | int = sum(min_widths.values())
+    total_min: int = sum(min_widths.values())
 
     if total_min >= available:
         return [min_widths[h] for h in headers]
@@ -308,7 +308,7 @@ def print_html_table(
     if not data:
         return
 
-    html_table: str = tabulate(data, headers="keys", tablefmt="html")
+    html_table: str = tabulate.tabulate(data, headers="keys", tablefmt="html")
 
     if not full_page:
         click.echo(html_table)
@@ -354,17 +354,17 @@ def save_results(
                     writer.writerows(data)
 
         elif fileformat == "html":
-            html_table = tabulate(data, headers="keys", tablefmt="html")
+            html_table = tabulate.tabulate(data, headers="keys", tablefmt="html")
             with file_path.open("w", encoding="utf-8") as f:
                 f.write(_build_html_page("Nadzoring Analysis Results", html_table))
 
         elif fileformat == "html_table":
             with file_path.open("w", encoding="utf-8") as f:
-                f.write(tabulate(data, headers="keys", tablefmt="html"))
+                f.write(tabulate.tabulate(data, headers="keys", tablefmt="html"))
 
         else:
             with file_path.open("w", encoding="utf-8") as f:
-                f.write(tabulate(data, headers="keys", tablefmt="grid"))
+                f.write(tabulate.tabulate(data, headers="keys", tablefmt="grid"))
 
         click.secho(f"Results saved to {file_path}", fg="green")
 
@@ -537,17 +537,17 @@ def format_dns_trace(trace_result: dict[str, Any]) -> list[dict[str, Any]]:
     hops: list[dict[str, Any]] = trace_result.get("hops", [])
 
     for i, hop in enumerate(hops):
-        response_time: Any | None = hop.get("response_time")
+        response_time_value: Any | None = hop.get("response_time")
 
-        if response_time is None:
+        if response_time_value is None:
             time_str = "timeout"
-        elif isinstance(response_time, int | float):
-            time_str = f"{response_time:.2f}ms"
+        elif isinstance(response_time_value, int | float):
+            time_str = f"{response_time_value:.2f}ms"
         else:
-            time_str = str(response_time)
+            time_str = str(response_time_value)
 
         records = hop.get("records", [])
-        records_str: str | Any = (
+        records_str: str = (
             "\n".join(str(r) for r in records)
             if records
             else hop.get("error", "No records")
@@ -565,15 +565,17 @@ def format_dns_trace(trace_result: dict[str, Any]) -> list[dict[str, Any]]:
 
     final: dict[str, Any] | None = trace_result.get("final_answer")
     if final and final not in hops:
-        response_time = final.get("response_time")
-        time_str: str = f"{response_time:.2f}ms" if response_time else "N/A"
+        response_time_final = final.get("response_time")
+        time_str_final: str = (
+            f"{response_time_final:.2f}ms" if response_time_final else "N/A"
+        )
         final_records = final.get("records", ["Answer received"])
 
         formatted.append(
             {
                 "hop": len(hops),
                 "nameserver": final.get("nameserver", "N/A"),
-                "response_time": time_str,
+                "response_time": time_str_final,
                 "records": "\n".join(str(r) for r in final_records),
                 "next": "Complete",
             }

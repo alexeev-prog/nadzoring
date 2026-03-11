@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from nadzoring.dns_lookup.types import DNSResult
+from nadzoring.dns_lookup.types import DNSResult, RecordType
 from nadzoring.dns_lookup.utils import resolve_with_timer
 from nadzoring.dns_lookup.validation import (
     calculate_record_score,
@@ -11,8 +11,8 @@ from nadzoring.dns_lookup.validation import (
     validate_txt_records,
 )
 
-_HEALTH_RECORD_TYPES: list[str] = ["A", "AAAA", "MX", "NS", "TXT", "CNAME"]
-_DEFAULT_CHECK_TYPES: list[str] = ["A", "AAAA", "MX", "NS", "TXT", "CNAME"]
+_HEALTH_RECORD_TYPES: list[RecordType] = ["A", "AAAA", "MX", "NS", "TXT", "CNAME"]
+_DEFAULT_CHECK_TYPES: list[RecordType] = ["A", "AAAA", "MX", "NS", "TXT", "CNAME"]
 
 
 class HealthCheckResult(dict[str, Any]):
@@ -108,7 +108,9 @@ def health_check_dns(domain: str, nameserver: str | None = None) -> HealthCheckR
             continue
 
         record_result: DNSResult = resolve_with_timer(domain, rtype, nameserver)
-        record_score: int = max(0, calculate_record_score(rtype, record_result, result))
+        record_score: int = max(
+            0, calculate_record_score(rtype, dict(record_result), result)
+        )
 
         result["record_scores"][rtype] = record_score
         total_score += record_score
@@ -123,7 +125,7 @@ def health_check_dns(domain: str, nameserver: str | None = None) -> HealthCheckR
 def check_dns(
     domain: str,
     nameserver: str | None = None,
-    record_types: list[str] | None = None,
+    record_types: list[RecordType] | None = None,
     *,
     validate_mx: bool = False,
     validate_txt: bool = False,

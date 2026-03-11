@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 from logging import Logger
-from typing import Any, NoReturn
+from typing import Any, Literal
 
 import click
 from tqdm import tqdm
@@ -99,10 +99,12 @@ def port_scan_command(
         _parse_port_specification(mode, ports)
     )
 
+    protocol_literal: Literal["tcp", "udp"] = "tcp" if protocol == "tcp" else "udp"
+
     base_config = ScanConfig(
         targets=list(targets),
         mode=mode,
-        protocol=protocol,
+        protocol=protocol_literal,
         custom_ports=parsed_ports[0],
         port_range=parsed_ports[1],
         timeout=timeout,
@@ -133,7 +135,7 @@ def port_scan_command(
         target_config = ScanConfig(
             targets=[target],
             mode=mode,
-            protocol=protocol,
+            protocol=protocol_literal,
             custom_ports=parsed_ports[0],
             port_range=parsed_ports[1],
             timeout=timeout,
@@ -174,9 +176,9 @@ def port_scan_command(
             target_config.progress_callback = _make_callback(
                 pbar, target_idx, target, len(targets)
             )
-            result: list[ScanResult] = scan_ports(target_config)
-            if result:
-                scan_results.extend(result)
+            result_scan: list[ScanResult] = scan_ports(target_config)
+            if result_scan:
+                scan_results.extend(result_scan)
 
     return format_scan_results(scan_results, show_closed=show_closed)
 
@@ -217,7 +219,7 @@ def ping_command(
     results: list[dict[str, str]] = []
     total: int = len(addresses)
 
-    pbar: tqdm[NoReturn] | None = (
+    pbar: tqdm | None = (
         None if quiet else tqdm(total=total, desc="Pinging addresses", unit="ping")
     )
 
@@ -252,7 +254,7 @@ def geolocation_command(
     results: list[dict[str, str]] = []
     total: int = len(ips)
 
-    pbar: tqdm[NoReturn] | None = (
+    pbar: tqdm | None = (
         None if quiet else tqdm(total=total, desc="Getting geolocation", unit="ip")
     )
 
@@ -298,7 +300,7 @@ def host_to_ip_command(
     results: list[dict[str, str]] = []
     total: int = len(hostnames)
 
-    pbar: tqdm[NoReturn] | None = (
+    pbar: tqdm | None = (
         None if quiet else tqdm(total=total, desc="Resolving hostnames", unit="host")
     )
 
@@ -342,7 +344,7 @@ def port_service_command(
     results: list[dict[str, int | str]] = []
     total: int = len(ports)
 
-    pbar: tqdm[NoReturn] | None = (
+    pbar: tqdm | None = (
         None if quiet else tqdm(total=total, desc="Looking up ports", unit="port")
     )
 
@@ -407,7 +409,7 @@ def http_ping_command(
     results: list[dict[str, Any]] = []
     total: int = len(urls)
 
-    pbar: tqdm[NoReturn] | None = (
+    pbar: tqdm | None = (
         None if quiet else tqdm(total=total, desc="Probing URLs", unit="url")
     )
 
@@ -476,7 +478,7 @@ def whois_command(
     results: list[dict[str, Any]] = []
     total: int = len(targets)
 
-    pbar: tqdm[NoReturn] | None = (
+    pbar: tqdm | None = (
         None if quiet else tqdm(total=total, desc="Running WHOIS", unit="target")
     )
 
@@ -595,7 +597,7 @@ def traceroute_command(
     results: list[dict[str, Any]] = []
     total: int = len(targets)
 
-    pbar: tqdm[NoReturn] | None = (
+    pbar: tqdm | None = (
         None if quiet else tqdm(total=total, desc="Tracing routes", unit="target")
     )
 

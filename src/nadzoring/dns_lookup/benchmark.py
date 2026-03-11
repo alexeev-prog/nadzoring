@@ -121,16 +121,16 @@ def benchmark_dns_servers(
         servers = get_public_dns_servers()
 
     if parallel:
-        results: list[BenchmarkResult] = _benchmark_parallel(
+        results_list: list[BenchmarkResult] = _benchmark_parallel(
             servers, domain, record_type, queries, max_workers, progress_callback
         )
     else:
-        results: list[BenchmarkResult] = _benchmark_sequential(
+        results_list = _benchmark_sequential(
             servers, domain, record_type, queries, progress_callback
         )
 
-    results.sort(key=lambda r: r["avg_response_time"])
-    return results
+    results_list.sort(key=lambda r: r["avg_response_time"])
+    return results_list
 
 
 def _benchmark_parallel(

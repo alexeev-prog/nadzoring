@@ -18,7 +18,8 @@ Typical usage::
 
 from logging import Logger
 
-from requests import RequestException, Response, get
+import requests
+from requests import RequestException, Response
 
 from nadzoring.logger import get_logger
 
@@ -44,7 +45,7 @@ def _fetch_geo_data(ip: str) -> dict | None:
 
     """
     try:
-        response: Response = get(
+        response: Response = requests.get(
             url=_GEO_API_URL.format(ip=ip),
             params={"fields": _GEO_FIELDS},
             timeout=_REQUEST_TIMEOUT,
@@ -133,7 +134,7 @@ def geo_ip(ip: str) -> GeoResult:
                 print(f"{ip} → {location}")
 
     """
-    raw: dict[str, str | int | float] | None = _fetch_geo_data(ip)
+    raw: dict | None = _fetch_geo_data(ip)
     if raw is None:
         return {}
 

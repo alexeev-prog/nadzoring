@@ -56,7 +56,7 @@ COMMON_PORTS: list[int] = [
     28017,
 ]
 
-ScanMode: type["ScanMode"] = Literal["fast", "full", "custom"]
+ScanMode = Literal["fast", "full", "custom"]
 
 
 @dataclass
@@ -309,7 +309,7 @@ def _scan_target_ports(
                     completed,
                     total_ports,
                 )
-                last_update: int = completed
+                last_update = completed
 
     result.end_time = datetime.now(tz=UTC)
 
