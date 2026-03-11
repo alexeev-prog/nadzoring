@@ -1,3 +1,58 @@
+commit dacaef1325a015639d4c254a3d21ccaf4f2acf39
+Merge: c4d9f2b 71714ab
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Thu Mar 12 00:18:00 2026 +0700
+
+    Merge pull request #18 from alexeev-prog/typing-fixing
+
+commit 71714ab3a5708f28db551bddd9fbd75913578a80
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Thu Mar 12 00:17:12 2026 +0700
+
+    fix potential issues from code review
+
+commit b900a61625c241435553ea78563d2d9b1735acad
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Thu Mar 12 00:10:19 2026 +0700
+
+    update readme
+
+commit efaf89364affbcddd3dd196df2f7b58556710d96
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Thu Mar 12 00:08:55 2026 +0700
+
+    update typing
+
+commit e8b8e0af1480796e24091168c729077f3a11c9e1
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Thu Mar 12 00:07:02 2026 +0700
+
+    fix typing issues
+
+commit 4ea51363509d12f90df6972755a250960f7210c0
+Merge: 814eecd c4d9f2b
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Thu Mar 12 00:02:12 2026 +0700
+
+    Merge branch 'main' into typing-fixing
+
+commit 814eecdb1b9d963f3b757e8b28dca893cd9b80ca
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Thu Mar 12 00:00:22 2026 +0700
+
+    update typing, updaqte readme and update dependenices
+
+commit c4d9f2ba88fa1ef0ab255aa294984b45a8a01c21
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Mar 11 23:25:23 2026 +0700
+
+    update readme
+
+commit d4d8ff75afda8f7a618939aa6e2d68bc48fca791
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Mar 11 23:23:00 2026 +0700
+
+    update readme
 
 commit 6df469b8ff68dcafdb2b0a5d5a0bad7da3afdbcd
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
