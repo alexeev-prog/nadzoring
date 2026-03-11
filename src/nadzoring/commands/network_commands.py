@@ -16,6 +16,7 @@ from nadzoring.network_base.network_params import network_param
 from nadzoring.network_base.ping_address import ping_addr
 from nadzoring.network_base.port_scanner import (
     ScanConfig,
+    ScanMode,
     ScanResult,
     get_ports_from_mode,
     scan_ports,
@@ -99,11 +100,14 @@ def port_scan_command(
         _parse_port_specification(mode, ports)
     )
 
+    mode_literal: ScanMode = (
+        "fast" if mode == "fast" else "full" if mode == "full" else "custom"
+    )
     protocol_literal: Literal["tcp", "udp"] = "tcp" if protocol == "tcp" else "udp"
 
     base_config = ScanConfig(
         targets=list(targets),
-        mode=mode,
+        mode=mode_literal,
         protocol=protocol_literal,
         custom_ports=parsed_ports[0],
         port_range=parsed_ports[1],
@@ -134,7 +138,7 @@ def port_scan_command(
     for target_idx, target in enumerate(targets, 1):
         target_config = ScanConfig(
             targets=[target],
-            mode=mode,
+            mode=mode_literal,
             protocol=protocol_literal,
             custom_ports=parsed_ports[0],
             port_range=parsed_ports[1],

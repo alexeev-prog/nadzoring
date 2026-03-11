@@ -499,31 +499,30 @@ def _compare_results(
         ``None`` when results are consistent.
 
     """
-    base: dict = {
-        "server": server,
-        "server_name": SERVER_NAMES.get(server, "Unknown"),
-        "server_country": SERVER_COUNTRIES.get(server, "Unknown"),
-        "control_error": control.get("error"),
-        "test_error": test.get("error"),
-        "control_records": control.get("records", []),
-        "test_records": test.get("records", []),
-        "control_ttl": control.get("ttl"),
-        "test_ttl": test.get("ttl"),
-        "common_records": [],
-        "control_analysis": {},
-        "test_analysis": {},
-        "owner": None,
-        "control_owner": None,
-        "test_owner": None,
-        "diff": None,
-    }
-
     if test.get("error") != control.get("error"):
         level: Literal["high", "medium"] = (
             "high" if "NXDOMAIN" in str(test.get("error")) else "medium"
         )
-        inconsistency = {**base, "type": "error_mismatch", "severity": level}
-        return InconsistencyDetail(**inconsistency)
+        return InconsistencyDetail(
+            server=server,
+            server_name=SERVER_NAMES.get(server, "Unknown"),
+            server_country=SERVER_COUNTRIES.get(server, "Unknown"),
+            type="error_mismatch",
+            severity=level,
+            control_error=control.get("error"),
+            test_error=test.get("error"),
+            control_records=control.get("records", []),
+            test_records=test.get("records", []),
+            control_ttl=control.get("ttl"),
+            test_ttl=test.get("ttl"),
+            diff=None,
+            common_records=[],
+            control_analysis={},
+            test_analysis={},
+            owner=None,
+            control_owner=None,
+            test_owner=None,
+        )
 
     if test.get("error") or control.get("error"):
         return None
@@ -541,49 +540,76 @@ def _compare_results(
         )
 
         if control_owners and test_owners and control_owners == test_owners:
-            inconsistency = {
-                **base,
-                "type": "cdn_variation",
-                "severity": "info",
-                "diff": "cdn_nodes",
-                "common_records": list(common),
-                "control_analysis": control_analysis,
-                "test_analysis": test_analysis,
-                "owner": next(iter(control_owners), "Unknown"),
-            }
-            return InconsistencyDetail(**inconsistency)
+            return InconsistencyDetail(
+                server=server,
+                server_name=SERVER_NAMES.get(server, "Unknown"),
+                server_country=SERVER_COUNTRIES.get(server, "Unknown"),
+                type="cdn_variation",
+                severity="info",
+                control_error=control.get("error"),
+                test_error=test.get("error"),
+                control_records=control.get("records", []),
+                test_records=test.get("records", []),
+                control_ttl=control.get("ttl"),
+                test_ttl=test.get("ttl"),
+                diff="cdn_nodes",
+                common_records=list(common),
+                control_analysis=control_analysis,
+                test_analysis=test_analysis,
+                owner=next(iter(control_owners), "Unknown"),
+                control_owner=None,
+                test_owner=None,
+            )
 
         mismatch_severity: Literal["high", "medium"] = "medium" if common else "high"
         control_owners_list: list[str] = control_analysis.get("owners", [])
         test_owners_list: list[str] = test_analysis.get("owners", [])
 
-        inconsistency = {
-            **base,
-            "type": "record_mismatch",
-            "severity": mismatch_severity,
-            "diff": "records_differ",
-            "common_records": list(common),
-            "control_analysis": control_analysis,
-            "test_analysis": test_analysis,
-            "control_owner": (
+        return InconsistencyDetail(
+            server=server,
+            server_name=SERVER_NAMES.get(server, "Unknown"),
+            server_country=SERVER_COUNTRIES.get(server, "Unknown"),
+            type="record_mismatch",
+            severity=mismatch_severity,
+            control_error=control.get("error"),
+            test_error=test.get("error"),
+            control_records=control.get("records", []),
+            test_records=test.get("records", []),
+            control_ttl=control.get("ttl"),
+            test_ttl=test.get("ttl"),
+            diff="records_differ",
+            common_records=list(common),
+            control_analysis=control_analysis,
+            test_analysis=test_analysis,
+            owner=None,
+            control_owner=(
                 control_owners_list[0] if control_owners_list else "Unknown"
             ),
-            "test_owner": test_owners_list[0] if test_owners_list else "Unknown",
-        }
-        return InconsistencyDetail(**inconsistency)
+            test_owner=test_owners_list[0] if test_owners_list else "Unknown",
+        )
 
     ttl_diff: int = abs((test.get("ttl") or 0) - (control.get("ttl") or 0))
     if ttl_diff > 3600:
-        inconsistency = {
-            **base,
-            "type": "ttl_mismatch",
-            "severity": "low",
-            "diff": ttl_diff,
-            "common_records": control.get("records", []),
-            "control_analysis": control_analysis,
-            "test_analysis": test_analysis,
-        }
-        return InconsistencyDetail(**inconsistency)
+        return InconsistencyDetail(
+            server=server,
+            server_name=SERVER_NAMES.get(server, "Unknown"),
+            server_country=SERVER_COUNTRIES.get(server, "Unknown"),
+            type="ttl_mismatch",
+            severity="low",
+            control_error=control.get("error"),
+            test_error=test.get("error"),
+            control_records=control.get("records", []),
+            test_records=test.get("records", []),
+            control_ttl=control.get("ttl"),
+            test_ttl=test.get("ttl"),
+            diff=ttl_diff,
+            common_records=control.get("records", []),
+            control_analysis=control_analysis,
+            test_analysis=test_analysis,
+            owner=None,
+            control_owner=None,
+            test_owner=None,
+        )
 
     return None
 
