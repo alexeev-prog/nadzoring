@@ -24,12 +24,12 @@ logger: Logger = get_logger(__name__)
 
 @click.group(name="arp")
 def arp_group() -> None:
-    """ARP cache management and security commands."""
+    """ARP cache and spoofing detection commands."""
 
 
 @arp_group.command(name="cache")
-@common_cli_options(include_quiet=True)
-def show_cache(*, quiet: bool) -> list[dict[str, Any]]:
+@common_cli_options()
+def show_cache() -> list[dict[str, Any]]:
     """Show current ARP cache table."""
     try:
         cache = ARPCache()
