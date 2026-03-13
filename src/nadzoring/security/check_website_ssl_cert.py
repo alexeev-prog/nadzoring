@@ -7,7 +7,7 @@ import certifi
 
 
 def check_ssl_expiry(
-    domain: str, days_before: int = 7
+    domain: str, *, days_before: int = 7
 ) -> dict[str, int | datetime | str]:
     """
     Check SSL certificate expiry for a given domain.
