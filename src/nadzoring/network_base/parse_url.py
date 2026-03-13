@@ -1,3 +1,5 @@
+"""URL parsing utilities."""
+
 from urllib.parse import ParseResult, parse_qsl, urlparse
 
 
