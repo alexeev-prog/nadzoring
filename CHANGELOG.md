@@ -1,3 +1,54 @@
+commit f55455d11716a5d123d163c3f5f2378397c7ab5c
+Merge: b9de859 a595164
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 13 22:35:56 2026 +0700
+
+    Merge branch 'feature/security-command-group' of github.com:alexeev-prog/nadzoring into feature/security-command-group
+
+commit b9de859d5449fe0048e6118860837bd216dfd30c
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 13 22:35:16 2026 +0700
+
+    update network commands
+
+commit a595164c155ecf1cf50ba02281ed644cb1734548
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 13 22:01:23 2026 +0700
+
+    Update src/nadzoring/network_base/parse_url.py
+    
+    Co-authored-by: devin-ai-integration[bot] <158243242+devin-ai-integration[bot]@users.noreply.github.com>
+
+commit 3509e4aa43ac88d11d5e1802a4985c8b8919de3f
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 13 22:01:14 2026 +0700
+
+    Update src/nadzoring/security/check_website_ssl_cert.py
+    
+    Co-authored-by: devin-ai-integration[bot] <158243242+devin-ai-integration[bot]@users.noreply.github.com>
+
+commit 53ad47e4035d6aa8b4548929ecdbc42d81657296
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 13 22:01:00 2026 +0700
+
+    Update src/nadzoring/security/check_website_ssl_cert.py
+    
+    Co-authored-by: devin-ai-integration[bot] <158243242+devin-ai-integration[bot]@users.noreply.github.com>
+
+commit 013c40ff17e49bf3333db204c6ecfa40e4467328
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 13 22:00:44 2026 +0700
+
+    Update src/nadzoring/commands/security_commands.py
+    
+    Co-authored-by: devin-ai-integration[bot] <158243242+devin-ai-integration[bot]@users.noreply.github.com>
+
+commit 6a164a6743f788474b86458eff1d1ac53ac9f747
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Mar 13 00:03:02 2026 +0700
+
+    create parse-url command in network-base group
+
 commit b1355c13c376f699cfc577e868729a75d33d99b8
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Thu Mar 12 23:57:17 2026 +0700
