@@ -13,6 +13,7 @@ from nadzoring.network_base.geolocation_ip import geo_ip
 from nadzoring.network_base.http_ping import HttpPingResult, http_ping
 from nadzoring.network_base.ipv4_local_cli import get_local_ipv4
 from nadzoring.network_base.network_params import network_param
+from nadzoring.network_base.parse_url import parse_url
 from nadzoring.network_base.ping_address import ping_addr
 from nadzoring.network_base.port_scanner import (
     ScanConfig,
@@ -228,7 +229,7 @@ def ping_command(
     )
 
     for address in addresses:
-        is_pinged = ping_addr(address)
+        is_pinged: bool = ping_addr(address)
         results.append(
             {
                 "address": address,
@@ -238,6 +239,35 @@ def ping_command(
         )
         if pbar:
             pbar.set_description(f"Pinging {address}")
+            pbar.update(1)
+
+    if pbar:
+        pbar.close()
+
+    return results
+
+
+@network_group.command(name="parse-url")
+@common_cli_options(include_quiet=True)
+@click.argument("urls", type=str, nargs=-1, required=True)
+def parse_url_command(
+    urls: tuple[str, ...],
+    *,
+    quiet: bool,
+) -> list[dict]:
+    """Pare one or more URLs."""
+    results: list[dict[str, str]] = []
+    total: int = len(urls)
+
+    pbar: tqdm | None = (
+        None if quiet else tqdm(total=total, desc="Parsing URLs", unit="URL")
+    )
+
+    for url in urls:
+        parsed_result: dict[str, str] = parse_url(url)
+        results.append(parsed_result)
+        if pbar:
+            pbar.set_description(f"Parsing {url}")
             pbar.update(1)
 
     if pbar:

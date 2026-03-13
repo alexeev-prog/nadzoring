@@ -188,7 +188,7 @@ def print_results_table(
             numalign="left",
         )
     except Exception:
-        output_table = tabulate.tabulate(data, headers="keys", tablefmt="simple")
+        output_table = tabulate.tabulate(data, headers="keys", tablefmt="simple_grid")
 
     click.echo(output_table)
 

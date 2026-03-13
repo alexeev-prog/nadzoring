@@ -15,3 +15,4 @@ Submodules
    nadzoring.commands.arp_commands
    nadzoring.commands.dns_commands
    nadzoring.commands.network_commands
+   nadzoring.commands.security_commands

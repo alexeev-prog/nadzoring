@@ -16,6 +16,7 @@ Subpackages
    nadzoring.commands
    nadzoring.dns_lookup
    nadzoring.network_base
+   nadzoring.security
    nadzoring.utils
 
 Submodules
