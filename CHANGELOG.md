@@ -1,3 +1,16 @@
+commit c399e488288324269e030f2acb08bc97bdaf12a9
+Merge: fd2235e 6f464d8
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Mar 14 00:16:12 2026 +0700
+
+    Merge pull request #19 from alexeev-prog/feature/security-command-group
+
+commit 6f464d8764830284299bb58fea2615b4f5fbf462
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Mar 14 00:14:18 2026 +0700
+
+    add domain info, email, http headers, subdomains, ssl monitorr commands, update docs and deps
+
 commit f55455d11716a5d123d163c3f5f2378397c7ab5c
 Merge: b9de859 a595164
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
