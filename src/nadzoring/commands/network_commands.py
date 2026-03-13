@@ -229,7 +229,7 @@ def ping_command(
     )
 
     for address in addresses:
-        is_pinged = ping_addr(address)
+        is_pinged: bool = ping_addr(address)
         results.append(
             {
                 "address": address,
