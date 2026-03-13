@@ -1,4 +1,4 @@
-"""ARP-related CLI commands."""
+"""Security-related CLI commands."""
 
 from datetime import datetime
 from logging import Logger
