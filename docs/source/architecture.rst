@@ -157,7 +157,7 @@ external dependencies:
         ▼
    security/email_security.py
         │  _query_txt() → dnspython | dig | nslookup
-        │  _analyse_spf() / _analyse_dkim() / _analyse_dmarc()
+        │  _analyze_spf() / _analyze_dkim() / _analyze_dmarc()
         │
         ▼
    Structured result dict → formatters.py → stdout / file
