@@ -1,4 +1,5 @@
 # Changelog
+## [0.1.8](https://github.com/alexeev-prog/nadzoring/releases/tag/v0.1.8) - 2026-03-14
 
 ### Bug Fixes
 
