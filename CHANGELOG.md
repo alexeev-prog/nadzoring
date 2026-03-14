@@ -1,3 +1,74 @@
+commit f0d5b502bd1b790b27110833cb4ec804f0e35771
+Merge: 37920ee 1b9d940
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Mar 14 22:04:08 2026 +0700
+
+    Merge pull request #29 from alexeev-prog/fix/gh-issue-26
+
+commit 1b9d94022f6a7f0016c4d1627fbb7becb05b9a37
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Mar 14 22:03:31 2026 +0700
+
+    fix: correct misleading chain_valid field in SSL certificate check
+
+commit 37920eea978c3e1061509e8c80d084c6065d2cf9
+Merge: a45b377 3aa0be0
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Mar 14 22:00:42 2026 +0700
+
+    Merge pull request #28 from alexeev-prog/fix/gh-issue-25
+
+commit 3aa0be0d5b1d22f8f2a971cfd7a4a43932c348d8
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Mar 14 21:59:44 2026 +0700
+
+    Fix unreachable DNS fallback code in _get_dns_records
+
+commit a45b377e0a21e918a0903cb0c88018a740d803e6
+Merge: 05e920c 3f756bd
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Mar 14 21:55:48 2026 +0700
+
+    Merge pull request #27 from alexeev-prog/fix/gh-issue-24
+
+commit 3f756bd1a1bcc9d345a1946e447c382969995304
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Mar 14 21:54:00 2026 +0700
+
+    fix match wildcasrd DNS names in SAN entries
+
+commit 05e920cf0a2947f44b1aef43ebb9e39c2b9bde3a
+Merge: d4d6084 d17208d
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Mar 14 21:45:20 2026 +0700
+
+    Merge pull request #23 from alexeev-prog/fix/gh-issue-22
+
+commit d17208df43e00f0f70269db9b8be7b555fb7093c
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Mar 14 21:43:36 2026 +0700
+
+    fix: use per-socket timeout instead of process-global setdefaulttimeout to eliminate race conditions in concurrent subdomain scanning
+
+commit d4d6084cad86018f4da03154fb66aa93cd915fb3
+Merge: bb88160 9b3ee14
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Mar 14 21:37:57 2026 +0700
+
+    Merge pull request #21 from alexeev-prog/fix/gh-issue-20
+
+commit 9b3ee14e7e4b6201cf787e9eb6e2a8c4dc0e0855
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Mar 14 21:36:05 2026 +0700
+
+    add error handling for dns resolution in _query_txt
+
+commit bb88160da583b9aa072125dd592efe3840faca10
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Mar 14 21:31:54 2026 +0700
+
+    update dependencies
+
 commit c6ca31dab99afe1a48493220b97ec6ea974565db
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Sat Mar 14 12:50:50 2026 +0700
