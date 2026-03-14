@@ -605,7 +605,9 @@ def check_ssl_certificate(
             - version: Certificate version
             - protocols: Protocol support information
             - chain_length: Number of certificates in chain (if verified)
-            - chain_valid: Boolean indicating chain validity (if verified)
+            - chain_valid: Boolean indicating if the certificate chain is properly
+                          constructed and valid (only meaningful when verification
+                          succeeded)
             - error: Error message if status is "error"
             - warning: Warning message if verification disabled
 
@@ -684,9 +686,13 @@ def check_ssl_certificate(
         protocols: dict[str, bool | list[str]] = check_protocols_and_ciphers(domain)
         result["protocols"] = protocols
 
-        if verify and cert_info.chain:
-            result["chain_length"] = len(cert_info.chain)
-            result["chain_valid"] = all(cert_info.chain)
+        if verify:
+            if cert_info.chain:
+                result["chain_length"] = len(cert_info.chain)
+                result["chain_valid"] = True
+            else:
+                result["chain_length"] = 0
+                result["chain_valid"] = False
 
     except Exception as e:
         result.update(
