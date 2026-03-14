@@ -116,5 +116,6 @@ dev = [
     "types-tqdm>=4.67.3.20260303",
     "types-certifi>=2021.10.8.3",
     "types-cryptography>=3.3.23.2",
+    "git-cliff>=2.12.0",
 ]
 
