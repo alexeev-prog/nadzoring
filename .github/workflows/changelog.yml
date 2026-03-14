@@ -1,8 +1,9 @@
 name: Update Changelog
 
 on:
-  release:
-    types: [published, edited]
+  push:
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -15,52 +16,22 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.release.target_commitish }}
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.x'
 
       - name: Install git-cliff
-        run: |
-          pip install git-cliff
+        run: pip install git-cliff
 
       - name: Generate changelog
-        run: |
-          git-cliff --output CHANGELOG.md
-          
-          if [ ! -f CHANGELOG.md ]; then
-            echo "Error: CHANGELOG.md was not generated"
-            exit 1
-          fi
+        run: git-cliff --output CHANGELOG.md
 
-      - name: Commit and push changelog
+      - name: Commit and push changes
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          
-          if git diff --quiet CHANGELOG.md; then
-            echo "No changes to CHANGELOG.md"
-          else
-            git add CHANGELOG.md
-            git commit -m "docs: update CHANGELOG.md for ${{ github.event.release.tag_name }} [skip ci]"
-            
-            git push origin HEAD:${{ github.event.release.target_commitish }}
-          fi
-
-      - name: Update release body
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event.release.tag_name }}
-          body: |
-            ${{ github.event.release.body }}
-            
-            ---
-            
-            ## 📋 Full Changelog
-            
-            ```$(cat CHANGELOG.md | sed -n '/^## \[${{ github.event.release.tag_name }}\]/,/^## \[/p' | sed '$d')```
-          append_body: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          git add CHANGELOG.md
+          git diff --quiet && git diff --staged --quiet || git commit -m "docs: update CHANGELOG.md [skip ci]"
+          git push

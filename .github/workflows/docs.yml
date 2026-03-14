@@ -1,37 +1,49 @@
-name: Update Changelog
+name: docs
 
 on:
   push:
-    branches:
-      - main
-
-permissions:
-  contents: write
+    branches: [main]
 
 jobs:
-  update-changelog:
+  pages:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+      contents: read
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        fetch-tags: true
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
 
-      - name: Install git-cliff
-        run: pip install git-cliff
+    - name: Install dependencies
+      run: |
+        pip install sphinx furo sphinx-polyversion
+        pip install aiohttp click dnspython elevate geopy netifaces pandas ping3 pysocks python-dateutil python-whois "requests[socks]" scapy tabulate tqdm
+        pip install -e .
 
-      - name: Generate changelog
-        run: git-cliff --output CHANGELOG.md
+    - name: Build versioned docs
+      run: |
+        sphinx-polyversion docs/poly.py
 
-      - name: Commit and push changes
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add CHANGELOG.md
-          git diff --quiet && git diff --staged --quiet || git commit -m "docs: update CHANGELOG.md [skip ci]"
-          git push
+        touch docs/_build/html/.nojekyll
+        echo '<meta http-equiv="refresh" content="0; url=main/">' > docs/_build/html/index.html
+
+    - name: Upload pages artifact
+      uses: actions/upload-pages-artifact@v4
+      with:
+        path: docs/_build/html
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
