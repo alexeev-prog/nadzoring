@@ -7,6 +7,7 @@ from logging import Logger
 from typing import Any
 
 import dns.resolver
+from dns.resolver import Answer
 
 from nadzoring.logger import get_logger
 
@@ -132,8 +133,11 @@ def _query_txt(name: str) -> list[str]:
         List of complete TXT record strings, one entry per DNS record.
 
     """
-    answers = dns.resolver.resolve(name, "TXT", lifetime=5)
-    return [b"".join(r.strings).decode("utf-8", errors="replace") for r in answers]
+    try:
+        answers: Answer = dns.resolver.resolve(name, "TXT", lifetime=5)
+        return [b"".join(r.strings).decode("utf-8", errors="replace") for r in answers]
+    except Exception:
+        logger.debug("dnspython TXT lookup failed for %s", name)
 
     try:
         output: str = subprocess.check_output(  # noqa: S603
