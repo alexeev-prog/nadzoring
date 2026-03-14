@@ -4,7 +4,7 @@
 ### Bug Fixes
 
 - Fix: use per-socket timeout instead of process-global setdefaulttimeout to eliminate race conditions in concurrent subdomain scanning([d17208d](https://github.com/alexeev-prog/nadzoring/commit/d17208df43e00f0f70269db9b8be7b555fb7093c))
-- Fix match wildcasrd DNS names in SAN entries([3f756bd](https://github.com/alexeev-prog/nadzoring/commit/3f756bd1a1bcc9d345a1946e447c382969995304))
+- Fix match wildcard DNS names in SAN entries([3f756bd](https://github.com/alexeev-prog/nadzoring/commit/3f756bd1a1bcc9d345a1946e447c382969995304))
 - Fix: correct misleading chain_valid field in SSL certificate check([1b9d940](https://github.com/alexeev-prog/nadzoring/commit/1b9d94022f6a7f0016c4d1627fbb7becb05b9a37))
 
 ### Documentation
