@@ -1,59 +1,37 @@
-name: docs
+name: Update Changelog
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+
+permissions:
+  contents: write
 
 jobs:
-  pages:
+  update-changelog:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    permissions:
-      pages: write
-      id-token: write
-      contents: read
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        fetch-tags: true
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Set up Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: '3.12'
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
 
-    - name: Install dependencies
-      run: |
-        pip install sphinx furo sphinx-polyversion
-        # Устанавливаем все зависимости проекта чтобы autodoc мог их импортировать
-        pip install aiohttp click dnspython elevate geopy netifaces pandas ping3 pysocks python-dateutil python-whois "requests[socks]" scapy tabulate tqdm
-        pip install -e .
+      - name: Install git-cliff
+        run: pip install git-cliff
 
-    - name: Build versioned docs
-      run: |
-        sphinx-polyversion docs/poly.py
+      - name: Generate changelog
+        run: git-cliff --output CHANGELOG.md
 
-        touch docs/_build/html/.nojekyll
-        echo '<meta http-equiv="refresh" content="0; url=main/">' > docs/_build/html/index.html
-
-    - name: Debug output structure
-      run: |
-        echo "=== docs/_build/html ==="
-        find docs/_build/html -maxdepth 2
-        echo "=== main/ html files ==="
-        find docs/_build/html/main -name "*.html" 2>/dev/null || echo "NO HTML FILES IN main/"
-        echo "=== sphinx error logs ==="
-        cat /tmp/sphinx-err-*.log 2>/dev/null || echo "no sphinx error logs found"
-
-    - name: Upload pages artifact
-      uses: actions/upload-pages-artifact@v4
-      with:
-        path: docs/_build/html
-
-    - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v4
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add CHANGELOG.md
+          git diff --quiet && git diff --staged --quiet || git commit -m "docs: update CHANGELOG.md [skip ci]"
+          git push
