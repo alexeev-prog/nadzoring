@@ -13,6 +13,7 @@ Submodules
    :maxdepth: 4
 
    nadzoring.network_base.connections
+   nadzoring.network_base.domain_info
    nadzoring.network_base.geolocation_ip
    nadzoring.network_base.http_ping
    nadzoring.network_base.ipv4_local_cli
