@@ -7,6 +7,10 @@
 - Fix match wildcasrd DNS names in SAN entries([3f756bd](https://github.com/alexeev-prog/nadzoring/commit/3f756bd1a1bcc9d345a1946e447c382969995304))
 - Fix: correct misleading chain_valid field in SSL certificate check([1b9d940](https://github.com/alexeev-prog/nadzoring/commit/1b9d94022f6a7f0016c4d1627fbb7becb05b9a37))
 
+### Documentation
+
+- Docs: update CHANGELOG.md [skip ci]([6e75ac4](https://github.com/alexeev-prog/nadzoring/commit/6e75ac454f5333aa709b5e5e2f72f4f0bbaba53f))
+
 ### Features
 
 - Add error handling for dns resolution in _query_txt([9b3ee14](https://github.com/alexeev-prog/nadzoring/commit/9b3ee14e7e4b6201cf787e9eb6e2a8c4dc0e0855))
@@ -18,6 +22,7 @@
 - Update dependencies([bb88160](https://github.com/alexeev-prog/nadzoring/commit/bb88160da583b9aa072125dd592efe3840faca10))
 - Fix unreachable DNS fallback code in _get_dns_records([3aa0be0](https://github.com/alexeev-prog/nadzoring/commit/3aa0be0d5b1d22f8f2a971cfd7a4a43932c348d8))
 - Update changelog workflow([0737064](https://github.com/alexeev-prog/nadzoring/commit/07370641214488a9e0137ff91ef4f1f60901404f))
+- Update workflow([a858547](https://github.com/alexeev-prog/nadzoring/commit/a858547b891bd50f726566deabb1e225f75ad95a))
 ## [0.1.7](https://github.com/alexeev-prog/nadzoring/releases/tag/v0.1.7) - 2026-03-14
 
 ### Bug Fixes
