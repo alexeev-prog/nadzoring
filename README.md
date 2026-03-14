@@ -6,7 +6,7 @@
   <p align="center">
     An open source tool and python library for detecting website blocks, downdetecting and network analysis
     <br />
-    <a href="https://alexeev-prog.github.io/nadzoring/v0.1.7"><strong>Explore the docs »</strong></a>
+    <a href="https://alexeev-prog.github.io/nadzoring/v0.1.8"><strong>Explore the docs »</strong></a>
     <br />
     <br />
     <a href="#-getting-started">Getting Started</a>
@@ -2395,7 +2395,8 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 | Version | Link | Status |
 |---------|------|--------|
 | **main** | [Latest (development)](https://alexeev-prog.github.io/nadzoring/main) | 🟡 Development |
-| **v0.1.7** | [Stable release](https://alexeev-prog.github.io/nadzoring/v0.1.7) | 🟢 Stable |
+| **v0.1.8** | [Stable release](https://alexeev-prog.github.io/nadzoring/v0.1.8) | 🟢 Stable |
+| v0.1.7 | [Previous release](https://alexeev-prog.github.io/nadzoring/v0.1.7) | ⚪ Legacy |
 | v0.1.6 | [Previous release](https://alexeev-prog.github.io/nadzoring/v0.1.6) | ⚪ Legacy |
 | v0.1.5 | [Previous release](https://alexeev-prog.github.io/nadzoring/v0.1.5) | ⚪ Legacy |
 | v0.1.4 | [Previous release](https://alexeev-prog.github.io/nadzoring/v0.1.4) | ⚪ Legacy |

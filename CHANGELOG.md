@@ -24,6 +24,7 @@
 - Update changelog workflow([0737064](https://github.com/alexeev-prog/nadzoring/commit/07370641214488a9e0137ff91ef4f1f60901404f))
 - Update workflow([a858547](https://github.com/alexeev-prog/nadzoring/commit/a858547b891bd50f726566deabb1e225f75ad95a))
 - Update workflow and git-cliff([7d05e77](https://github.com/alexeev-prog/nadzoring/commit/7d05e77be0923079acf85c00a0a3e2ce352d4219))
+- Update changelog.md([fb89dba](https://github.com/alexeev-prog/nadzoring/commit/fb89dba55ee44fc4d715587a20aa53bc65b580f1))
 ## [0.1.7](https://github.com/alexeev-prog/nadzoring/releases/tag/v0.1.7) - 2026-03-14
 
 ### Bug Fixes
