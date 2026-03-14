@@ -300,7 +300,13 @@ def check_domain_match(cert: Certificate, hostname: str) -> tuple[bool, list[str
         )
         if isinstance(san.value, SubjectAlternativeName):
             for name in san.value:
-                if isinstance(name, DNSName) and name.value == hostname:
+                if isinstance(name, DNSName) and (
+                    name.value == hostname
+                    or (
+                        name.value.startswith("*.")
+                        and _match_wildcard(name.value, hostname)
+                    )
+                ):
                     san_match = True
                     matches.append(f"DNS:{name.value}")
                 if isinstance(name, IPAddress) and str(name.value) == hostname:
