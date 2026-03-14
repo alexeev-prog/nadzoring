@@ -2,8 +2,8 @@ Network Commands
 ================
 
 The ``network-base`` group provides host reachability checks, HTTP
-probing, port scanning, geolocation, WHOIS, traceroute, and local
-network information commands.
+probing, port scanning, geolocation, WHOIS, comprehensive domain
+information, traceroute, and local network information commands.
 
 .. code-block:: bash
 
@@ -170,6 +170,80 @@ Python API
 
 ----
 
+network-base whois
+------------------
+
+Perform a WHOIS lookup for a domain or IP address.
+
+.. code-block:: text
+
+   nadzoring network-base whois [OPTIONS] TARGET
+
+.. code-block:: bash
+
+   nadzoring network-base whois example.com
+   nadzoring network-base whois 8.8.8.8
+   nadzoring network-base whois -o json --save whois.json example.com
+
+.. note::
+   Requires the ``whois`` system utility.  See :doc:`/installation` for
+   installation instructions.
+
+----
+
+network-base domain-info
+-------------------------
+
+Retrieve comprehensive information about a domain in a single call.
+Aggregates WHOIS registration data, DNS record lookups (A, AAAA, MX, NS,
+TXT), IP geolocation for the primary resolved address, and reverse DNS.
+
+.. code-block:: text
+
+   nadzoring network-base domain-info [OPTIONS] DOMAIN [DOMAIN ...]
+
+.. code-block:: bash
+
+   nadzoring network-base domain-info example.com
+
+   # Multiple domains
+   nadzoring network-base domain-info google.com github.com cloudflare.com
+
+   # Export as JSON
+   nadzoring network-base domain-info -o json --save domain_report.json example.com
+
+Python API
+~~~~~~~~~~
+
+.. code-block:: python
+
+   from nadzoring.network_base.domain_info import get_domain_info
+
+   info = get_domain_info("example.com")
+
+   # WHOIS registration data
+   print(info["whois"]["registrar"])
+   print(info["whois"]["creation_date"])
+   print(info["whois"]["expiry_date"])
+
+   # Resolved IP addresses
+   print(info["dns"]["ipv4"])    # '93.184.216.34'
+   print(info["dns"]["ipv6"])    # '2606:2800:220:1:248:1893:25c8:1946'
+
+   # DNS records by type
+   for rtype, records in info["dns"]["records"].items():
+       print(f"  {rtype}: {records}")
+
+   # Geolocation of the primary IP
+   geo = info["geolocation"]
+   if geo:
+       print(f"{geo['city']}, {geo['country']}  ({geo['lat']}, {geo['lon']})")
+
+   # Reverse DNS for the primary IP
+   print(info["reverse_dns"])    # 'example.com' or None
+
+----
+
 network-base port-scan
 -----------------------
 
@@ -264,27 +338,6 @@ Python API
    print(get_service_on_port(80))    # "http"
    print(get_service_on_port(22))    # "ssh"
    print(get_service_on_port(9999))  # "unknown"
-
-----
-
-network-base whois
-------------------
-
-Perform a WHOIS lookup for a domain or IP address.
-
-.. code-block:: text
-
-   nadzoring network-base whois [OPTIONS] TARGET
-
-.. code-block:: bash
-
-   nadzoring network-base whois example.com
-   nadzoring network-base whois 8.8.8.8
-   nadzoring network-base whois -o json --save whois.json example.com
-
-.. note::
-   Requires the ``whois`` system utility.  See :doc:`/installation` for
-   installation instructions.
 
 ----
 

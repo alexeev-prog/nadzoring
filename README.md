@@ -6,7 +6,7 @@
   <p align="center">
     An open source tool and python library for detecting website blocks, downdetecting and network analysis
     <br />
-    <a href="https://alexeev-prog.github.io/nadzoring/v0.1.6"><strong>Explore the docs »</strong></a>
+    <a href="https://alexeev-prog.github.io/nadzoring/v0.1.7"><strong>Explore the docs »</strong></a>
     <br />
     <br />
     <a href="#-getting-started">Getting Started</a>
@@ -44,9 +44,11 @@
     <img src="https://raw.githubusercontent.com/alexeev-prog/nadzoring/refs/heads/main/docs/pallet-0.png">
 </p>
 
-Nadzoring (from Russian "надзор" — supervision/oversight + English "-ing" suffix) is a free and open-source command-line tool for detecting website blocks, monitoring service availability, and network analysis. It helps you investigate network connectivity issues, check if websites are accessible, analyze network configurations with comprehensive DNS diagnostics — including reverse DNS, DNS poisoning detection, ARP spoofing monitoring, and much more.
+Nadzoring (from Russian "надзор" — supervision/oversight + English "-ing" suffix) is a free and open-source command-line tool for detecting website blocks, monitoring service availability, and network analysis. It helps you investigate network connectivity issues, check if websites are accessible, analyze network configurations with comprehensive DNS diagnostics — including reverse DNS, DNS poisoning detection, ARP spoofing monitoring, SSL/TLS certificate analysis, HTTP security header auditing, email security validation (SPF/DKIM/DMARC), subdomain discovery, and much more.
 
-This library is fully typed and have linter zero-warning policy.
+Nadzoring is fully typed, has a zero-warnings linter policy, and is written according to SOLID, modularity, and SRP principles. It also has detailed documentation that is connected to Context7.
+
+This utility has high-quality typing and a library API for use in your projects.
 
 <p align="center">
     <img src="https://raw.githubusercontent.com/alexeev-prog/nadzoring/refs/heads/main/docs/logo.png" width=300>
@@ -81,9 +83,16 @@ This library is fully typed and have linter zero-warning policy.
       - [port-scan](#port-scan)
       - [port-service](#port-service)
       - [whois](#whois)
+      - [domain-info](#domain-info)
       - [connections](#connections)
       - [traceroute](#traceroute)
       - [route](#route)
+    - [Security Commands](#security-commands)
+      - [security check-ssl](#security-check-ssl)
+      - [security check-headers](#security-check-headers)
+      - [security check-email](#security-check-email)
+      - [security subdomains](#security-subdomains)
+      - [security watch-ssl](#security-watch-ssl)
     - [ARP Commands](#arp-commands)
       - [arp cache](#arp-cache)
       - [arp detect-spoofing](#arp-detect-spoofing)
@@ -96,6 +105,7 @@ This library is fully typed and have linter zero-warning policy.
     - [DNS Lookup API](#dns-lookup-api)
     - [Reverse DNS API](#reverse-dns-api)
     - [Network Base API](#network-base-api)
+    - [Security API](#security-api)
     - [ARP API](#arp-api)
   - [Examples](#examples)
     - [DNS Diagnostics](#dns-diagnostics)
@@ -104,6 +114,11 @@ This library is fully typed and have linter zero-warning policy.
     - [DNS Performance Benchmarking](#dns-performance-benchmarking)
     - [Port Scanning](#port-scanning)
     - [HTTP Service Probing](#http-service-probing)
+    - [SSL/TLS Certificate Auditing](#ssltls-certificate-auditing)
+    - [HTTP Security Header Auditing](#http-security-header-auditing)
+    - [Email Security Validation](#email-security-validation)
+    - [Subdomain Discovery](#subdomain-discovery)
+    - [Continuous SSL Monitoring](#continuous-ssl-monitoring)
     - [ARP Spoofing Detection](#arp-spoofing-detection)
     - [Network Path Analysis](#network-path-analysis)
     - [Complete Network Diagnostics](#complete-network-diagnostics)
@@ -135,6 +150,7 @@ Optional system utilities:
 | `ip` / `route` | `network-base params`, `network-base route` |
 | `net-tools` | `network-base params` on some Linux distros (`sudo apt install net-tools`) |
 | `ss` | `network-base connections` (Linux) |
+| `dig` / `nslookup` | `security check-email` (DNS TXT lookups; `dnspython` used when available) |
 
 ### Installation
 
@@ -159,7 +175,7 @@ pip install git+https://github.com/alexeev-prog/nadzoring.git
 ## Usage
 
 Nadzoring uses a hierarchical command structure: `nadzoring <group> <command> [OPTIONS]`.
-The three main groups are `dns`, `network-base`, and `arp`.
+The four main groups are `dns`, `network-base`, `security`, and `arp`.
 
 ### Global Options
 
@@ -921,7 +937,7 @@ nadzoring network-base whois -o json --save whois_data.json github.com
 **Python API:**
 
 ```python
-from nadzoring.network_base.whois_lookup import whois_lookup
+from nadzoring.network_base.whois import whois_lookup
 
 result = whois_lookup("example.com")
 print(result["registrar"])      # 'RESERVED-Internet Assigned Numbers Authority'
@@ -930,6 +946,51 @@ print(result["expiry_date"])
 print(result["name_servers"])
 if result.get("error"):
     print("Error:", result["error"])  # whois not installed, lookup failed, etc.
+```
+
+---
+
+#### domain-info
+
+Retrieve comprehensive information about a domain in a single call. Aggregates WHOIS registration data, DNS record lookups (A, AAAA, MX, NS, TXT), IP geolocation for the primary resolved address, and reverse DNS — all returned as a structured response.
+
+```bash
+nadzoring network-base domain-info [OPTIONS] DOMAINS...
+```
+
+```bash
+nadzoring network-base domain-info example.com
+nadzoring network-base domain-info google.com github.com cloudflare.com
+nadzoring network-base domain-info -o json --save domain_report.json example.com
+```
+
+**Python API:**
+
+```python
+from nadzoring.network_base.domain_info import get_domain_info
+
+info = get_domain_info("example.com")
+
+# WHOIS registration data
+print(info["whois"]["registrar"])
+print(info["whois"]["creation_date"])
+print(info["whois"]["expiry_date"])
+
+# Resolved IP addresses
+print(info["dns"]["ipv4"])    # '93.184.216.34'
+print(info["dns"]["ipv6"])    # '2606:2800:220:1:248:1893:25c8:1946'
+
+# DNS records by type
+for rtype, records in info["dns"]["records"].items():
+    print(f"  {rtype}: {records}")
+
+# Geolocation of the primary IP
+geo = info["geolocation"]
+if geo:
+    print(f"{geo['city']}, {geo['country']}  ({geo['lat']}, {geo['lon']})")
+
+# Reverse DNS for the primary IP
+print(info["reverse_dns"])    # 'example.com' or None
 ```
 
 ---
@@ -1031,6 +1092,427 @@ from nadzoring.network_base.route_table import get_route_table
 routes = get_route_table()
 for route in routes:
     print(route.destination, "via", route.gateway, "dev", route.interface)
+```
+
+---
+
+### Security Commands
+
+The `security` group provides SSL/TLS certificate inspection, HTTP security header auditing, email security record validation, subdomain discovery, and continuous certificate monitoring.
+
+```bash
+nadzoring security --help
+```
+
+---
+
+#### security check-ssl
+
+Inspect the SSL/TLS certificate for one or more domains. Checks expiry, issuer, subject, Subject Alternative Names, key strength, domain match, and which TLS protocol versions the server accepts (TLSv1.0 through TLSv1.3).
+
+By default only a compact summary is shown. Use `--full` to see all fields including the complete SAN list, protocol details, chain length, and raw serial number.
+
+```bash
+nadzoring security check-ssl [OPTIONS] DOMAINS...
+```
+
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--days-before` | `-d` | Days before expiry to flag as `warning` status | `7` |
+| `--no-verify` | | Disable certificate chain verification (falls back automatically) | `False` |
+| `--full` | | Show all certificate fields instead of compact summary | `False` |
+
+**Status values:**
+
+| Status | Meaning |
+|--------|---------|
+| `valid` | Certificate is valid and not near expiry |
+| `warning` | Fewer than `--days-before` days remaining |
+| `expired` | Certificate has already expired |
+| `error` | Could not connect or parse the certificate |
+
+```bash
+# Basic check — compact summary table
+nadzoring security check-ssl example.com
+
+# Check multiple domains with a 30-day warning window
+nadzoring security check-ssl --days-before 30 google.com github.com cloudflare.com
+
+# Check without verifying the certificate chain (useful for self-signed certs)
+nadzoring security check-ssl --no-verify internal.corp.example.com
+
+# Full details including SAN list, protocol support, chain info
+nadzoring security check-ssl --full ya.ru
+
+# Save results as JSON for further processing
+nadzoring security check-ssl -o json --save ssl_report.json example.com github.com
+```
+
+**Python API:**
+
+```python
+from nadzoring.security.check_website_ssl_cert import (
+    check_ssl_certificate,
+    check_ssl_expiry,
+    check_ssl_expiry_with_fallback,
+)
+
+# Verified check (full certificate chain validation)
+result = check_ssl_certificate("example.com", days_before=14)
+
+print(result["status"])          # 'valid' | 'warning' | 'expired' | 'error'
+print(result["remaining_days"])  # e.g. 142
+print(result["expiry_date"])     # '2025-10-15T12:00:00+00:00'
+print(result["verification"])    # 'verified' | 'unverified' | 'failed'
+
+# Subject and issuer dicts
+print(result["subject"]["CN"])   # 'example.com'
+print(result["issuer"]["CN"])    # 'DigiCert TLS RSA SHA256 2020 CA1'
+print(result["issuer"]["O"])     # 'DigiCert Inc'
+
+# Subject Alternative Names
+for san in result.get("san", []):
+    print(san)                   # 'DNS:example.com', 'DNS:www.example.com', ...
+
+# Domain matching
+print(result["domain_match"])       # True
+print(result["matched_names"])      # ['DNS:example.com']
+
+# Public key info
+key = result["public_key"]
+print(key["algorithm"])             # 'RSA' | 'EC' | 'Ed25519' | ...
+print(key.get("key_size"))          # 2048 (RSA/DSA)
+print(key.get("curve"))             # 'secp256r1' (EC)
+print(key["strength"])              # 'weak' | 'good' | 'strong'
+
+# Protocol support (TLSv1.0 – TLSv1.3)
+protos = result["protocols"]
+print(protos["supported"])          # ['TLSv1.2', 'TLSv1.3']
+print(protos["has_outdated"])       # False
+
+# Chain info (only when verify=True)
+print(result.get("chain_length"))   # 3
+print(result.get("chain_valid"))    # True
+
+# Simplified expiry-only check
+result = check_ssl_expiry("example.com")
+
+# Automatic fallback to unverified mode if chain check fails
+result = check_ssl_expiry_with_fallback("self-signed.badssl.com")
+print(result["verification"])       # 'unverified' when fallback was used
+```
+
+---
+
+#### security check-headers
+
+Analyse the HTTP security headers returned by one or more URLs. Checks for the presence of eleven recommended headers, flags deprecated headers (e.g. `X-XSS-Protection`), identifies information-leaking headers (e.g. `Server`, `X-Powered-By`), and produces a 0–100 coverage score.
+
+```bash
+nadzoring security check-headers [OPTIONS] URLS...
+```
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--timeout` | Request timeout in seconds | `10.0` |
+| `--no-verify` | Disable SSL certificate verification | `False` |
+
+**Checked security headers:**
+
+| Header | Purpose |
+|--------|---------|
+| `Strict-Transport-Security` | Enforce HTTPS (HSTS) |
+| `Content-Security-Policy` | Mitigate XSS and injection attacks |
+| `X-Content-Type-Options` | Prevent MIME-type sniffing |
+| `X-Frame-Options` | Prevent clickjacking |
+| `X-XSS-Protection` | Legacy XSS filter (deprecated) |
+| `Referrer-Policy` | Control referrer information leakage |
+| `Permissions-Policy` | Restrict browser feature access |
+| `Cross-Origin-Embedder-Policy` | Isolate cross-origin resources |
+| `Cross-Origin-Opener-Policy` | Isolate browsing context |
+| `Cross-Origin-Resource-Policy` | Control cross-origin resource sharing |
+| `Cache-Control` | Prevent caching of sensitive responses |
+
+```bash
+# Check a single URL
+nadzoring security check-headers https://example.com
+
+# Check multiple URLs and save results
+nadzoring security check-headers https://google.com https://github.com https://cloudflare.com
+
+# Skip SSL verification for internal/self-signed endpoints
+nadzoring security check-headers --no-verify https://internal.corp.example.com
+
+# Export as JSON for CI integration or dashboards
+nadzoring security check-headers -o json --save headers_audit.json https://example.com
+
+# Adjust timeout for slow servers
+nadzoring security check-headers --timeout 20 https://slow-api.example.com
+```
+
+**Python API:**
+
+```python
+from nadzoring.security.http_headers import check_http_security_headers
+
+result = check_http_security_headers("https://example.com", timeout=10.0)
+
+print(result["url"])          # final URL after redirects
+print(result["status_code"])  # 200
+print(result["score"])        # 0–100 coverage score
+
+# Present security headers
+for header, value in result["present"].items():
+    print(f"  ✓ {header}: {value}")
+
+# Missing security headers
+for header in result["missing"]:
+    print(f"  ✗ {header}")
+
+# Deprecated headers found in the response
+for header in result["deprecated"]:
+    print(f"  ⚠ deprecated: {header}")
+
+# Information-leaking headers
+for header, value in result["leaking"].items():
+    print(f"  ⚠ leaking: {header} = {value}")
+
+if result["error"]:
+    print("Request failed:", result["error"])
+```
+
+---
+
+#### security check-email
+
+Validate the email security configuration for one or more domains. Checks SPF (Sender Policy Framework), DKIM (DomainKeys Identified Mail) by probing common selectors, and DMARC (Domain-based Message Authentication, Reporting and Conformance). Returns structured findings including detected issues and an overall score.
+
+> **Note:** Requires `dig` or `nslookup` to be available on the system, or `dnspython` installed in the Python environment (`pip install dnspython`). `dnspython` is preferred as it handles multi-chunk TXT records reliably.
+
+```bash
+nadzoring security check-email [OPTIONS] DOMAINS...
+```
+
+```bash
+# Check a single domain
+nadzoring security check-email gmail.com
+
+# Check multiple domains at once
+nadzoring security check-email google.com github.com cloudflare.com
+
+# Export full JSON report
+nadzoring security check-email -o json --save email_security.json example.com
+
+# Quiet mode for scripting — results only, no progress bars
+nadzoring security check-email --quiet example.com
+```
+
+**Python API:**
+
+```python
+from nadzoring.security.email_security import check_email_security
+
+result = check_email_security("example.com")
+
+print(result["domain"])
+
+# Overall score: 0 = none of SPF/DKIM/DMARC found, 3 = all found
+print(result["overall_score"])  # e.g. 3
+
+# SPF analysis
+spf = result["spf"]
+print(spf["found"])             # True
+print(spf["record"])            # 'v=spf1 include:_spf.example.com ~all'
+print(spf["mechanisms"])        # ['include:_spf.example.com']
+print(spf["all_qualifier"])     # '~'  (softfail — recommended minimum)
+for issue in spf["issues"]:
+    print("  SPF issue:", issue)
+
+# DKIM analysis
+dkim = result["dkim"]
+print(dkim["found"])            # True
+print(dkim["selectors_checked"])  # list of 13 common selectors probed
+for selector, record in dkim["records"].items():
+    print(f"  DKIM selector '{selector}': {record[:60]}...")
+for issue in dkim["issues"]:
+    print("  DKIM issue:", issue)
+
+# DMARC analysis
+dmarc = result["dmarc"]
+print(dmarc["found"])           # True
+print(dmarc["record"])          # 'v=DMARC1; p=reject; rua=mailto:...'
+print(dmarc["policy"])          # 'none' | 'quarantine' | 'reject'
+print(dmarc["subdomain_policy"])  # sp= tag value or None
+print(dmarc["pct"])             # percentage of messages the policy applies to
+print(dmarc["rua"])             # aggregate report addresses
+print(dmarc["ruf"])             # forensic report addresses
+for issue in dmarc["issues"]:
+    print("  DMARC issue:", issue)
+
+# All issues aggregated across SPF + DKIM + DMARC
+for issue in result["all_issues"]:
+    print("Issue:", issue)
+```
+
+**Common issues reported:**
+
+| Category | Issue |
+|----------|-------|
+| SPF | No SPF record found |
+| SPF | Multiple SPF records (RFC violation) |
+| SPF | `+all` allows any sender (insecure) |
+| SPF | Missing `all` mechanism |
+| SPF | Exceeds 10 DNS lookup limit |
+| DKIM | No DKIM records found for common selectors |
+| DMARC | No DMARC record found |
+| DMARC | Policy `p=none` does not protect against spoofing |
+| DMARC | No aggregate report address (`rua=`) configured |
+| DMARC | Policy applies to less than 100% of messages |
+
+---
+
+#### security subdomains
+
+Discover subdomains for a target domain using two complementary methods: certificate transparency (CT) log queries via [crt.sh](https://crt.sh) and concurrent DNS brute-force using a built-in wordlist of 80+ common prefixes (or a custom wordlist file). Each result is tagged with its discovery source.
+
+```bash
+nadzoring security subdomains [OPTIONS] DOMAIN
+```
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--wordlist` | Path to a custom wordlist file (one prefix per line) | Built-in 80+ prefix list |
+| `--threads` | Number of concurrent DNS resolution threads | `20` |
+| `--timeout` | Per-host DNS resolution timeout in seconds | `3.0` |
+| `--no-bruteforce` | Skip DNS brute-force entirely, use CT logs only | `False` |
+
+```bash
+# Discover subdomains using CT logs + built-in wordlist
+nadzoring security subdomains example.com
+
+# CT logs only — no brute-force DNS
+nadzoring security subdomains --no-bruteforce example.com
+
+# Use a custom wordlist file
+nadzoring security subdomains --wordlist /path/to/subdomains.txt example.com
+
+# Increase concurrency and timeout for faster / more thorough scanning
+nadzoring security subdomains --threads 50 --timeout 5 example.com
+
+# Export results as JSON
+nadzoring security subdomains -o json --save subdomains.json example.com
+
+# Quiet mode for scripting
+nadzoring security subdomains --quiet example.com
+```
+
+**Python API:**
+
+```python
+from nadzoring.security.subdomain_scan import scan_subdomains
+
+# CT logs + built-in wordlist brute-force
+results = scan_subdomains("example.com", max_threads=20, timeout=3.0)
+
+for r in results:
+    print(f"{r['subdomain']:40}  {r['ip']:16}  [{r['source']}]")
+
+# CT logs only
+results = scan_subdomains("example.com", wordlist_path="")
+
+# Custom wordlist
+results = scan_subdomains(
+    "example.com",
+    wordlist_path="/path/to/custom_wordlist.txt",
+    max_threads=50,
+    timeout=5.0,
+)
+
+# Source values: 'ct_log' | 'brute_force'
+ct_found     = [r for r in results if r["source"] == "ct_log"]
+brute_found  = [r for r in results if r["source"] == "brute_force"]
+print(f"CT log: {len(ct_found)}  Brute-force: {len(brute_found)}")
+```
+
+**Built-in wordlist includes prefixes for:**
+common web services (`www`, `mail`, `ftp`, `smtp`), admin panels (`admin`, `portal`, `cpanel`, `whm`, `plesk`), APIs and apps (`api`, `app`, `dev`, `staging`, `test`, `beta`), infrastructure (`vpn`, `proxy`, `lb`, `waf`, `gateway`, `ns`, `ns1`, `ns2`), CDN and static assets (`cdn`, `static`, `assets`, `media`, `images`), DevOps tooling (`git`, `gitlab`, `jenkins`, `ci`, `cd`, `docker`, `k8s`, `grafana`, `kibana`), databases (`db`, `mysql`, `postgres`, `mongo`, `redis`, `elastic`), and more.
+
+---
+
+#### security watch-ssl
+
+Continuously monitor SSL/TLS certificates for one or more domains. On each check cycle the certificate is re-fetched and alerts are fired for: near-expiry (`status == warning`), expired certificates, certificate changes (expiry date difference between consecutive checks), and check failures. Runs indefinitely until Ctrl-C or for a fixed number of cycles.
+
+```bash
+nadzoring security watch-ssl [OPTIONS] DOMAINS...
+```
+
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--interval` | `-i` | Seconds between full check cycles | `3600` |
+| `--cycles` | `-c` | Number of cycles to run (`0` = run indefinitely) | `0` |
+| `--days-before` | `-d` | Days before expiry to trigger a warning alert | `7` |
+
+```bash
+# Monitor ya.ru indefinitely, check every hour
+nadzoring security watch-ssl ya.ru
+
+# Monitor multiple domains with a 14-day warning threshold
+nadzoring security watch-ssl --days-before 14 example.com github.com cloudflare.com
+
+# Run exactly 5 check cycles with a 60-second interval (useful for CI/testing)
+nadzoring security watch-ssl --cycles 5 --interval 60 example.com
+
+# Frequent checks — every 5 minutes — for a critical service
+nadzoring security watch-ssl --interval 300 api.example.com
+
+# Save all check results as JSON after monitoring ends
+nadzoring security watch-ssl --cycles 3 -o json --save ssl_history.json example.com
+
+# Quiet mode — suppress progress output, emit only alert lines
+nadzoring security watch-ssl --quiet --cycles 10 --interval 30 example.com
+```
+
+**Alert events fired:**
+
+| Trigger | Message example |
+|---------|-----------------|
+| Check failure | `Check failed: [Errno 111] Connection refused` |
+| Expired certificate | `Certificate has EXPIRED` |
+| Near expiry | `Certificate expires in 5 day(s)` |
+| Certificate changed | `Certificate changed: expiry 2025-06-01 → 2025-12-01` |
+
+**Python API:**
+
+```python
+from nadzoring.security.ssl_monitor import SSLMonitor
+
+# Create monitor for multiple domains
+monitor = SSLMonitor(
+    domains=["example.com", "github.com", "cloudflare.com"],
+    interval=3600,   # seconds between cycles
+    days_before=14,  # alert when fewer than 14 days remain
+)
+
+# Custom alert handler
+def on_alert(domain: str, message: str) -> None:
+    print(f"ALERT  {domain}: {message}")
+    # send to Slack, PagerDuty, email, etc.
+
+monitor.set_alert_callback(on_alert)
+
+# Run a fixed number of cycles (blocking)
+results = monitor.run_cycles(cycles=5)
+
+# Or run indefinitely until KeyboardInterrupt
+try:
+    monitor.run()
+except KeyboardInterrupt:
+    pass
+
+# Retrieve full history of all check results
+for entry in monitor.history():
+    print(entry["domain"], entry["status"], entry["remaining_days"], entry["checked_at"])
 ```
 
 ---
@@ -1171,6 +1653,10 @@ Use `-o` / `--output` to change the output format:
 nadzoring dns resolve -o json example.com
 nadzoring dns health -o html --save health.html example.com
 nadzoring network-base connections -o csv --save conns.csv
+nadzoring security check-ssl -o json example.com
+nadzoring security check-headers -o html --save headers.html https://example.com
+nadzoring security check-email -o json --save email_audit.json example.com
+nadzoring security subdomains -o json --save subdomains.json example.com
 ```
 
 ## Saving Results
@@ -1180,6 +1666,11 @@ nadzoring dns check -o html --save dns_report.html example.com
 nadzoring dns compare -o csv --save comparison.csv google.com
 nadzoring dns poisoning -o json --save poisoning.json example.com
 nadzoring network-base port-scan -o json --save scan.json example.com
+nadzoring network-base domain-info -o json --save domain_info.json example.com
+nadzoring security check-ssl -o json --save ssl_report.json example.com
+nadzoring security check-headers -o json --save headers_report.json https://example.com
+nadzoring security check-email -o json --save email_security.json example.com
+nadzoring security subdomains -o json --save subdomains.json example.com
 nadzoring arp cache -o csv --save arp.csv
 ```
 
@@ -1301,7 +1792,8 @@ from nadzoring.network_base.traceroute import traceroute
 from nadzoring.network_base.connections import get_connections
 from nadzoring.network_base.route_table import get_route_table
 from nadzoring.network_base.network_params import network_param
-from nadzoring.network_base.whois_lookup import whois_lookup
+from nadzoring.network_base.whois import whois_lookup
+from nadzoring.network_base.domain_info import get_domain_info
 from nadzoring.network_base.port_scanner import ScanConfig, scan_ports
 
 # Ping — returns bool
@@ -1317,6 +1809,13 @@ loc = geo_ip("8.8.8.8")
 if loc:
     print(loc["country"], loc["city"])
 
+# Comprehensive domain info — WHOIS + DNS + geo + reverse DNS
+info = get_domain_info("example.com")
+print(info["whois"]["registrar"])
+print(info["dns"]["ipv4"])
+print(info["geolocation"]["country"])
+print(info["reverse_dns"])
+
 # Traceroute
 for hop in traceroute("8.8.8.8", max_hops=10):
     print(hop.hop, hop.ip, hop.rtt_ms)
@@ -1329,6 +1828,58 @@ for conn in get_connections(protocol="tcp", state_filter="ESTABLISHED"):
 config = ScanConfig(targets=["example.com"], mode="fast", timeout=2.0)
 for result in scan_ports(config):
     print("Open ports:", result.open_ports)
+```
+
+### Security API
+
+```python
+from nadzoring.security.check_website_ssl_cert import (
+    check_ssl_certificate,
+    check_ssl_expiry,
+    check_ssl_expiry_with_fallback,
+)
+from nadzoring.security.http_headers import check_http_security_headers
+from nadzoring.security.email_security import check_email_security
+from nadzoring.security.subdomain_scan import scan_subdomains
+from nadzoring.security.ssl_monitor import SSLMonitor
+
+# SSL/TLS certificate check
+result = check_ssl_certificate("example.com", days_before=14)
+print(result["status"], result["remaining_days"])
+print(result["protocols"]["supported"])   # ['TLSv1.2', 'TLSv1.3']
+print(result["public_key"]["strength"])   # 'good'
+
+# Fallback mode for self-signed / problematic certs
+result = check_ssl_expiry_with_fallback("self-signed.example.com")
+
+# HTTP security header audit
+headers = check_http_security_headers("https://example.com")
+print(headers["score"])     # 0–100
+print(headers["missing"])   # list of absent recommended headers
+print(headers["leaking"])   # {'Server': 'nginx/1.18.0'}
+
+# Email security (SPF / DKIM / DMARC)
+email = check_email_security("example.com")
+print(email["overall_score"])           # 0–3
+print(email["spf"]["all_qualifier"])    # '~' (softfail)
+print(email["dmarc"]["policy"])         # 'reject'
+print(email["all_issues"])              # aggregated issue list
+
+# Subdomain discovery
+subdomains = scan_subdomains(
+    "example.com",
+    max_threads=30,
+    timeout=4.0,
+)
+for s in subdomains:
+    print(s["subdomain"], s["ip"], s["source"])
+
+# Continuous SSL monitoring
+monitor = SSLMonitor(["example.com", "github.com"], interval=3600, days_before=14)
+monitor.set_alert_callback(lambda domain, msg: print(f"ALERT {domain}: {msg}"))
+results = monitor.run_cycles(cycles=3)
+for r in monitor.history():
+    print(r["domain"], r["status"], r["remaining_days"])
 ```
 
 ### ARP API
@@ -1412,6 +1963,98 @@ nadzoring network-base http-ping https://google.com https://cloudflare.com https
 nadzoring network-base http-ping -o csv --save http_metrics.csv https://example.com
 ```
 
+### SSL/TLS Certificate Auditing
+
+```bash
+# Quick check — compact summary
+nadzoring security check-ssl example.com
+
+# Check multiple domains with a 30-day warning window
+nadzoring security check-ssl --days-before 30 google.com github.com cloudflare.com ya.ru
+
+# Full details including SAN list, protocol versions, chain info
+nadzoring security check-ssl --full example.com
+
+# Check without verifying the chain (self-signed / internal CA)
+nadzoring security check-ssl --no-verify https://internal.corp.example.com
+
+# Save full report as JSON
+nadzoring security check-ssl --full -o json --save ssl_audit.json example.com github.com
+```
+
+### HTTP Security Header Auditing
+
+```bash
+# Single URL
+nadzoring security check-headers https://example.com
+
+# Batch audit of several services
+nadzoring security check-headers \
+    https://api.example.com \
+    https://admin.example.com \
+    https://static.example.com
+
+# Skip SSL verification for internal endpoints
+nadzoring security check-headers --no-verify https://internal.corp.example.com
+
+# Export as JSON for CI / dashboard integration
+nadzoring security check-headers -o json --save headers_audit.json https://example.com
+```
+
+### Email Security Validation
+
+```bash
+# Check a single domain
+nadzoring security check-email example.com
+
+# Audit multiple domains
+nadzoring security check-email gmail.com outlook.com yahoo.com proton.me
+
+# Export full JSON report with SPF/DKIM/DMARC details
+nadzoring security check-email -o json --save email_audit.json example.com
+
+# Check all your owned domains at once
+nadzoring security check-email corp.example.com mail.example.com newsletter.example.com
+```
+
+### Subdomain Discovery
+
+```bash
+# CT logs + built-in wordlist brute-force
+nadzoring security subdomains example.com
+
+# CT logs only — faster, no DNS brute-force
+nadzoring security subdomains --no-bruteforce example.com
+
+# Custom wordlist and more threads for deeper scanning
+nadzoring security subdomains \
+    --wordlist /path/to/big-wordlist.txt \
+    --threads 100 \
+    --timeout 5 \
+    example.com
+
+# Save discovered subdomains as JSON
+nadzoring security subdomains -o json --save subdomains.json example.com
+```
+
+### Continuous SSL Monitoring
+
+```bash
+# Monitor a single domain indefinitely (Ctrl-C to stop)
+nadzoring security watch-ssl example.com
+
+# Monitor multiple domains with a 14-day warning threshold
+nadzoring security watch-ssl --days-before 14 \
+    example.com github.com cloudflare.com api.example.com
+
+# Check every 5 minutes for a critical service
+nadzoring security watch-ssl --interval 300 api.example.com
+
+# Run 10 cycles with a 60-second interval and save all results
+nadzoring security watch-ssl --cycles 10 --interval 60 \
+    -o json --save ssl_monitor_history.json example.com
+```
+
 ### ARP Spoofing Detection
 
 ```bash
@@ -1436,8 +2079,12 @@ nadzoring network-base params -v
 nadzoring network-base host-to-ip google.com cloudflare.com github.com
 nadzoring network-base ping 8.8.8.8 1.1.1.1 google.com
 nadzoring network-base geolocation 8.8.8.8 1.1.1.1
+nadzoring network-base domain-info example.com
 nadzoring network-base port-scan --mode fast example.com
 nadzoring network-base traceroute cloudflare.com
+nadzoring security check-ssl example.com
+nadzoring security check-headers https://example.com
+nadzoring security check-email example.com
 nadzoring arp cache
 ```
 
@@ -1710,6 +2357,10 @@ nadzoring dns compare example.com
 nadzoring dns poisoning example.com
 nadzoring network-base http-ping https://example.com
 nadzoring network-base traceroute example.com
+nadzoring security check-ssl example.com
+nadzoring security check-headers https://example.com
+nadzoring security check-email example.com
+nadzoring security subdomains example.com
 ```
 
 ---
@@ -1735,6 +2386,7 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 - Additional output formats
 - ARP detection heuristics
 - New network diagnostic commands
+- Extended security auditing (HSTS preload check, certificate transparency monitoring, CAA record validation)
 
 ---
 
@@ -1743,7 +2395,8 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 | Version | Link | Status |
 |---------|------|--------|
 | **main** | [Latest (development)](https://alexeev-prog.github.io/nadzoring/main) | 🟡 Development |
-| **v0.1.6** | [Stable release](https://alexeev-prog.github.io/nadzoring/v0.1.6) | 🟢 Stable |
+| **v0.1.7** | [Stable release](https://alexeev-prog.github.io/nadzoring/v0.1.7) | 🟢 Stable |
+| v0.1.6 | [Previous release](https://alexeev-prog.github.io/nadzoring/v0.1.6) | ⚪ Legacy |
 | v0.1.5 | [Previous release](https://alexeev-prog.github.io/nadzoring/v0.1.5) | ⚪ Legacy |
 | v0.1.4 | [Previous release](https://alexeev-prog.github.io/nadzoring/v0.1.4) | ⚪ Legacy |
 | v0.1.3 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.3) | ⚪ Legacy |
@@ -1754,6 +2407,7 @@ The documentation site includes:
 - [Error Handling guide](https://alexeev-prog.github.io/nadzoring/main/error_handling.html) — complete reference of all error patterns and return values
 - [Architecture overview](https://alexeev-prog.github.io/nadzoring/main/architecture.html) — layer design, SRP/DRY/KISS principles applied
 - [DNS command reference](https://alexeev-prog.github.io/nadzoring/main/commands/dns.html) — full CLI + Python API per command
+- [Security command reference](https://alexeev-prog.github.io/nadzoring/main/commands/security.html) — SSL, headers, email, subdomains, monitoring
 - [DNS monitoring guide](https://alexeev-prog.github.io/nadzoring/main/monitoring_dns.html) — systemd, cron, trend analysis
 
 ---

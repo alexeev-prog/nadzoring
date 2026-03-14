@@ -36,6 +36,9 @@ Key conventions enforced by the ruff config:
 - **PEP 8** naming: ``snake_case`` for functions/variables,
   ``PascalCase`` for classes, ``UPPER_CASE`` for module-level constants
 - No ``print()`` in library code — use the :mod:`nadzoring.logger` module
+- Boolean keyword-only arguments via ``*`` separator (``FBT`` rules)
+- ``BLE001`` (broad exception catch) may be suppressed with a comment where
+  intentional — document *why* the broad catch is needed
 
 ----
 
@@ -48,10 +51,31 @@ Before adding a feature, read :doc:`architecture`.  The short version:
 2. **DRY** — extract repeated patterns into helpers or the ``utils/``
    package.
 3. **KISS** — prefer simple, readable code over clever one-liners.
-4. **Error handling** — never raise on expected network/DNS failures;
+4. **Error handling** — never raise on expected network/DNS/SSL failures;
    return structured error data instead.
 5. **Type hints** — all public functions must have complete type
    annotations; use ``TypedDict`` for structured return values.
+6. **No comments** — use Google-style docstrings with ``Args``, ``Returns``,
+   and ``Examples`` sections instead of inline comments.
+
+----
+
+Adding a Security Check
+------------------------
+
+The ``security/`` package follows the same conventions as other domain
+packages.  When adding a new security check:
+
+1. Create ``src/nadzoring/security/mycheck.py`` with a single public
+   function (SRP).
+2. Return a structured dict with an ``"error"`` key set to ``None`` on
+   success or a human-readable string on failure.  Never raise.
+3. Export the function from ``src/nadzoring/security/__init__.py``.
+4. Add a CLI command in ``src/nadzoring/commands/security_commands.py``
+   using ``@common_cli_options``.
+5. Add the result shape to ``utils/formatters.py`` if a new formatter is
+   needed.
+6. Document the command in ``docs/commands/security.rst``.
 
 ----
 
@@ -67,7 +91,7 @@ Tests live in ``tests/``.  Run them with:
 New features require at least:
 
 - A happy-path test
-- An error/edge-case test (e.g. domain not found, timeout)
+- An error/edge-case test (e.g. domain not found, timeout, SSL error)
 
 ----
 
@@ -78,8 +102,25 @@ Submitting a Pull Request
 2. Create a feature branch: ``git checkout -b feat/my-feature``.
 3. Make your changes and add tests.
 4. Run ``ruff check`` and ``pytest`` — both must pass.
-5. Update the relevant ``.rst`` documentation file.
+5. Update the relevant ``.rst`` documentation file (``commands/security.rst``
+   for new security commands, ``commands/network.rst`` for new network
+   commands, etc.).
 6. Open a PR with a clear description of what changed and why.
+
+----
+
+Areas We'd Love Help With
+--------------------------
+
+- Additional DNS record type support
+- New health check validation rules
+- CDN network database expansion
+- Performance optimisations
+- Additional output formats
+- ARP detection heuristics
+- New network diagnostic commands
+- Extended security auditing: HSTS preload check, certificate transparency
+  monitoring, CAA record validation, TLSA/DANE record inspection
 
 ----
 

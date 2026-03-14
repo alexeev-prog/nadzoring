@@ -15,7 +15,7 @@ Nadzoring uses a three-level command hierarchy:
 
    nadzoring <group> <command> [OPTIONS] [ARGUMENTS]
 
-The three command groups are ``dns``, ``network-base``, and ``arp``.
+The four command groups are ``dns``, ``network-base``, ``security``, and ``arp``.
 
 ----
 
@@ -116,7 +116,37 @@ Look up specific DNS record types:
 
 ----
 
-3. Reverse DNS Lookup
+3. Comprehensive Domain Information
+-------------------------------------
+
+Retrieve WHOIS registration data, DNS records, IP geolocation, and reverse DNS
+for a domain in a single command:
+
+.. code-block:: bash
+
+   nadzoring network-base domain-info example.com
+
+   # Multiple domains, save as JSON
+   nadzoring network-base domain-info -o json --save domain_info.json \
+       google.com github.com cloudflare.com
+
+**Python API:**
+
+.. code-block:: python
+
+   from nadzoring.network_base.domain_info import get_domain_info
+
+   info = get_domain_info("example.com")
+
+   print(info["whois"]["registrar"])
+   print(info["dns"]["ipv4"])          # '93.184.216.34'
+   print(info["dns"]["records"]["MX"]) # list of MX records
+   print(info["geolocation"]["country"])
+   print(info["reverse_dns"])          # hostname or None
+
+----
+
+4. Reverse DNS Lookup
 -----------------------
 
 Find the hostname associated with an IP address (PTR record):
@@ -156,7 +186,7 @@ Find the hostname associated with an IP address (PTR record):
 
 ----
 
-4. Ping a Host
+5. Ping a Host
 ---------------
 
 Check basic network reachability:
@@ -181,7 +211,7 @@ Check basic network reachability:
 
 ----
 
-5. HTTP Probe a URL
+6. HTTP Probe a URL
 ---------------------
 
 Measure DNS resolution time, time-to-first-byte, and total download time:
@@ -203,15 +233,15 @@ Measure DNS resolution time, time-to-first-byte, and total download time:
    from nadzoring.network_base.http_ping import http_ping
 
    result = http_ping("https://example.com")
-   print(result.status_code)   # 200
-   print(result.dns_ms)        # e.g. 12.5
-   print(result.ttfb_ms)       # e.g. 87.3
-   print(result.total_ms)      # e.g. 134.6
+   print(result.status_code)    # 200
+   print(result.dns_ms)         # e.g. 12.5
+   print(result.ttfb_ms)        # e.g. 87.3
+   print(result.total_ms)       # e.g. 134.6
    print(result.content_length) # bytes
 
 ----
 
-6. DNS Health Check
+7. DNS Health Check
 ---------------------
 
 Score a domain's DNS configuration from 0 to 100:
@@ -242,7 +272,7 @@ Scoring thresholds:
 
 ----
 
-7. Validate DNS Records
+8. Validate DNS Records
 ------------------------
 
 Run a detailed DNS check including MX priority and SPF/DKIM validation:
@@ -271,7 +301,7 @@ Run a detailed DNS check including MX priority and SPF/DKIM validation:
 
 ----
 
-8. Trace the DNS Resolution Path
+9. Trace the DNS Resolution Path
 ----------------------------------
 
 Follow the delegation chain from root servers to the authoritative answer,
@@ -297,7 +327,7 @@ similar to ``dig +trace``:
 
 ----
 
-9. Compare DNS Servers
+10. Compare DNS Servers
 -----------------------
 
 Detect discrepancies between multiple resolvers for the same domain:
@@ -328,7 +358,7 @@ Detect discrepancies between multiple resolvers for the same domain:
 
 ----
 
-10. Detect DNS Poisoning
+11. Detect DNS Poisoning
 --------------------------
 
 Check whether a domain's DNS responses show signs of poisoning, censorship,
@@ -348,7 +378,7 @@ Severity levels: ``NONE`` → ``LOW`` → ``MEDIUM`` → ``HIGH`` → ``CRITICAL
 
 ----
 
-11. Benchmark DNS Servers
+12. Benchmark DNS Servers
 ---------------------------
 
 Find the fastest DNS resolver for your location:
@@ -379,7 +409,7 @@ Find the fastest DNS resolver for your location:
 
 ----
 
-12. Scan Ports
+13. Scan Ports
 ---------------
 
 Discover open ports and running services on a target:
@@ -400,7 +430,98 @@ Discover open ports and running services on a target:
 
 ----
 
-13. ARP Cache and Spoofing Detection
+14. Security Auditing
+-----------------------
+
+**SSL/TLS certificate check:**
+
+.. code-block:: bash
+
+   # Compact summary
+   nadzoring security check-ssl example.com
+
+   # 30-day warning window, multiple domains
+   nadzoring security check-ssl --days-before 30 google.com github.com
+
+   # Full details (SAN, protocols, chain)
+   nadzoring security check-ssl --full example.com
+
+**Python API:**
+
+.. code-block:: python
+
+   from nadzoring.security.check_website_ssl_cert import check_ssl_certificate
+
+   result = check_ssl_certificate("example.com", days_before=14)
+   print(result["status"])            # 'valid' | 'warning' | 'expired' | 'error'
+   print(result["remaining_days"])    # e.g. 142
+   print(result["protocols"]["supported"])  # ['TLSv1.2', 'TLSv1.3']
+
+**HTTP security header audit:**
+
+.. code-block:: bash
+
+   nadzoring security check-headers https://example.com
+
+**Python API:**
+
+.. code-block:: python
+
+   from nadzoring.security.http_headers import check_http_security_headers
+
+   result = check_http_security_headers("https://example.com")
+   print(result["score"])    # 0–100 coverage score
+   print(result["missing"])  # list of absent recommended headers
+   print(result["leaking"])  # e.g. {'Server': 'nginx/1.18.0'}
+
+**Email security (SPF / DKIM / DMARC) validation:**
+
+.. code-block:: bash
+
+   nadzoring security check-email example.com
+
+**Python API:**
+
+.. code-block:: python
+
+   from nadzoring.security.email_security import check_email_security
+
+   result = check_email_security("example.com")
+   print(result["overall_score"])         # 0–3
+   print(result["spf"]["all_qualifier"])  # '~'
+   print(result["dmarc"]["policy"])       # 'reject'
+   print(result["all_issues"])            # aggregated issue list
+
+**Subdomain discovery:**
+
+.. code-block:: bash
+
+   # CT logs + built-in wordlist
+   nadzoring security subdomains example.com
+
+   # CT logs only
+   nadzoring security subdomains --no-bruteforce example.com
+
+**Continuous SSL monitoring:**
+
+.. code-block:: bash
+
+   nadzoring security watch-ssl example.com
+   nadzoring security watch-ssl --days-before 14 --interval 300 api.example.com
+
+**Python API:**
+
+.. code-block:: python
+
+   from nadzoring.security.ssl_monitor import SSLMonitor
+
+   monitor = SSLMonitor(["example.com", "api.example.com"], interval=3600, days_before=14)
+   monitor.set_alert_callback(lambda domain, msg: print(f"ALERT {domain}: {msg}"))
+   monitor.run_cycles(cycles=5)
+
+----
+
+15. ARP Cache and Spoofing Detection
 --------------------------------------
 
 Inspect the local ARP cache:
@@ -439,6 +560,10 @@ Use ``-o`` to change how results are displayed or saved:
    nadzoring dns resolve -o json example.com
    nadzoring dns health -o html --save health_report.html example.com
    nadzoring network-base connections -o csv --save conns.csv
+   nadzoring security check-ssl -o json example.com
+   nadzoring security check-headers -o json --save headers.json https://example.com
+   nadzoring security check-email -o json --save email.json example.com
+   nadzoring security subdomains -o json --save subdomains.json example.com
 
 Available formats: ``table`` (default), ``json``, ``csv``, ``html``, ``html_table``
 
@@ -455,16 +580,19 @@ Getting Help
    # List commands in a group
    nadzoring dns --help
    nadzoring network-base --help
+   nadzoring security --help
    nadzoring arp --help
 
    # Help for a specific command
    nadzoring dns reverse --help
    nadzoring network-base port-scan --help
+   nadzoring security check-ssl --help
+   nadzoring security check-email --help
    nadzoring arp monitor-spoofing --help
 
 ----
 
-14. Continuous DNS Monitoring
+16. Continuous DNS Monitoring
 -------------------------------
 
 The ``dns monitor`` command runs a persistent loop that tracks health and
@@ -537,12 +665,12 @@ printed automatically.
    sudo systemctl enable --now nadzoring-dns-monitor
    sudo journalctl -u nadzoring-dns-monitor -f
 
-See :doc:`monitoring` for the full systemd unit file, cron setup, trend
+See :doc:`monitoring_dns` for the full systemd unit file, cron setup, trend
 analysis examples, and alert integration patterns.
 
 ----
 
-15. Error Handling Patterns
+17. Error Handling Patterns
 -----------------------------
 
 Every public Python API function returns structured errors rather than
@@ -553,6 +681,8 @@ raising exceptions, making it safe to use in automation scripts:
    from nadzoring.dns_lookup.utils import resolve_with_timer
    from nadzoring.dns_lookup.reverse import reverse_dns
    from nadzoring.dns_lookup.health import health_check_dns
+   from nadzoring.security.check_website_ssl_cert import check_ssl_certificate
+   from nadzoring.security.http_headers import check_http_security_headers
 
    # resolve_with_timer never raises — check the "error" field
    result = resolve_with_timer("example.com", "A", timeout=3.0)
@@ -574,3 +704,17 @@ raising exceptions, making it safe to use in automation scripts:
            print("CRITICAL:", issue)
    for warning in health["warnings"]:
        print("WARN:", warning)
+
+   # check_ssl_certificate never raises — check result["status"]
+   ssl = check_ssl_certificate("example.com")
+   if ssl["status"] == "error":
+       print("SSL check failed:", ssl.get("error"))
+   elif ssl["status"] == "warning":
+       print(f"Expiring in {ssl['remaining_days']} days")
+
+   # check_http_security_headers — check result["error"]
+   headers = check_http_security_headers("https://example.com")
+   if headers["error"]:
+       print("Header check failed:", headers["error"])
+   else:
+       print(f"Security score: {headers['score']}/100")

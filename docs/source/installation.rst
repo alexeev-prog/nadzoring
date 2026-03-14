@@ -28,6 +28,23 @@ Optional system utilities (needed for specific commands):
      - ``network-base connections`` (Linux)
    * - ``net-tools`` (``route -n``)
      - ``network-base params`` on some Linux distros
+   * - ``dig``
+     - ``security check-email`` (DNS TXT lookups — used when ``dnspython``
+       is not installed)
+   * - ``nslookup``
+     - ``security check-email`` (second fallback after ``dig``)
+
+Optional Python packages:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Package
+     - Required by
+   * - ``dnspython``
+     - ``security check-email`` (preferred; handles multi-chunk TXT records
+       reliably).  Install with ``pip install dnspython``.
 
 ----
 
@@ -75,13 +92,13 @@ Installing Optional System Dependencies
 .. code-block:: bash
 
    sudo apt update
-   sudo apt install net-tools traceroute whois iproute2
+   sudo apt install net-tools traceroute whois iproute2 dnsutils
 
 **Linux (RHEL / CentOS / Fedora):**
 
 .. code-block:: bash
 
-   sudo dnf install net-tools traceroute whois iproute
+   sudo dnf install net-tools traceroute whois iproute bind-utils
 
 **macOS (Homebrew):**
 
@@ -93,6 +110,23 @@ Installing Optional System Dependencies
 
 ``tracert`` and ``arp`` are built into Windows. No additional installs required
 for basic functionality.
+
+----
+
+Installing Optional Python Dependencies
+-----------------------------------------
+
+For reliable email security checks (``security check-email``), install
+``dnspython``:
+
+.. code-block:: bash
+
+   pip install dnspython
+
+Without ``dnspython``, Nadzoring falls back to ``dig`` and then ``nslookup``
+for DNS TXT record queries.  Multi-chunk TXT records (long SPF strings split
+across multiple quoted segments) are handled correctly in all three cases, but
+``dnspython`` is the most reliable option.
 
 ----
 
@@ -156,3 +190,12 @@ Run a quick smoke test after installing:
 
    # Show local network parameters
    nadzoring network-base params
+
+   # Check an SSL certificate
+   nadzoring security check-ssl example.com
+
+   # Audit HTTP security headers
+   nadzoring security check-headers https://example.com
+
+   # Validate email security records
+   nadzoring security check-email example.com

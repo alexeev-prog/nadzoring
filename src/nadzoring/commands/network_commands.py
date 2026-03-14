@@ -9,6 +9,7 @@ from tqdm import tqdm
 
 from nadzoring.logger import get_logger
 from nadzoring.network_base.connections import ConnectionEntry, get_connections
+from nadzoring.network_base.domain_info import get_domain_info
 from nadzoring.network_base.geolocation_ip import geo_ip
 from nadzoring.network_base.http_ping import HttpPingResult, http_ping
 from nadzoring.network_base.ipv4_local_cli import get_local_ipv4
@@ -50,6 +51,7 @@ def network_group() -> None:
     "--mode",
     type=click.Choice(["fast", "full", "custom"], case_sensitive=False),
     default="fast",
+    show_default=True,
     help="Scan mode: fast (common ports), full (1-65535), or custom",
 )
 @click.option(
@@ -60,18 +62,21 @@ def network_group() -> None:
     "--protocol",
     type=click.Choice(["tcp", "udp"], case_sensitive=False),
     default="tcp",
+    show_default=True,
     help="Protocol to scan",
 )
 @click.option(
     "--timeout",
     type=float,
     default=2.0,
+    show_default=True,
     help="Socket timeout in seconds",
 )
 @click.option(
     "--workers",
     type=int,
     default=50,
+    show_default=True,
     help="Maximum number of concurrent workers per target",
 )
 @click.option(
@@ -189,9 +194,25 @@ def port_scan_command(
 
 
 def _parse_port_specification(
-    mode: str, ports: str | None
+    mode: str,
+    ports: str | None,
 ) -> tuple[list[int] | None, tuple[int, int] | None]:
-    """Parse port specification from CLI arguments."""
+    """
+    Parse a port specification string into custom ports or a range.
+
+    Args:
+        mode: Scan mode string; only ``"custom"`` triggers parsing.
+        ports: Raw port string such as ``"22,80,443"`` or ``"1-1024"``.
+
+    Returns:
+        Two-tuple of ``(custom_ports, port_range)`` where exactly one
+        element is non-``None`` when ``mode == "custom"`` and ``ports``
+        is provided, and both are ``None`` otherwise.
+
+    Raises:
+        click.BadParameter: When the port string cannot be parsed.
+
+    """
     if mode != "custom" or not ports:
         return None, None
 
@@ -219,9 +240,9 @@ def ping_command(
     addresses: tuple[str, ...],
     *,
     quiet: bool,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Ping one or more addresses."""
-    results: list[dict[str, str]] = []
+    results: list[dict[str, Any]] = []
     total: int = len(addresses)
 
     pbar: tqdm | None = (
@@ -254,9 +275,9 @@ def parse_url_command(
     urls: tuple[str, ...],
     *,
     quiet: bool,
-) -> list[dict]:
-    """Pare one or more URLs."""
-    results: list[dict[str, str]] = []
+) -> list[dict[str, Any]]:
+    """Parse one or more URLs into their components."""
+    results: list[dict[str, Any]] = []
     total: int = len(urls)
 
     pbar: tqdm | None = (
@@ -264,8 +285,7 @@ def parse_url_command(
     )
 
     for url in urls:
-        parsed_result: dict[str, str] = parse_url(url)
-        results.append(parsed_result)
+        results.append(parse_url(url))
         if pbar:
             pbar.set_description(f"Parsing {url}")
             pbar.update(1)
@@ -283,9 +303,9 @@ def geolocation_command(
     ips: tuple[str, ...],
     *,
     quiet: bool,
-) -> list[dict]:
-    """Get geolocation for one or more IPs."""
-    results: list[dict[str, str]] = []
+) -> list[dict[str, Any]]:
+    """Get geolocation for one or more IP addresses."""
+    results: list[dict[str, Any]] = []
     total: int = len(ips)
 
     pbar: tqdm | None = (
@@ -293,14 +313,14 @@ def geolocation_command(
     )
 
     for ip in ips:
-        geolocation: dict[str, str] = geo_ip(ip)
+        geo: dict[str, str] = geo_ip(ip)
         results.append(
             {
                 "ip_address": ip,
-                "latitude": geolocation.get("lat", "Unknown"),
-                "longitude": geolocation.get("lon", "Unknown"),
-                "country": geolocation.get("country", "Unknown"),
-                "city": geolocation.get("city", "Unknown"),
+                "latitude": geo.get("lat", "Unknown"),
+                "longitude": geo.get("lon", "Unknown"),
+                "country": geo.get("country", "Unknown"),
+                "city": geo.get("city", "Unknown"),
             }
         )
         if pbar:
@@ -315,7 +335,7 @@ def geolocation_command(
 
 @network_group.command(name="params")
 @common_cli_options()
-def params_command() -> list[dict]:
+def params_command() -> list[dict[str, Any]]:
     """Display network configuration parameters for the current system."""
     data: dict[str, str | None] = network_param() or {}
     data["local_ipv4"] = get_local_ipv4()
@@ -329,9 +349,9 @@ def host_to_ip_command(
     hostnames: tuple[str, ...],
     *,
     quiet: bool,
-) -> list[dict]:
-    """Get IPs for one or more hostname addresses."""
-    results: list[dict[str, str]] = []
+) -> list[dict[str, Any]]:
+    """Resolve one or more hostnames to IP addresses."""
+    results: list[dict[str, Any]] = []
     total: int = len(hostnames)
 
     pbar: tqdm | None = (
@@ -342,16 +362,12 @@ def host_to_ip_command(
     router_ipv6: str | None = router_ip(ipv6=True)
 
     for hostname in hostnames:
-        ip: str = get_ip_from_host(hostname)
-        ipv4_check: str = check_ipv4(hostname)
-        ipv6_check = check_ipv6(hostname)
-
         results.append(
             {
                 "hostname": hostname,
-                "ip_address": ip,
-                "ipv4_check": ipv4_check,
-                "ipv6_check": ipv6_check,
+                "ip_address": get_ip_from_host(hostname),
+                "ipv4_check": check_ipv4(hostname),
+                "ipv6_check": check_ipv6(hostname),
                 "router_ipv4": router_ipv4 or "Not found",
                 "router_ipv6": router_ipv6 or "Not found",
             }
@@ -373,9 +389,9 @@ def port_service_command(
     ports: tuple[int, ...],
     *,
     quiet: bool,
-) -> list[dict]:
-    """Get service names for one or more ports."""
-    results: list[dict[str, int | str]] = []
+) -> list[dict[str, Any]]:
+    """Get service names for one or more port numbers."""
+    results: list[dict[str, Any]] = []
     total: int = len(ports)
 
     pbar: tqdm | None = (
@@ -383,11 +399,10 @@ def port_service_command(
     )
 
     for port in ports:
-        service: str = get_service_on_port(port)
         results.append(
             {
                 "port": port,
-                "service": service,
+                "service": get_service_on_port(port),
                 "protocol": "tcp/udp",
             }
         )
@@ -408,6 +423,7 @@ def port_service_command(
     "--timeout",
     type=float,
     default=10.0,
+    show_default=True,
     help="Request timeout in seconds",
 )
 @click.option(
@@ -434,12 +450,7 @@ def http_ping_command(
     show_headers: bool,
     quiet: bool,
 ) -> list[dict[str, Any]]:
-    """
-    Check HTTP/HTTPS response timing and headers for one or more URLs.
-
-    Measures DNS resolution time, time-to-first-byte (TTFB), total download
-    time, HTTP status code and optional response headers.
-    """
+    """Check HTTP/HTTPS response timing and status for one or more URLs."""
     results: list[dict[str, Any]] = []
     total: int = len(urls)
 
@@ -503,12 +514,7 @@ def whois_command(
     *,
     quiet: bool,
 ) -> list[dict[str, Any]]:
-    """
-    Look up WHOIS registration info for one or more domains or IPs.
-
-    Requires the system 'whois' utility to be installed
-    (apt install whois / brew install whois).
-    """
+    """Look up WHOIS registration info for one or more domains or IPs."""
     results: list[dict[str, Any]] = []
     total: int = len(targets)
 
@@ -518,11 +524,39 @@ def whois_command(
 
     for target in targets:
         info: dict[str, str | None] = whois_lookup(target)
-        row: dict[str, Any] = {k: v for k, v in info.items() if v is not None}
-        results.append(row)
+        results.append({k: v for k, v in info.items() if v is not None})
 
         if pbar:
             pbar.set_description(f"WHOIS {target}")
+            pbar.update(1)
+
+    if pbar:
+        pbar.close()
+
+    return results
+
+
+@network_group.command(name="domain-info")
+@common_cli_options(include_quiet=True)
+@click.argument("domains", nargs=-1, required=True)
+def domain_info_command(
+    domains: tuple[str, ...],
+    *,
+    quiet: bool,
+) -> list[dict[str, Any]]:
+    """Get comprehensive info (WHOIS, DNS, geo) for one or more domains."""
+    results: list[dict[str, Any]] = []
+    total: int = len(domains)
+
+    pbar: tqdm | None = (
+        None if quiet else tqdm(total=total, desc="Getting domain info", unit="domain")
+    )
+
+    for domain in domains:
+        results.append(get_domain_info(domain))
+
+        if pbar:
+            pbar.set_description(f"Getting info for {domain}")
             pbar.update(1)
 
     if pbar:
@@ -538,6 +572,7 @@ def whois_command(
     "-p",
     type=click.Choice(["tcp", "udp", "all"], case_sensitive=False),
     default="all",
+    show_default=True,
     help="Filter by protocol",
 )
 @click.option(
@@ -559,12 +594,7 @@ def connections_command(
     no_process: bool,
     quiet: bool,
 ) -> list[dict[str, Any]]:
-    """
-    List active network connections (TCP/UDP).
-
-    Shows local/remote addresses, connection state and, where available,
-    the PID and process name. Analogous to 'ss' or 'netstat'.
-    """
+    """List active TCP/UDP network connections on the current system."""
     entries: list[ConnectionEntry] = get_connections(
         protocol=protocol,
         state_filter=state_filter,
@@ -598,13 +628,15 @@ def connections_command(
     "--max-hops",
     type=int,
     default=30,
+    show_default=True,
     help="Maximum number of hops",
 )
 @click.option(
     "--timeout",
     type=float,
     default=2.0,
-    help="Per-hop timeout in seconds (default: 2)",
+    show_default=True,
+    help="Per-hop timeout in seconds",
 )
 @click.option(
     "--sudo",
@@ -620,14 +652,7 @@ def traceroute_command(
     use_sudo: bool,
     quiet: bool,
 ) -> list[dict[str, Any]]:
-    """
-    Trace the network path to one or more hosts.
-
-    Uses 'traceroute' (Linux) or 'tracert' (Windows). On Linux, raw-socket
-    access is needed: run with --sudo, as root, or grant the capability with
-    'sudo setcap cap_net_raw+ep $(which traceroute)'.
-    tracepath is tried automatically as a root-free fallback.
-    """
+    """Trace the network path to one or more hosts."""
     results: list[dict[str, Any]] = []
     total: int = len(targets)
 
@@ -676,11 +701,7 @@ def traceroute_command(
 @network_group.command(name="route")
 @common_cli_options(include_quiet=True)
 def route_command(*, quiet: bool = False) -> list[dict[str, Any]]:
-    """
-    Display the system IP routing table.
-
-    Uses 'ip route' on Linux and 'route PRINT' on Windows.
-    """
+    """Display the system IP routing table."""
     entries: list[RouteEntry] = get_route_table()
 
     if not entries and not quiet:

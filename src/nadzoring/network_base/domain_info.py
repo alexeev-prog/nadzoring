@@ -11,7 +11,7 @@ from dns.resolver import Answer
 
 from nadzoring.logger import get_logger
 from nadzoring.network_base.geolocation_ip import geo_ip
-from nadzoring.network_base.whois import whois_lookup
+from nadzoring.network_base.whois_lookup import whois_lookup
 
 logger: Logger = get_logger(__name__)
 
