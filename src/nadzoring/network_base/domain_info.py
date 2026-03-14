@@ -74,37 +74,38 @@ def _get_dns_records(domain: str) -> dict[str, list[str]]:
             records[rtype] = [str(r) for r in answers]
         except Exception:
             logger.exception("Raised exception when get dns records")
-    return records
 
-    try:
-        a_records: list[
-            tuple[
-                AddressFamily,
-                SocketKind,
-                int,
-                str,
-                tuple[int, bytes] | tuple[str, int] | tuple[str, int, int, int],
-            ]
-        ] = socket.getaddrinfo(domain, None, socket.AF_INET)
-        if a_records:
-            records["A"] = list({s[4][0] for s in a_records})
-    except socket.gaierror:
-        pass
+    if "A" not in records:
+        try:
+            a_records: list[
+                tuple[
+                    AddressFamily,
+                    SocketKind,
+                    int,
+                    str,
+                    tuple[int, bytes] | tuple[str, int] | tuple[str, int, int, int],
+                ]
+            ] = socket.getaddrinfo(domain, None, socket.AF_INET)
+            if a_records:
+                records["A"] = list({s[4][0] for s in a_records})
+        except socket.gaierror:
+            pass
 
-    try:
-        aaaa_records: list[
-            tuple[
-                AddressFamily,
-                SocketKind,
-                int,
-                str,
-                tuple[int, bytes] | tuple[str, int] | tuple[str, int, int, int],
-            ]
-        ] = socket.getaddrinfo(domain, None, socket.AF_INET6)
-        if aaaa_records:
-            records["AAAA"] = list({s[4][0] for s in aaaa_records})
-    except socket.gaierror:
-        pass
+    if "AAAA" not in records:
+        try:
+            aaaa_records: list[
+                tuple[
+                    AddressFamily,
+                    SocketKind,
+                    int,
+                    str,
+                    tuple[int, bytes] | tuple[str, int] | tuple[str, int, int, int],
+                ]
+            ] = socket.getaddrinfo(domain, None, socket.AF_INET6)
+            if aaaa_records:
+                records["AAAA"] = list({s[4][0] for s in aaaa_records})
+        except socket.gaierror:
+            pass
 
     return records
 
