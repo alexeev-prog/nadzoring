@@ -10,12 +10,14 @@
 ### Features
 
 - Add error handling for dns resolution in _query_txt([9b3ee14](https://github.com/alexeev-prog/nadzoring/commit/9b3ee14e7e4b6201cf787e9eb6e2a8c4dc0e0855))
+- Add git-cliff and update changelog([8d00ee5](https://github.com/alexeev-prog/nadzoring/commit/8d00ee5a2eba1a51aa84274978a58b3ca49886d2))
 
 ### Other Changes
 
 - Update docs workflow([b767a9b](https://github.com/alexeev-prog/nadzoring/commit/b767a9b449d2cd606edee1bd6b48378b4bf9ac97))
 - Update dependencies([bb88160](https://github.com/alexeev-prog/nadzoring/commit/bb88160da583b9aa072125dd592efe3840faca10))
 - Fix unreachable DNS fallback code in _get_dns_records([3aa0be0](https://github.com/alexeev-prog/nadzoring/commit/3aa0be0d5b1d22f8f2a971cfd7a4a43932c348d8))
+- Update changelog workflow([0737064](https://github.com/alexeev-prog/nadzoring/commit/07370641214488a9e0137ff91ef4f1f60901404f))
 ## [0.1.7](https://github.com/alexeev-prog/nadzoring/releases/tag/v0.1.7) - 2026-03-14
 
 ### Bug Fixes
