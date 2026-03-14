@@ -148,7 +148,10 @@ def _probe_subdomain(subdomain: str, timeout: float) -> dict[str, Any] | None:
 
     """
     try:
-        socket.setdefaulttimeout(timeout)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(timeout)
+        sock.connect((subdomain, 80))
+        sock.close()
         ip: str = socket.gethostbyname(subdomain)
     except (TimeoutError, socket.gaierror):
         return None
