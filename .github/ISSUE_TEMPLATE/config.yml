@@ -1,1 +1,9 @@
 blank_issues_enabled: false
+contact_links:
+  - name: GitHub Discussions
+    url: https://github.com/alexeev-prog/nadzoring/discussions
+    about: For general discussions.
+
+  - name: Documentation
+    url: https://alexeev-prog.github.io/nadzoring
+    about: For documentation and reference.

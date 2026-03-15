@@ -42,6 +42,13 @@ def mutants(session):
 
 
 @nox.session
-def typing(session):
+def mypy_typing(session):
     session.install("mypy")
     session.run("mypy", "src/nadzoring")
+
+
+@nox.session
+def ty_typing(session):
+    session.install("ty")
+    session.run("ty", "check", "src/nadzoring")
+
