@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 from logging import Logger
-from typing import Any, Literal
+from typing import Any, Literal, NoReturn
 
 import click
 from tqdm import tqdm
@@ -30,6 +30,10 @@ from nadzoring.network_base.router_ip import (
     get_ip_from_host,
     router_ip,
 )
+from nadzoring.network_base.service_detector import (
+    ServiceDetectionResult,
+    detect_service_on_host,
+)
 from nadzoring.network_base.service_on_port import get_service_on_port
 from nadzoring.network_base.traceroute import TraceHop, traceroute
 from nadzoring.network_base.whois_lookup import whois_lookup
@@ -42,6 +46,82 @@ logger: Logger = get_logger(__name__)
 @click.group(name="network-base")
 def network_group() -> None:
     """Network base commands for analysis and diagnostics."""
+
+
+@network_group.command(name="detect-service")
+@common_cli_options(include_quiet=True)
+@click.argument("target", required=True)
+@click.argument("ports", type=int, nargs=-1, required=True)
+@click.option(
+    "--timeout",
+    type=float,
+    default=3.0,
+    show_default=True,
+    help="Connection timeout in seconds",
+)
+@click.option(
+    "--no-probe",
+    is_flag=True,
+    help="Don't send protocol-specific probes",
+)
+def detect_service_command(
+    target: str,
+    ports: tuple[int, ...],
+    timeout: float,
+    *,
+    no_probe: bool,
+    quiet: bool,
+) -> list[dict[str, Any]]:
+    """
+    Detect actual services running on specific ports of a target host.
+
+    Connects to each specified port, grabs a banner if possible,
+    and analyzes it to determine the real service.
+
+    Examples:
+        nadzoring network-base detect-service example.com 80 443 22
+        nadzoring network-base detect-service --timeout 5 192.168.1.1 8080 3306
+
+    """
+    results: list[dict[str, int | str]] = []
+    total: int = len(ports)
+
+    pbar: tqdm[NoReturn] | None = (
+        None if quiet else tqdm(total=total, desc="Detecting services", unit="port")
+    )
+
+    for port in ports:
+        result: ServiceDetectionResult = detect_service_on_host(
+            host=target,
+            port=port,
+            timeout=timeout,
+            send_probe=not no_probe,
+        )
+
+        detected: str = result.detected_service or result.guessed_service or "unknown"
+        status: str = result.detected_service or "guessed"
+        if result.error:
+            status = f"error: {result.error}"
+
+        results.append(
+            {
+                "target": target,
+                "port": port,
+                "detected_service": detected,
+                "status": status,
+                "banner": result.banner or "",
+                "method": result.method,
+            }
+        )
+
+        if pbar:
+            pbar.set_description(f"Port {port}")
+            pbar.update(1)
+
+    if pbar:
+        pbar.close()
+
+    return results
 
 
 @network_group.command(name="port-scan")
