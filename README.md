@@ -17,6 +17,8 @@
     ·
     <a href="https://context7.com/alexeev-prog/nadzoring">Context7</a>
     ·
+    <a href="https://deepwiki.com/alexeev-prog/nadzoring">Deepwiki</a>
+    ·
     <a href="https://alexeev-prog.github.io/nadzoring/main">Latest Documentation</a>
     ·
     <a href="https://github.com/alexeev-prog/nadzoring/blob/main/LICENSE">License</a>
@@ -24,6 +26,7 @@
 </div>
 <br>
 <p align="center">
+    <a href="https://deepwiki.com/alexeev-prog/nadzoring"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
     <img src="https://img.shields.io/github/languages/top/alexeev-prog/nadzoring?style=for-the-badge">
     <img src="https://img.shields.io/github/languages/count/alexeev-prog/nadzoring?style=for-the-badge">
     <img alt="GitHub License" src="https://img.shields.io/github/license/alexeev-prog/nadzoring?style=for-the-badge&logo=gnu">
