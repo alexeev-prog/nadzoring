@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from typing import Any, TypeVar, cast
 
 import click
+import yaml
 
 from nadzoring.logger import setup_cli_logging
 from nadzoring.utils.formatters import (
@@ -34,7 +35,7 @@ def common_cli_options(
     This decorator provides standardized CLI options across all commands,
     with selective inclusion based on the command's needs. It handles:
     - Logging configuration (verbose/quiet modes)
-    - Output format selection (table, json, csv, html)
+    - Output format selection (table, json, csv, html, yaml)
     - Result saving to files
     - Performance timing in verbose mode
 
@@ -74,7 +75,7 @@ def common_cli_options(
         decorated_func = click.option(
             "--output",
             "-o",
-            type=click.Choice(["table", "json", "csv", "html", "html_table"]),
+            type=click.Choice(["table", "json", "csv", "html", "html_table", "yaml"]),
             default="table",
             help="Output format",
         )(decorated_func)
@@ -217,7 +218,7 @@ def _handle_output(result: Any, output_format: str, *, no_color: bool) -> None:
 
     Args:
         result: The result data from the command to display.
-        output_format: The output format to use (json, table, csv, html, html_table).
+        output_format: The output format to use (json, table, csv, html, html_table, yaml).
         no_color: If True, disable colored output in table formatting.
 
     Raises:
@@ -227,6 +228,16 @@ def _handle_output(result: Any, output_format: str, *, no_color: bool) -> None:
     try:
         if output_format == "json":
             click.echo(json.dumps(result, indent=2, default=str, ensure_ascii=False))
+        elif output_format == "yaml":
+            yaml_output: str = yaml.dump(
+                result,
+                allow_unicode=True,
+                default_flow_style=False,
+                sort_keys=False,
+                indent=2,
+                width=120,
+            )
+            click.echo(yaml_output)
         elif output_format == "table":
             print_results_table(result, no_color=no_color)
         elif output_format == "csv":

@@ -46,7 +46,7 @@ Every command supports these flags:
      - ``False``
    * - ``--output``
      - ``-o``
-     - Output format: ``table``, ``json``, ``csv``, ``html``, ``html_table``
+     - Output format: ``table``, ``json``, ``csv``, ``html``, ``html_table``, ``yaml``
      - ``table``
    * - ``--save``
      -
@@ -565,7 +565,7 @@ Use ``-o`` to change how results are displayed or saved:
    nadzoring security check-email -o json --save email.json example.com
    nadzoring security subdomains -o json --save subdomains.json example.com
 
-Available formats: ``table`` (default), ``json``, ``csv``, ``html``, ``html_table``
+Available formats: ``table`` (default), ``json``, ``csv``, ``html``, ``html_table``, ``yaml``
 
 ----
 
