@@ -46,7 +46,7 @@
 
 Nadzoring (from Russian "надзор" — supervision/oversight + English "-ing" suffix) is a free and open-source command-line tool for detecting website blocks, monitoring service availability, and network analysis. It helps you investigate network connectivity issues, check if websites are accessible, analyze network configurations with comprehensive DNS diagnostics — including reverse DNS, DNS poisoning detection, ARP spoofing monitoring, SSL/TLS certificate analysis, HTTP security header auditing, email security validation (SPF/DKIM/DMARC), subdomain discovery, and much more.
 
-Nadzoring is fully typed, has a zero-warnings linter policy, and is written according to SOLID, modularity, and SRP principles. It also has detailed documentation that is connected to Context7.
+Nadzoring is **AI-friendly** fully typed, has a zero-warnings linter policy, and is written according to SOLID, modularity, and SRP principles. It also has detailed documentation that is connected to Context7.
 
 This utility has high-quality typing and a library API for use in your projects.
 
