@@ -26,7 +26,6 @@
 </div>
 <br>
 <p align="center">
-    <a href="https://deepwiki.com/alexeev-prog/nadzoring"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
     <img src="https://img.shields.io/github/languages/top/alexeev-prog/nadzoring?style=for-the-badge">
     <img src="https://img.shields.io/github/languages/count/alexeev-prog/nadzoring?style=for-the-badge">
     <img alt="GitHub License" src="https://img.shields.io/github/license/alexeev-prog/nadzoring?style=for-the-badge&logo=gnu">
@@ -49,7 +48,9 @@
 
 Nadzoring (from Russian "надзор" — supervision/oversight + English "-ing" suffix) is a free and open-source command-line tool for detecting website blocks, monitoring service availability, and network analysis. It helps you investigate network connectivity issues, check if websites are accessible, analyze network configurations with comprehensive DNS diagnostics — including reverse DNS, DNS poisoning detection, ARP spoofing monitoring, SSL/TLS certificate analysis, HTTP security header auditing, email security validation (SPF/DKIM/DMARC), subdomain discovery, and much more.
 
-Nadzoring is **AI-friendly** fully typed, has a zero-warnings linter policy, and is written according to SOLID, modularity, and SRP principles. It also has detailed documentation that is connected to Context7.
+Nadzoring is **AI-friendly** fully typed, has a zero-warnings linter policy, and is written according to SOLID, modularity, and SRP principles. It also has detailed documentation that is connected to Context7 and DeepWiki.
+
+<a href="https://deepwiki.com/alexeev-prog/nadzoring"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 
 This utility has high-quality typing and a library API for use in your projects.
 
