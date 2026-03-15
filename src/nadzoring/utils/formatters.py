@@ -12,10 +12,11 @@ from typing import Any, Literal
 
 import click
 import tabulate
+import yaml
 
 from nadzoring.network_base.port_scanner import ScanResult
 
-type OutputFormat = Literal["table", "json", "csv", "html", "html_table"]
+type OutputFormat = Literal["table", "json", "csv", "html", "html_table", "yaml"]
 """Valid output format types for CLI commands."""
 
 type RecordData = dict[str, Any]
@@ -324,10 +325,10 @@ def save_results(
 
     Args:
         data: Data to persist. Structure depends on *fileformat*:
-            JSON — any JSON-serialisable object; CSV / HTML — list of
+            JSON / YAML — any serialisable object; CSV / HTML — list of
             dicts with consistent keys.
         filename: Destination file path.
-        fileformat: One of ``"json"``, ``"csv"``, ``"html"``,
+        fileformat: One of ``"json"``, ``"yaml"``, ``"csv"``, ``"html"``,
             ``"html_table"``, or any other value (falls back to plain
             ``tabulate`` grid output).
 
@@ -339,6 +340,18 @@ def save_results(
         if fileformat == "json":
             with file_path.open("w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False, default=str)
+
+        elif fileformat == "yaml":
+            with file_path.open("w", encoding="utf-8") as f:
+                yaml.dump(
+                    data,
+                    f,
+                    allow_unicode=True,
+                    default_flow_style=False,
+                    sort_keys=False,
+                    indent=2,
+                    width=120,
+                )
 
         elif fileformat == "csv":
             with file_path.open("w", encoding="utf-8", newline="") as f:

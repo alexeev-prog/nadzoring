@@ -23,7 +23,7 @@ Key Features
 - **Security Auditing** — SSL/TLS certificate inspection, HTTP security headers,
   SPF/DKIM/DMARC validation, subdomain discovery, continuous certificate monitoring
 - **ARP Security** — cache inspection, spoofing detection, real-time monitoring
-- **Multiple Output Formats** — ``table``, ``json``, ``csv``, ``html``, ``html_table``
+- **Multiple Output Formats** — ``table``, ``json``, ``csv``, ``html``, ``html_table``, ``yaml``.
 - **Cross-Platform** — Linux, Windows, macOS
 
 ----
