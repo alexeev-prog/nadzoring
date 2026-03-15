@@ -140,8 +140,8 @@ def _query_txt(name: str) -> list[str]:
         logger.debug("dnspython TXT lookup failed for %s", name)
 
     try:
-        output: str = subprocess.check_output(  # noqa: S603
-            ["dig", "+short", "TXT", name],  # noqa: S607
+        output: str = subprocess.check_output(
+            ["dig", "+short", "TXT", name],
             stderr=subprocess.DEVNULL,
             timeout=10,
             text=True,
@@ -155,8 +155,8 @@ def _query_txt(name: str) -> list[str]:
         pass
 
     try:
-        output = subprocess.check_output(  # noqa: S603
-            ["nslookup", "-type=TXT", name],  # noqa: S607
+        output = subprocess.check_output(
+            ["nslookup", "-type=TXT", name],
             stderr=subprocess.DEVNULL,
             timeout=10,
             text=True,
@@ -206,7 +206,7 @@ def _analyse_spf(domain: str) -> SpfResult:
     result.mechanisms = [p for p in parts[1:] if not p.startswith("all")]
 
     for part in parts:
-        if part in ("-all", "~all", "+all", "?all") or part == "all":
+        if part in {"-all", "~all", "+all", "?all"} or part == "all":
             result.all_qualifier = part[0] if len(part) > 3 else "+"
             if result.all_qualifier == "+":
                 result.issues.append("+all allows any sender (insecure)")
@@ -215,9 +215,7 @@ def _analyse_spf(domain: str) -> SpfResult:
         result.issues.append("Missing 'all' mechanism")
 
     lookup_count: int = sum(
-        1
-        for m in result.mechanisms
-        if any(m.startswith(p) for p in ("include:", "a", "mx", "ptr", "exists:"))
+        1 for m in result.mechanisms if any(m.startswith(p) for p in ("include:", "a", "mx", "ptr", "exists:"))
     )
     if lookup_count > 10:
         result.issues.append(f"Exceeds 10 DNS lookup limit ({lookup_count} lookups)")
@@ -309,9 +307,7 @@ def _analyse_dmarc(domain: str) -> DmarcResult:  # noqa: C901
         result.issues.append("No aggregate report address (rua=) configured")
 
     if result.pct is not None and result.pct < 100:
-        result.issues.append(
-            f"Policy applies to only {result.pct}% of messages (pct={result.pct})"
-        )
+        result.issues.append(f"Policy applies to only {result.pct}% of messages (pct={result.pct})")
 
     return result
 

@@ -24,7 +24,7 @@ def _get_linux_ip() -> str | None:
 
     """
     try:
-        output: str = check_output("ip -h -br a | grep UP", shell=True, text=True)  # noqa: S602, S607
+        output: str = check_output("ip -h -br a | grep UP", shell=True, text=True)
         parts: list[str] = output.strip().split()
 
         if len(parts) >= 3:
@@ -73,9 +73,7 @@ def _parse_windows_network_config(config_lines: list) -> str | None:
 
         ip_address: str = properties.get("IPAddress", "")
         if ip_address:
-            cleaned_ip: str = (
-                ip_address.replace('"', "").replace("{", "").replace("}", "")
-            )
+            cleaned_ip: str = ip_address.replace('"', "").replace("{", "").replace("}", "")
             return cleaned_ip.split(",", maxsplit=1)[0].strip()
 
     return None
@@ -90,8 +88,8 @@ def _get_windows_ip() -> str | None:
 
     """
     try:
-        output: str = check_output(  # noqa: S602
-            "wmic nicconfig get IPAddress, IPEnabled /value",  # noqa: S607
+        output: str = check_output(
+            "wmic nicconfig get IPAddress, IPEnabled /value",
             shell=True,
             text=True,
             encoding="cp866",

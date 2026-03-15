@@ -56,7 +56,7 @@ def _run_whois_command(target: str) -> str | None:
     encoding: Literal["cp866", "utf-8"] = "cp866" if os_name == "Windows" else "utf-8"
 
     try:
-        return check_output(  # noqa: S602
+        return check_output(
             f"whois {target}",
             shell=True,
             stderr=PIPE,

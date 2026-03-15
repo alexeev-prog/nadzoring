@@ -86,7 +86,7 @@ class ARPCache:
             raise ARPCacheRetrievalError("'ip' command not found")
 
         try:
-            result: CompletedProcess[str] = subprocess.run(  # noqa: S603
+            result: CompletedProcess[str] = subprocess.run(
                 [ip_path, "neigh", "show"],
                 capture_output=True,
                 text=True,
@@ -112,7 +112,7 @@ class ARPCache:
             raise ARPCacheRetrievalError("'arp' command not found")
 
         try:
-            result: CompletedProcess[str] = subprocess.run(  # noqa: S603
+            result: CompletedProcess[str] = subprocess.run(
                 [arp_path, "-a"],
                 capture_output=True,
                 text=True,
@@ -139,7 +139,7 @@ class ARPCache:
             raise ARPCacheRetrievalError("'arp' command not found")
 
         try:
-            result: CompletedProcess[str] = subprocess.run(  # noqa: S603
+            result: CompletedProcess[str] = subprocess.run(
                 [arp_path, "-a"],
                 capture_output=True,
                 text=True,
@@ -233,9 +233,7 @@ class ARPCache:
                 ip: str = parts[0]
                 mac_value: str = parts[1].replace("-", ":")
                 state: ARPEntryState = (
-                    ARPEntryState.REACHABLE
-                    if parts[2].lower() == "dynamic"
-                    else ARPEntryState.PERMANENT
+                    ARPEntryState.REACHABLE if parts[2].lower() == "dynamic" else ARPEntryState.PERMANENT
                 )
 
                 entries.append(

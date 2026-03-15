@@ -44,7 +44,7 @@ def _parse_linux_ip_route(raw: str) -> list[RouteEntry]:
             continue
 
         destination = parts[0]
-        gateway: str = "0.0.0.0"  # noqa: S104
+        gateway: str = "0.0.0.0"
         interface: str | None = None
         metric: str | None = None
 
@@ -119,8 +119,8 @@ def _parse_windows_route_print(raw: str) -> list[RouteEntry]:
 def _get_linux_routes() -> list[RouteEntry]:
     """Retrieve routing table on Linux using 'ip route'."""
     try:
-        raw: str = check_output(  # noqa: S602
-            "ip route",  # noqa: S607
+        raw: str = check_output(
+            "ip route",
             shell=True,
             stderr=PIPE,
         ).decode(errors="replace")
@@ -134,8 +134,8 @@ def _get_linux_routes() -> list[RouteEntry]:
 def _get_windows_routes() -> list[RouteEntry]:
     """Retrieve routing table on Windows using 'route PRINT'."""
     try:
-        raw: str = check_output(  # noqa: S602
-            "route PRINT",  # noqa: S607
+        raw: str = check_output(
+            "route PRINT",
             shell=True,
             stderr=PIPE,
         ).decode("cp866", errors="replace")

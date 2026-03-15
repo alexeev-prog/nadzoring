@@ -91,7 +91,7 @@ def _parse_netstat_output(raw: str) -> list[ConnectionEntry]:
 
     for line in raw.splitlines():
         parts: list[str] = line.split()
-        if not parts or parts[0] not in ("TCP", "UDP"):
+        if not parts or parts[0] not in {"TCP", "UDP"}:
             continue
 
         proto_value: str = parts[0]
@@ -153,7 +153,7 @@ def _get_linux_connections(
     """Get active connections on Linux using ss."""
     flags: str = "-tuna" + ("p" if include_process else "")
     try:
-        raw: str = check_output(  # noqa: S602
+        raw: str = check_output(
             f"ss {flags}",
             shell=True,
             stderr=PIPE,
@@ -173,8 +173,8 @@ def _get_windows_connections(
 ) -> list[ConnectionEntry]:
     """Get active connections on Windows using netstat."""
     try:
-        raw: str = check_output(  # noqa: S602
-            "netstat -ano",  # noqa: S607
+        raw: str = check_output(
+            "netstat -ano",
             shell=True,
             stderr=PIPE,
         ).decode("cp866", errors="replace")

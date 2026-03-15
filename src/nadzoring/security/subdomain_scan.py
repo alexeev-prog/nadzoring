@@ -1,5 +1,6 @@
 """Subdomain discovery via certificate transparency logs and DNS brute-force."""
 
+import operator
 import socket
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from logging import Logger
@@ -171,11 +172,7 @@ def _load_wordlist(path: Path) -> list[str]:
 
     """
     try:
-        return [
-            line.strip()
-            for line in path.read_text(encoding="utf-8").splitlines()
-            if line.strip()
-        ]
+        return [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
     except OSError:
         logger.exception("Failed to read wordlist: %s", path)
         return []
@@ -221,7 +218,7 @@ def scan_subdomains(
     """
     ct_subdomains: set[str] = _fetch_ct_subdomains(domain)
 
-    if wordlist_path == "":
+    if not wordlist_path:
         brute_candidates: set[str] = set()
     elif wordlist_path is not None:
         prefixes: list[str] = _load_wordlist(Path(wordlist_path))
@@ -245,8 +242,7 @@ def scan_subdomains(
 
     with ThreadPoolExecutor(max_workers=max_threads) as executor:
         future_to_sub: dict[Future[dict[str, Any] | None], str] = {
-            executor.submit(_probe_subdomain, sub, timeout): sub
-            for sub in all_candidates
+            executor.submit(_probe_subdomain, sub, timeout): sub for sub in all_candidates
         }
         for future in as_completed(future_to_sub):
             sub = future_to_sub[future]
@@ -258,5 +254,5 @@ def scan_subdomains(
                 result["source"] = source_map.get(sub, "unknown")
                 results.append(result)
 
-    results.sort(key=lambda r: r["subdomain"])
+    results.sort(key=operator.itemgetter("subdomain"))
     return results

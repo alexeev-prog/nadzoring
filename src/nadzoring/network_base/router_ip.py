@@ -95,9 +95,7 @@ def check_ipv6(hostname: str) -> str:
 def _get_linux_router_ip(*, ipv6: bool) -> str | None:
     """Retrieve the default gateway address on Linux via ``route -n``."""
     try:
-        raw: str = (
-            check_output("route -n | grep UG", shell=True).decode().split()[1]  # noqa: S602, S607
-        )
+        raw: str = check_output("route -n | grep UG", shell=True).decode().split()[1]
     except (CalledProcessError, IndexError, OSError):
         logger.exception("Failed to retrieve router IP on Linux")
         return None
@@ -109,8 +107,8 @@ def _get_windows_router_ip(*, ipv6: bool) -> str | None:
     """Retrieve the default gateway address on Windows via ``route PRINT``."""
     try:
         raw: str = (
-            check_output(  # noqa: S602
-                "route PRINT 0* -4 | findstr 0.0.0.0",  # noqa: S607
+            check_output(
+                "route PRINT 0* -4 | findstr 0.0.0.0",
                 shell=True,
             )
             .decode("cp866")

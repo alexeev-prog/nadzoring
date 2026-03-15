@@ -105,17 +105,19 @@ def validate_mx_records(
     Examples:
         Valid records::
 
-            result = validate_mx_records(
-                ["10 mail.example.com", "20 backup.example.com"]
-            )
+            result = validate_mx_records([
+                "10 mail.example.com",
+                "20 backup.example.com",
+            ])
             assert result["valid"] is True
             assert result["issues"] == []
 
         Duplicate priorities::
 
-            result = validate_mx_records(
-                ["10 mail1.example.com", "10 mail2.example.com"]
-            )
+            result = validate_mx_records([
+                "10 mail1.example.com",
+                "10 mail2.example.com",
+            ])
             assert result["valid"] is False
             assert "Duplicate priority: 10" in result["issues"]
 
@@ -210,12 +212,10 @@ def validate_txt_records(
 
         All good::
 
-            result = validate_txt_records(
-                [
-                    "v=spf1 include:spf.example.com ~all",
-                    "v=DKIM1; k=rsa; p=MIIBIjANBg...",
-                ]
-            )
+            result = validate_txt_records([
+                "v=spf1 include:spf.example.com ~all",
+                "v=DKIM1; k=rsa; p=MIIBIjANBg...",
+            ])
             assert result["valid"] is True
             assert result["issues"] == []
 

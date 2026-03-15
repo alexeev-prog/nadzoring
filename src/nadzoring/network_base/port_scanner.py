@@ -142,7 +142,7 @@ def _grab_banner(sock: socket.socket, target_ip: str, port: int) -> str | None:
     """Attempt to grab banner from open port."""
     try:
         sock.settimeout(1.0)
-        if port in (80, 443, 8080, 8443):
+        if port in {80, 443, 8080, 8443}:
             sock.send(b"HEAD / HTTP/1.0\r\n\r\n")
         elif port == 21:
             sock.send(b"HELP\r\n")
@@ -160,9 +160,7 @@ def _grab_banner(sock: socket.socket, target_ip: str, port: int) -> str | None:
         return None
 
 
-def _scan_tcp_port(
-    target_ip: str, port: int, timeout: float, *, grab_banner: bool
-) -> tuple[int, PortResult]:
+def _scan_tcp_port(target_ip: str, port: int, timeout: float, *, grab_banner: bool) -> tuple[int, PortResult]:
     """Scan a single TCP port on a target."""
     result = PortResult(port=port, state="filtered", service="unknown")
     sock = None
@@ -173,9 +171,7 @@ def _scan_tcp_port(
         sock.settimeout(timeout)
 
         connection_result: int = sock.connect_ex((target_ip, port))
-        response_time: float = (
-            datetime.now(tz=UTC) - start_time
-        ).total_seconds() * 1000
+        response_time: float = (datetime.now(tz=UTC) - start_time).total_seconds() * 1000
 
         if connection_result == 0:
             result.state = "open"
@@ -187,7 +183,7 @@ def _scan_tcp_port(
                 if banner:
                     result.banner = banner
 
-        elif connection_result in (111, 61):
+        elif connection_result in {111, 61}:
             result.state = "closed"
         else:
             result.state = "filtered"
@@ -218,9 +214,7 @@ def _scan_udp_port(target_ip: str, port: int, timeout: float) -> tuple[int, Port
 
         try:
             sock.recvfrom(1024)
-            response_time: float = (
-                datetime.now(tz=UTC) - start_time
-            ).total_seconds() * 1000
+            response_time: float = (datetime.now(tz=UTC) - start_time).total_seconds() * 1000
             result.state = "open"
             result.response_time = round(response_time, 2)
             result.service = get_service_on_port(port)
@@ -300,9 +294,7 @@ def _scan_target_ports(
 
             completed += 1
 
-            if config.progress_callback and (
-                completed - last_update >= update_frequency or completed == total_ports
-            ):
+            if config.progress_callback and (completed - last_update >= update_frequency or completed == total_ports):
                 current_batch: int = (completed + batch_size - 1) // batch_size
                 config.progress_callback(
                     f"Batch {current_batch}/{num_batches}",
@@ -346,9 +338,7 @@ def scan_ports(config: ScanConfig) -> list[ScanResult]:
             logger.warning("Skipping target %s: resolution failed", target)
             continue
 
-        result: ScanResult = _scan_target_ports(
-            target_ip, ports, config, target, len(config.targets)
-        )
+        result: ScanResult = _scan_target_ports(target_ip, ports, config, target, len(config.targets))
         results.append(result)
 
     return results

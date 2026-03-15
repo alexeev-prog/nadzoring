@@ -58,9 +58,7 @@ def _parse_linux_traceroute(raw: str) -> list[TraceHop]:
         ip: str | None = None
         rtts: list[float | None] = []
 
-        host_match: Match[str] | None = re.match(
-            r"^([^\s(]+)\s*\(([^)]+)\)\s*(.*)", rest
-        )
+        host_match: Match[str] | None = re.match(r"^([^\s(]+)\s*\(([^)]+)\)\s*(.*)", rest)
         if host_match:
             host = host_match.group(1)
             ip = host_match.group(2)
@@ -128,9 +126,7 @@ def _parse_windows_tracert(raw: str) -> list[TraceHop]:
         ip_match: Match[str] | None = re.search(r"([\d.]+)\s*$", rest)
         ip: str | None = ip_match.group(1) if ip_match else None
 
-        host_match: Match[str] | None = re.search(
-            r"([a-zA-Z][^\s]+)\s+[\d.]+\s*$", rest
-        )
+        host_match: Match[str] | None = re.search(r"([a-zA-Z][^\s]+)\s+[\d.]+\s*$", rest)
         host: str | None = host_match.group(1) if host_match else ip
 
         hops.append(
@@ -161,7 +157,7 @@ def _stream_process(cmd: str, *, wall_timeout: float) -> tuple[str, str]:
         the process was still running when the timeout fired.
 
     """
-    with Popen(  # noqa: S602
+    with Popen(
         cmd,
         shell=True,
         stdout=PIPE,
@@ -174,9 +170,7 @@ def _stream_process(cmd: str, *, wall_timeout: float) -> tuple[str, str]:
         except TimeoutExpired:
             proc.kill()
             stdout, stderr = proc.communicate()
-            logger.warning(
-                "Command timed out after %.0f s, returning partial output", wall_timeout
-            )
+            logger.warning("Command timed out after %.0f s, returning partial output", wall_timeout)
 
     return stdout or "", stderr or ""
 
@@ -216,8 +210,7 @@ def _run_linux_traceroute(
 
     if not stdout and _is_permission_error(stderr):
         logger.error(
-            "traceroute requires elevated privileges for %s. "
-            "Re-run with --sudo or execute as root.",
+            "traceroute requires elevated privileges for %s. Re-run with --sudo or execute as root.",
             target,
         )
         return []
@@ -227,13 +220,9 @@ def _run_linux_traceroute(
 
     if "not found" in stderr.lower() or "no such file" in stderr.lower():
         logger.warning("traceroute not found, trying tracepath")
-        return _run_tracepath(
-            target, max_hops=max_hops, per_hop_timeout=per_hop_timeout
-        )
+        return _run_tracepath(target, max_hops=max_hops, per_hop_timeout=per_hop_timeout)
 
-    logger.warning(
-        "traceroute produced no output for %s; stderr: %s", target, stderr.strip()
-    )
+    logger.warning("traceroute produced no output for %s; stderr: %s", target, stderr.strip())
     return []
 
 
@@ -290,7 +279,7 @@ def _run_windows_tracert(
     cmd: str = f"tracert -h {max_hops} {target}"
 
     try:
-        with Popen(  # noqa: S602
+        with Popen(
             cmd,
             shell=True,
             stdout=PIPE,

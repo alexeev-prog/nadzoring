@@ -63,7 +63,7 @@ def _get_linux_network_info() -> dict[str, str | None]:
 def _get_linux_interface_info() -> dict[str, str | None]:
     """Extract interface name and IP addresses on Linux."""
     try:
-        command_output: str = check_output("ip -h -br a | grep UP", shell=True).decode()  # noqa: S602, S607
+        command_output: str = check_output("ip -h -br a | grep UP", shell=True).decode()
         parts: list[str] = command_output.split()
 
         return {
@@ -79,9 +79,7 @@ def _get_linux_interface_info() -> dict[str, str | None]:
 def _get_linux_gateway() -> str | None:
     """Get default gateway on Linux."""
     try:
-        gateway_candidate: str = (
-            check_output("route -n | grep UG", shell=True).decode().split()[1]  # noqa: S602, S607
-        )
+        gateway_candidate: str = check_output("route -n | grep UG", shell=True).decode().split()[1]
 
         try:
             IPv4Address(gateway_candidate)
@@ -106,13 +104,11 @@ def _get_linux_mac_address(interface_name: str | None) -> str | None:
         return None
 
     try:
-        mac_output: str = check_output(  # noqa: S602
-            f'ifconfig {interface_name} | grep -E "ether|HWaddr"', shell=True
-        ).decode()
+        mac_output: str = check_output(f'ifconfig {interface_name} | grep -E "ether|HWaddr"', shell=True).decode()
 
         parts: list[str] = mac_output.split()
         for i, part in enumerate(parts):
-            if part in ("ether", "HWaddr") and i + 1 < len(parts):
+            if part in {"ether", "HWaddr"} and i + 1 < len(parts):
                 return parts[i + 1]
     except (CalledProcessError, IndexError, AttributeError):
         logger.exception("Failed to get Linux MAC address")
@@ -138,8 +134,8 @@ def _get_windows_network_info() -> dict[str, str | None]:
 
 def _parse_windows_network_configs() -> list[str]:
     """Parse Windows network configuration output."""
-    raw_output: str = check_output(  # noqa: S602
-        "wmic nicconfig get IPAddress, MACAddress, IPEnabled, SettingID, DefaultIPGateway /value",  # noqa: E501, S607
+    raw_output: str = check_output(
+        "wmic nicconfig get IPAddress, MACAddress, IPEnabled, SettingID, DefaultIPGateway /value",
         shell=True,
     ).decode("cp866")
 
@@ -192,9 +188,7 @@ def _extract_interface_details(interface_parts: list[str]) -> dict[str, str | No
         if key == "SettingID":
             details["Default Interface"] = value
         elif key == "DefaultIPGateway":
-            details["Router ip-address"] = (
-                value.replace("{", "").replace("}", "").replace('"', "")
-            )
+            details["Router ip-address"] = value.replace("{", "").replace("}", "").replace('"', "")
         elif key == "MACAddress":
             details["MAC-address"] = value
         elif key == "IPAddress":

@@ -21,9 +21,7 @@ from logging import Logger
 from time import time
 
 import dns.exception
-import dns.name
 import dns.resolver
-import dns.reversename
 from dns.resolver import Answer, Resolver
 
 from nadzoring.dns_lookup.types import DNSResult, RecordType
@@ -82,19 +80,14 @@ def create_resolver(
 
 def _extract_mx_records(answers: Answer) -> list[str]:
     """Extract and format MX records from a resolver answer."""
-    return [
-        f"{answer.preference} {str(answer.exchange).rstrip('.')}" for answer in answers
-    ]
+    return [f"{answer.preference} {str(answer.exchange).rstrip('.')}" for answer in answers]
 
 
 def _extract_txt_records(answers: Answer) -> list[str]:
     """Extract and format TXT records, joining multi-part strings."""
     records: list[str] = []
     for answer in answers:
-        parts: list[str] = [
-            part.decode("utf-8") if isinstance(part, bytes) else str(part)
-            for part in answer.strings
-        ]
+        parts: list[str] = [part.decode("utf-8") if isinstance(part, bytes) else str(part) for part in answer.strings]
         records.append("".join(parts))
     return records
 
@@ -102,10 +95,7 @@ def _extract_txt_records(answers: Answer) -> list[str]:
 def _extract_soa_records(answers: Answer) -> list[str]:
     """Extract and format SOA records into a single space-joined string."""
     return [
-        (
-            f"{soa.mname} {soa.rname} {soa.serial} "
-            f"{soa.refresh} {soa.retry} {soa.expire} {soa.minimum}"
-        )
+        (f"{soa.mname} {soa.rname} {soa.serial} {soa.refresh} {soa.retry} {soa.expire} {soa.minimum}")
         for soa in answers
     ]
 

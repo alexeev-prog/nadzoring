@@ -29,9 +29,7 @@ def parse_url(url: str) -> dict[str, str | int | list[tuple[str, str]] | None]:
             - fragment: URL fragment/hash component
 
     Example:
-        >>> result = parse_url(
-        ...     "https://user:pass@example.com:8080/path?key=value#section"
-        ... )
+        >>> result = parse_url("https://user:pass@example.com:8080/path?key=value#section")
         original: https://user:pass@example.com:8080/path?key=value#section
         protocol: https
         username: user

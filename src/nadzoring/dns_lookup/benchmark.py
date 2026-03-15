@@ -1,5 +1,6 @@
 """DNS server benchmarking for performance testing and comparison."""
 
+import operator
 import statistics
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
@@ -125,11 +126,9 @@ def benchmark_dns_servers(
             servers, domain, record_type, queries, max_workers, progress_callback
         )
     else:
-        results_list = _benchmark_sequential(
-            servers, domain, record_type, queries, progress_callback
-        )
+        results_list = _benchmark_sequential(servers, domain, record_type, queries, progress_callback)
 
-    results_list.sort(key=lambda r: r["avg_response_time"])
+    results_list.sort(key=operator.itemgetter("avg_response_time"))
     return results_list
 
 
@@ -160,10 +159,7 @@ def _benchmark_parallel(
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_server: dict[Future[BenchmarkResult], str] = {
-            executor.submit(
-                benchmark_single_server, server, domain, record_type, queries
-            ): server
-            for server in servers
+            executor.submit(benchmark_single_server, server, domain, record_type, queries): server for server in servers
         }
 
         for i, future in enumerate(as_completed(future_to_server)):
@@ -205,9 +201,7 @@ def _benchmark_sequential(
 
     for i, server in enumerate(servers):
         try:
-            results.append(
-                benchmark_single_server(server, domain, record_type, queries)
-            )
+            results.append(benchmark_single_server(server, domain, record_type, queries))
         except Exception:
             logger.exception("Benchmark failed for %s", server)
             continue

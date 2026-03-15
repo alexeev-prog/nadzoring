@@ -64,8 +64,7 @@ class ARPSpoofingDetector:
                         mac_address=mac,
                         interfaces=interfaces,
                         description=(
-                            f"MAC address {mac} is used by IPs: {', '.join(ips)}. "
-                            "This could indicate ARP spoofing."
+                            f"MAC address {mac} is used by IPs: {', '.join(ips)}. This could indicate ARP spoofing."
                         ),
                     )
                 )

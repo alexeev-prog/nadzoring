@@ -114,9 +114,7 @@ class CertificateInfo:
         context.load_verify_locations(certifi.where())
 
         with (
-            socket.create_connection(
-                (self.hostname, self.port), timeout=self.timeout
-            ) as sock,
+            socket.create_connection((self.hostname, self.port), timeout=self.timeout) as sock,
             context.wrap_socket(sock, server_hostname=self.hostname) as ssock,
         ):
             self._peercert = ssock.getpeercert()
@@ -125,9 +123,7 @@ class CertificateInfo:
 
             self._chain = []
             for der in ssock.get_verified_chain():
-                self._chain.append(
-                    x509.load_der_x509_certificate(der, default_backend())
-                )
+                self._chain.append(x509.load_der_x509_certificate(der, default_backend()))
 
     def fetch_unverified(self) -> None:
         """
@@ -153,9 +149,7 @@ class CertificateInfo:
         context.verify_mode = ssl.CERT_NONE
 
         with (
-            socket.create_connection(
-                (self.hostname, self.port), timeout=self.timeout
-            ) as sock,
+            socket.create_connection((self.hostname, self.port), timeout=self.timeout) as sock,
             context.wrap_socket(sock, server_hostname=self.hostname) as ssock,
         ):
             der_cert: bytes | None = ssock.getpeercert(binary_form=True)
@@ -218,9 +212,7 @@ def get_key_info(
 
     Examples:
         >>> key_info = get_key_info(cert.public_key())
-        >>> print(
-        ...     f"Algorithm: {key_info['algorithm']}, Strength: {key_info['strength']}"
-        ... )
+        >>> print(f"Algorithm: {key_info['algorithm']}, Strength: {key_info['strength']}")
 
     Note:
         Strength assessment:
@@ -235,13 +227,7 @@ def get_key_info(
         return {
             "algorithm": "RSA",
             "key_size": public_key.key_size,
-            "strength": (
-                "weak"
-                if public_key.key_size < 2048
-                else "good"
-                if public_key.key_size < 4096
-                else "strong"
-            ),
+            "strength": ("weak" if public_key.key_size < 2048 else "good" if public_key.key_size < 4096 else "strong"),
         }
     if isinstance(public_key, dsa.DSAPublicKey):
         return {
@@ -295,17 +281,11 @@ def check_domain_match(cert: Certificate, hostname: str) -> tuple[bool, list[str
     matches: list[str] = []
 
     try:
-        san: Extension[Any] = cert.extensions.get_extension_for_oid(
-            ExtensionOID.SUBJECT_ALTERNATIVE_NAME
-        )
+        san: Extension[Any] = cert.extensions.get_extension_for_oid(ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
         if isinstance(san.value, SubjectAlternativeName):
             for name in san.value:
                 if isinstance(name, DNSName) and (
-                    name.value == hostname
-                    or (
-                        name.value.startswith("*.")
-                        and _match_wildcard(name.value, hostname)
-                    )
+                    name.value == hostname or (name.value.startswith("*.") and _match_wildcard(name.value, hostname))
                 ):
                     san_match = True
                     matches.append(f"DNS:{name.value}")
@@ -316,9 +296,7 @@ def check_domain_match(cert: Certificate, hostname: str) -> tuple[bool, list[str
         pass
 
     subject: Name = cert.subject
-    cn_attributes: list[NameAttribute] = subject.get_attributes_for_oid(
-        NameOID.COMMON_NAME
-    )
+    cn_attributes: list[NameAttribute] = subject.get_attributes_for_oid(NameOID.COMMON_NAME)
     if cn_attributes:
         cn: str = cn_attributes[0].value
         if cn == hostname or (cn.startswith("*.") and _match_wildcard(cn, hostname)):
@@ -455,9 +433,7 @@ def get_san_list(cert: Certificate) -> list[str]:
     """
     sans: list[str] = []
     try:
-        san: Extension[Any] = cert.extensions.get_extension_for_oid(
-            ExtensionOID.SUBJECT_ALTERNATIVE_NAME
-        )
+        san: Extension[Any] = cert.extensions.get_extension_for_oid(ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
         if isinstance(san.value, SubjectAlternativeName):
             for name in san.value:
                 if isinstance(name, DNSName):
@@ -541,7 +517,7 @@ def check_protocols_and_ciphers(
         True
 
     """
-    _outdated: tuple[str, ...] = ("TLSv1.0", "TLSv1.1")
+    outdated: tuple[str, ...] = ("TLSv1.0", "TLSv1.1")
 
     candidates: list[tuple[str, ssl.TLSVersion]] = [
         ("TLSv1.0", ssl.TLSVersion.TLSv1),
@@ -562,7 +538,7 @@ def check_protocols_and_ciphers(
     return {
         "supported": supported,
         "failed": failed,
-        "has_outdated": any(v in supported for v in _outdated),
+        "has_outdated": any(v in supported for v in outdated),
     }
 
 
@@ -638,19 +614,11 @@ def check_ssl_certificate(
 
         expiry = cert.not_valid_after_utc
         remaining = (expiry - datetime.now(UTC)).days
-        result.update(
-            {
-                "remaining_days": remaining,
-                "expiry_date": expiry.isoformat(),
-                "status": (
-                    "expired"
-                    if remaining < 0
-                    else "warning"
-                    if remaining <= days_before
-                    else "valid"
-                ),
-            }
-        )
+        result.update({
+            "remaining_days": remaining,
+            "expiry_date": expiry.isoformat(),
+            "status": ("expired" if remaining < 0 else "warning" if remaining <= days_before else "valid"),
+        })
 
         subject: dict[str, str] = get_subject_info(cert)
         if subject:
@@ -669,13 +637,9 @@ def check_ssl_certificate(
         if matched_names:
             result["matched_names"] = matched_names
 
-        public_key: (
-            DSAPublicKey
-            | Ed25519PublicKey
-            | Ed448PublicKey
-            | EllipticCurvePublicKey
-            | RSAPublicKey
-        ) = cert.public_key()
+        public_key: DSAPublicKey | Ed25519PublicKey | Ed448PublicKey | EllipticCurvePublicKey | RSAPublicKey = (
+            cert.public_key()
+        )
         key_info: dict[str, int | str] = get_key_info(public_key)
         result["public_key"] = key_info
 
@@ -695,14 +659,12 @@ def check_ssl_certificate(
                 result["chain_valid"] = False
 
     except Exception as e:
-        result.update(
-            {
-                "remaining_days": None,
-                "status": "error",
-                "error": str(e),
-                "verification": "failed" if verify else "unverified",
-            }
-        )
+        result.update({
+            "remaining_days": None,
+            "status": "error",
+            "error": str(e),
+            "verification": "failed" if verify else "unverified",
+        })
 
     return result
 

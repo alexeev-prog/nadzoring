@@ -1,5 +1,6 @@
 """DNS health check functionality for comprehensive domain DNS evaluation."""
 
+from collections import UserDict
 from typing import Any
 
 from nadzoring.dns_lookup.types import DNSResult, RecordType
@@ -15,7 +16,7 @@ _HEALTH_RECORD_TYPES: list[RecordType] = ["A", "AAAA", "MX", "NS", "TXT", "CNAME
 _DEFAULT_CHECK_TYPES: list[RecordType] = ["A", "AAAA", "MX", "NS", "TXT", "CNAME"]
 
 
-class HealthCheckResult(dict[str, Any]):
+class HealthCheckResult(UserDict[str, Any]):
     """
     Comprehensive DNS health check result.
 
@@ -40,7 +41,7 @@ class HealthCheckResult(dict[str, Any]):
     record_scores: dict[str, int]
 
 
-class DetailedCheckResult(dict[str, Any]):
+class DetailedCheckResult(UserDict[str, Any]):
     """
     Detailed DNS check result with per-record-type information.
 
@@ -108,9 +109,7 @@ def health_check_dns(domain: str, nameserver: str | None = None) -> HealthCheckR
             continue
 
         record_result: DNSResult = resolve_with_timer(domain, rtype, nameserver)
-        record_score: int = max(
-            0, calculate_record_score(rtype, dict(record_result), result_dict)
-        )
+        record_score: int = max(0, calculate_record_score(rtype, dict(record_result), result_dict))
 
         result_dict["record_scores"][rtype] = record_score
         total_score += record_score
