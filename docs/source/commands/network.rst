@@ -315,6 +315,68 @@ Python API
 
 ----
 
+network-base detect-service
+---------------------------
+
+Actively connect to ports on a target host and detect the actual running
+services by analyzing banners.
+
+.. code-block:: text
+
+   nadzoring network-base detect-service [OPTIONS] TARGET PORTS...
+
+Options
+~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 15 60
+
+   * - Option
+     - Default
+     - Description
+   * - ``--timeout``
+     - ``3.0``
+     - Connection timeout in seconds
+   * - ``--no-probe``
+     - off
+     - Disable sending protocol-specific probes
+
+Examples
+~~~~~~~~
+
+.. code-block:: bash
+
+   # Detect services on common ports
+   nadzoring network-base detect-service example.com 80 443 22
+
+   # Multiple ports including database
+   nadzoring network-base detect-service 192.168.1.100 3306 5432 6379
+
+   # Longer timeout for slow services
+   nadzoring network-base detect-service --timeout 5 example.com 8080
+
+   # JSON output for scripting
+   nadzoring network-base detect-service -o json example.com 80 443
+
+Python API
+~~~~~~~~~~
+
+.. code-block:: python
+
+   from nadzoring.network_base.service_detector import detect_service_on_host
+
+   # Detect service on port 80
+   result = detect_service_on_host("example.com", 80)
+
+   if result.detected_service:
+       print(f"Service: {result.detected_service}")
+       print(f"Banner: {result.banner}")
+   else:
+       print(f"Fallback guess: {result.guessed_service}")
+
+----
+
 network-base port-service
 --------------------------
 
