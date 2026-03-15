@@ -1,0 +1,375 @@
+---
+description: Nadzoring Python framework usage rules for CLI tool and library development
+globs: *.py
+alwaysApply: false
+---
+
+- Always maintain strict separation between CLI layer (`nadzoring/commands/`) and domain logic (`nadzoring/dns_lookup/`, `network_base/`, `security/`, `arp/`). CLI modules should only handle Click argument parsing, progress bars, and call domain functions—never implement business logic.
+- Domain layer functions must never print to stdout/stderr or call Click functions. They should return structured data (TypedDict or dataclass) and let the CLI layer handle presentation.
+- All public functions in domain modules must return structured errors rather than raising exceptions for expected failures. Always include an `"error"` field in returned dictionaries that is `None` on success and contains a human-readable string on failure.
+- Never use `print()` for logging. Use the project's logging module (`nadzoring.logger`) with `get_logger(__name__)` and appropriate log levels (DEBUG, INFO, WARNING, ERROR).
+- Always use `logger.exception()` inside except blocks—it automatically captures and includes the traceback.
+
+## Error Handling Pattern
+
+All domain functions must follow the structured error return pattern:
+
+```python
+from nadzoring.dns_lookup.types import DNSResult
+
+def resolve_with_timer(domain: str, record_type: str = "A") -> DNSResult:
+    result: DNSResult = {
+        "domain": domain,
+        "record_type": record_type,
+        "records": [],
+        "ttl": None,
+        "error": None,
+        "response_time": None,
+    }
+
+    try:
+        # ... resolution logic ...
+        result["records"] = resolved_records
+        result["response_time"] = measured_time
+    except dns.resolver.NXDOMAIN:
+        result["error"] = "Domain does not exist"
+    except dns.exception.Timeout:
+        result["error"] = "Query timeout"
+        logger.debug("DNS timeout for %s", domain)
+    except Exception as exc:
+        result["error"] = str(exc)
+        logger.debug("Unexpected error: %s", exc)
+
+    return result
+```
+
+Callers should always check the `"error"` field before using other data:
+
+```python
+result = resolve_with_timer("example.com")
+if result["error"]:
+    print(f"DNS error: {result['error']}")
+else:
+    for record in result["records"]:
+        print(record)
+```
+
+## CLI Command Structure
+
+- Every CLI command must use the `@common_cli_options` decorator from `nadzoring.utils.decorators` to ensure consistent behavior for `--verbose`, `--quiet`, `--no-color`, `--output`, and `--save`.
+- Commands should accept Click arguments as tuples and iterate over them, typically using `tqdm` for progress bars (respecting the `quiet` flag).
+- CLI commands must return a plain list of dictionaries (or a JSON-serializable structure) containing the raw results. Formatting and saving are handled by the decorator.
+
+```python
+from nadzoring.utils.decorators import common_cli_options
+from tqdm import tqdm
+
+@dns_group.command(name="resolve")
+@common_cli_options(include_quiet=True)
+@click.argument("domains", nargs=-1, required=True)
+def resolve_command(domains: tuple[str, ...], *, quiet: bool) -> list[dict]:
+    """Resolve DNS records for one or more domains."""
+    results: list[dict] = []
+    pbar = None if quiet else tqdm(total=len(domains), desc="Resolving", unit="domain")
+
+    for domain in domains:
+        result = resolve_dns(domain)  # domain function call
+        results.append({"domain": domain, "records": result.get("records", [])})
+        if pbar:
+            pbar.update(1)
+
+    if pbar:
+        pbar.close()
+    return results
+```
+
+## Type Annotations
+
+- Use Python 3.12+ modern syntax everywhere:
+  - `str | None` instead of `Optional[str]`
+  - `list[str]` instead of `List[str]` from typing
+  - `dict[str, Any]` instead of `Dict[str, Any]`
+  - `tuple[int, ...]` for variable-length tuples
+- Use `type` aliases for complex, repeated type signatures.
+- Define `TypedDict` classes for all structured return types (see `nadzoring/dns_lookup/types.py` for examples).
+- All function parameters and return values must be fully annotated, including `-> None`.
+- Use `from __future__ import annotations` only when necessary for forward references.
+
+```python
+from typing import TypedDict, Literal
+
+type RecordType = Literal["A", "AAAA", "MX", "NS", "TXT", "CNAME", "PTR"]
+
+class DNSResult(TypedDict, total=False):
+    domain: str
+    record_type: str
+    records: list[str]
+    ttl: int | None
+    error: str | None
+    response_time: float | None
+```
+
+## Docstring Format
+
+All public functions, classes, and modules must have Google-style docstrings with `Args:`, `Returns:`, and `Examples:` sections:
+
+```python
+def traceroute(
+    target: str,
+    *,
+    max_hops: int = 30,
+    timeout: float = 2.0,
+) -> list[TraceHop]:
+    """
+    Perform a traceroute to the specified target host.
+
+    Uses 'traceroute' (with 'tracepath' fallback) on Linux and 'tracert'
+    on Windows. Results include per-hop RTT measurements.
+
+    Args:
+        target: Hostname or IP address to trace.
+        max_hops: Maximum number of hops before stopping. Defaults to 30.
+        timeout: Per-hop timeout in seconds. Defaults to 2.0.
+
+    Returns:
+        List of TraceHop objects. Unreachable hops have None values for
+        host/ip and rtt_ms contains [None].
+
+    Examples:
+        >>> hops = traceroute("8.8.8.8", max_hops=10)
+        >>> hops[0].hop
+        1
+    """
+```
+
+## Keyword-Only Arguments
+
+Boolean flags and optional parameters must be keyword-only (after `*`):
+
+```python
+# ✅ Correct
+def scan_ports(
+    targets: list[str],
+    *,
+    mode: str = "fast",
+    timeout: float = 2.0,
+    grab_banner: bool = True,
+) -> list[ScanResult]:
+    ...
+
+# ❌ Wrong
+def scan_ports(targets, mode="fast", timeout=2.0, grab_banner=True):
+    ...
+```
+
+## Dataclasses for Structured Data
+
+Use `@dataclass` for structured data models. Use `field(default_factory=...)` for mutable defaults:
+
+```python
+from dataclasses import dataclass, field
+
+@dataclass
+class TraceHop:
+    """Represents a single hop in a traceroute."""
+
+    hop: int
+    host: str | None
+    ip: str | None
+    rtt_ms: list[float | None] = field(default_factory=list)
+```
+
+## Module Organization
+
+- Each module must start with a one-line module docstring describing its purpose.
+- Imports should be grouped in standard order: standard library → third-party → local modules, separated by blank lines.
+- Never use wildcard imports (`from module import *`). Explicitly import what you need.
+- Define `__all__` in each `__init__.py` to explicitly declare the public API.
+
+## CLI Option Handling with @common_cli_options
+
+The decorator automatically handles:
+- `--verbose` / `--quiet`: Configures logging levels and suppresses progress bars
+- `--no-color`: Disables ANSI color codes in output
+- `--output` / `-o`: Routes output to appropriate formatter (table, json, csv, html)
+- `--save`: Persists results to the specified file path
+
+Never manually implement these options in commands. Always use the decorator with appropriate `include_*` flags:
+
+```python
+@common_cli_options(include_verbose=True, include_quiet=True, include_output=True)
+def my_command(verbose: bool, quiet: bool, output: str) -> list[dict]:
+    # Command implementation
+    ...
+```
+
+## DNS Lookup Module Patterns
+
+- Use `resolve_with_timer` from `nadzoring.dns_lookup.utils` as the foundation for all DNS queries.
+- Always pass `include_ttl=True` when TTL information is needed.
+- For reverse lookups, use `reverse_dns` which handles both IPv4 and IPv6 automatically.
+- When comparing servers, the first server in the list is the baseline; all others are compared against it.
+- For poisoning detection, always provide rich context using `SERVER_NAMES`, `SERVER_COUNTRIES`, and `CDN_NETWORKS` dictionaries.
+
+## Security Module Patterns
+
+- For SSL checks, use `CertificateInfo` class to manage connection state and certificate fetching.
+- Use `check_ssl_certificate` for full validation with optional verification.
+- Use `check_ssl_expiry_with_fallback` when you need automatic fallback to unverified mode.
+- For HTTP header checks, the function returns a `HeaderAnalysis` dataclass; convert to dict for CLI output.
+- Email security checks probe 13 common DKIM selectors—this list is defined in `_DKIM_SELECTORS`.
+- Subdomain scanning uses both CT logs (crt.sh) and DNS brute-force; results are tagged with source.
+
+## ARP Module Patterns
+
+- Use `ARPCache` class to retrieve system ARP cache—it automatically detects the platform.
+- The `ARPCacheRetrievalError` is raised only when the underlying system command fails, not for empty caches.
+- For static spoofing detection, use `ARPSpoofingDetector` which analyzes cache entries for duplicates.
+- For real-time monitoring, use `ARPRealtimeDetector` with the `monitor()` method and optional packet callback.
+
+## Network Base Module Patterns
+
+- Port scanning: always create a `ScanConfig` object first, then pass it to `scan_ports()`.
+- Traceroute: use `traceroute()` function; on Linux it automatically falls back to `tracepath` if `traceroute` fails.
+- For HTTP timing, use `http_ping()` which returns an `HttpPingResult` dataclass with DNS, TTFB, and total timing.
+- WHOIS lookups require the system `whois` command; always check for `"error"` key in result.
+- Domain info aggregation: `get_domain_info()` combines WHOIS, DNS, geolocation, and reverse DNS in one call.
+
+## Output Formatting
+
+- Never format data directly in commands. Return raw data and let the formatters handle presentation.
+- When creating new formatters in `nadzoring.utils.formatters`, follow the pattern of existing functions:
+  - Take the raw result structure as input
+  - Return a list of flat dictionaries suitable for `tabulate`
+  - Handle special formatting (colors, truncation) through helper functions
+- Use `colorize_value()` for semantic coloring of status fields.
+- Use `truncate_string()` for fields that might exceed column width.
+
+## Testing Requirements
+
+- All new code must maintain 100% test coverage (as enforced by `nox` session).
+- Write tests that verify both success and error paths.
+- Mock external dependencies (DNS, network, subprocess calls) in tests—never make real network requests.
+- Name test functions descriptively: `test_resolve_with_timer_success`, `test_resolve_with_timer_nxdomain`.
+- Run `nox -s test` locally before submitting changes.
+
+## Logging Configuration
+
+- Never configure logging directly in modules. Use `setup_cli_logging()` from `nadzoring.logger` at the CLI entry point.
+- In library code, only use `get_logger(__name__)` and log messages.
+- Respect the log levels: DEBUG for detailed troubleshooting, INFO for normal operations, WARNING for recoverable issues, ERROR for failures.
+- The `--quiet` flag suppresses all output except results; `--verbose` enables DEBUG level with detailed formatting.
+
+## Naming Conventions
+
+- Modules: `snake_case.py` (e.g., `port_scanner.py`)
+- Classes: `PascalCase` (e.g., `ARPSpoofingDetector`)
+- Functions and methods: `snake_case` (e.g., `resolve_with_timer`)
+- Constants: `UPPER_CASE` (e.g., `_DEFAULT_TIMEOUT`, `_PUBLIC_DNS_SERVERS`)
+- Private functions/methods: prefix with underscore `_` (e.g., `_parse_linux_traceroute`)
+- Type variables: `T` or descriptive names like `RecordType`
+
+## Import Conventions
+
+- Standard library imports first
+- Third-party imports second (alphabetical)
+- Local imports third (relative or absolute from package root)
+- Use `from module import name` for specific imports
+- Avoid `import *` except in `__init__.py` for public API aggregation
+
+```python
+import socket
+import sys
+from datetime import datetime
+from typing import Any
+
+import click
+import requests
+from tqdm import tqdm
+
+from nadzoring.logger import get_logger
+from nadzoring.network_base.types import ScanResult
+```
+
+## Error Class Hierarchy
+
+All exceptions should inherit from `nadzoring.utils.errors.NadzoringError`:
+
+```python
+from nadzoring.utils.errors import NadzoringError
+
+class DNSError(NadzoringError):
+    """Base exception for DNS-related failures."""
+
+class DNSResolutionError(DNSError):
+    """Raised when a DNS query cannot be resolved."""
+
+class DNSTimeoutError(DNSError):
+    """Raised when a DNS query times out."""
+```
+
+## Adding New Features
+
+1. Create module in appropriate domain package (e.g., `security/myfeature.py`)
+2. Define public function with docstring, type hints, and structured error return
+3. Export it from package `__init__.py`
+4. Add CLI command in relevant `commands/` file using `@common_cli_options`
+5. Add formatter in `utils/formatters.py` if needed
+6. Write tests in `tests/` with 100% coverage
+7. Document in appropriate `.rst` file under `docs/commands/` or API reference
+
+## Version and Release Management
+
+- Version is stored in `src/nadzoring/__init__.py` as `__version__`
+- Also update `pyproject.toml` version
+- CHANGELOG.md must be updated for each release
+- Documentation versions are managed by `sphinx-polyversion`—tagged releases automatically get their own documentation version
+- Never commit directly to `main` without pull request and CI passing
+
+## noqa Comments
+
+When suppressing linter warnings, always include an inline comment explaining the rule code:
+
+```python
+raw = check_output(  # noqa: S602
+    "ip route",      # noqa: S607
+    shell=True,
+    stderr=PIPE,
+)
+```
+
+## Context Integration
+
+- The Context7 chat widget is loaded in documentation via `docs/conf.py`
+- Never modify the Context7 integration code without testing in documentation build
+- The public key is stored in `context7.json`—keep it secure
+
+## CI/CD Pipeline Rules
+
+- GitHub Actions workflows in `.github/workflows/` must pass for all pull requests
+- `python-package.yml` runs linting and tests on Python 3.12, 3.13, 3.14
+- `docs.yml` builds versioned documentation and deploys to GitHub Pages
+- Never bypass CI checks—if a check fails, fix it properly before merging
+- Dependencies are updated weekly via Dependabot (`dependabot.yml`)
+
+## Development Environment
+
+- Use `uv` for dependency management (faster than pip)
+- Install dev dependencies with `uv sync` (includes all tools in `dependency-groups.dev`)
+- Run `nox -s lint` before committing to catch issues early
+- Run `nox -s typing` to verify type annotations
+- Run `nox -s mutants` for mutation testing when making significant changes
+- Never commit with failing tests or linter warnings
+
+## Code Review Standards
+
+- All code must be reviewed before merging to `main`
+- Reviewers should verify:
+  - SRP is maintained (modules do one thing)
+  - Error handling follows the structured return pattern
+  - Type annotations are complete and correct
+  - Docstrings are present and accurate
+  - Tests cover both success and failure cases
+  - No `print()` statements in library code
+  - CLI commands use `@common_cli_options` correctly
+  - Changes are documented in appropriate `.rst` files
