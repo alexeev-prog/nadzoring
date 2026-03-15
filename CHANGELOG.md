@@ -4,7 +4,7 @@
 ### Bug Fixes
 
 - Fix: use per-socket timeout instead of process-global setdefaulttimeout to eliminate race conditions in concurrent subdomain scanning([d17208d](https://github.com/alexeev-prog/nadzoring/commit/d17208df43e00f0f70269db9b8be7b555fb7093c))
-- Fix match wildcasrd DNS names in SAN entries([3f756bd](https://github.com/alexeev-prog/nadzoring/commit/3f756bd1a1bcc9d345a1946e447c382969995304))
+- Fix match wildcard DNS names in SAN entries([3f756bd](https://github.com/alexeev-prog/nadzoring/commit/3f756bd1a1bcc9d345a1946e447c382969995304))
 - Fix: correct misleading chain_valid field in SSL certificate check([1b9d940](https://github.com/alexeev-prog/nadzoring/commit/1b9d94022f6a7f0016c4d1627fbb7becb05b9a37))
 
 ### Documentation
@@ -37,7 +37,7 @@
 
 - Create security command group and add check-ssl-expiry command([b1355c1](https://github.com/alexeev-prog/nadzoring/commit/b1355c13c376f699cfc577e868729a75d33d99b8))
 - Create parse-url command in network-base group([6a164a6](https://github.com/alexeev-prog/nadzoring/commit/6a164a6743f788474b86458eff1d1ac53ac9f747))
-- Add domain info, email, http headers, subdomains, ssl monitorr commands, update docs and deps([6f464d8](https://github.com/alexeev-prog/nadzoring/commit/6f464d8764830284299bb58fea2615b4f5fbf462))
+- Add domain info, email, http headers, subdomains, ssl monitor commands, update docs and deps([6f464d8](https://github.com/alexeev-prog/nadzoring/commit/6f464d8764830284299bb58fea2615b4f5fbf462))
 
 ### Other Changes
 
