@@ -1557,7 +1557,7 @@ else:
 
 #### arp detect-spoofing
 
-Statically detect ARP spoofing by analysing the current ARP cache.
+Statically detect ARP spoofing by analyzing the current ARP cache.
 
 ```bash
 nadzoring arp detect-spoofing [OPTIONS] [INTERFACES]...
