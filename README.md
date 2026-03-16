@@ -52,13 +52,13 @@ Nadzoring is **AI-friendly** fully typed, has a zero-warnings linter policy, and
 
 This utility has high-quality typing and a library API for use in your projects.
 
-<a href="https://sloprank.io/repo/alexeev-prog/nadzoring"><img src="https://sloprank.io/badge/alexeev-prog/nadzoring.svg" alt="sloprank"></a>
+<a href="https://deepwiki.com/alexeev-prog/nadzoring"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 
 <p align="center">
     <img src="https://raw.githubusercontent.com/alexeev-prog/nadzoring/refs/heads/main/docs/logo.png" width=300>
 </p>
 
-<a href="https://deepwiki.com/alexeev-prog/nadzoring"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
+<a href="https://sloprank.io/repo/alexeev-prog/nadzoring"><img src="https://sloprank.io/badge/alexeev-prog/nadzoring.svg" alt="sloprank"></a>
 
 ## Table of Contents
 
