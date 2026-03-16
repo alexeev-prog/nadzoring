@@ -50,13 +50,15 @@ Nadzoring (from Russian "надзор" — supervision/oversight + English "-ing
 
 Nadzoring is **AI-friendly** fully typed, has a zero-warnings linter policy, and is written according to SOLID, modularity, and SRP principles. It also has detailed documentation that is connected to Context7 and DeepWiki.
 
-<a href="https://deepwiki.com/alexeev-prog/nadzoring"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
-
 This utility has high-quality typing and a library API for use in your projects.
+
+[![sloprank](sloprank.io/badge/alexeev-prog/nadzoring.svg)](sloprank.io/repo/alexeev-prog/nadzoring)
 
 <p align="center">
     <img src="https://raw.githubusercontent.com/alexeev-prog/nadzoring/refs/heads/main/docs/logo.png" width=300>
 </p>
+
+<a href="https://deepwiki.com/alexeev-prog/nadzoring"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 
 ## Table of Contents
 
