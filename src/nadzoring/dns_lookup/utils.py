@@ -20,8 +20,8 @@ use :mod:`nadzoring.utils.errors`.
 from logging import Logger
 from time import time
 
-import dns.exception
 import dns.asyncresolver
+import dns.exception
 import dns.resolver
 from dns.asyncresolver import Resolver as AsyncResolver
 from dns.resolver import Answer, Resolver
