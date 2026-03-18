@@ -2,8 +2,9 @@ Network Commands
 ================
 
 The ``network-base`` group provides host reachability checks, HTTP
-probing, port scanning, geolocation, WHOIS, comprehensive domain
-information, traceroute, and local network information commands.
+probing, port scanning, service detection, geolocation, WHOIS,
+comprehensive domain information, traceroute, and local network
+information commands.
 
 .. code-block:: bash
 
@@ -132,6 +133,39 @@ Python API
        print("Resolution failed")
    else:
        print(ip)  # "93.184.216.34"
+
+----
+
+network-base parse-url
+-----------------------
+
+Parse a URL into its components (scheme, hostname, port, path, query, fragment, etc.).
+
+.. code-block:: text
+
+   nadzoring network-base parse-url [OPTIONS] URL [URL ...]
+
+.. code-block:: bash
+
+   nadzoring network-base parse-url https://example.com/path?q=1#section
+   nadzoring network-base parse-url "postgresql://user:pass@localhost:5432/db"
+
+Python API
+~~~~~~~~~~
+
+.. code-block:: python
+
+   from nadzoring.network_base.parse_url import parse_url
+
+   result = parse_url("https://user:pass@example.com:8080/path?key=value#frag")
+   print(result["protocol"])   # 'https'
+   print(result["hostname"])   # 'example.com'
+   print(result["port"])       # 8080
+   print(result["username"])   # 'user'
+   print(result["password"])   # 'pass'
+   print(result["path"])       # '/path'
+   print(result["query_params"])  # [('key', 'value')]
+   print(result["fragment"])   # 'frag'
 
 ----
 
@@ -271,13 +305,19 @@ Options
      - Protocol: ``tcp`` or ``udp``
    * - ``--ports``
      - —
-     - Custom port range in ``start-end`` format (``--mode custom``)
+     - Custom port list or range (e.g. ``22,80,443`` or ``1-1024``)
    * - ``--timeout``
      - ``2.0``
      - Per-port connection timeout in seconds
    * - ``--workers``
      - ``50``
      - Number of concurrent threads
+   * - ``--no-banner``
+     - off
+     - Disable banner grabbing
+   * - ``--show-closed``
+     - off
+     - Show closed ports in results
 
 Examples
 ~~~~~~~~
@@ -370,10 +410,12 @@ Python API
    result = detect_service_on_host("example.com", 80)
 
    if result.detected_service:
-       print(f"Service: {result.detected_service}")
+       print(f"Service: {result.detected_service} (method: {result.method})")
        print(f"Banner: {result.banner}")
    else:
        print(f"Fallback guess: {result.guessed_service}")
+       if result.error:
+           print(f"Error: {result.error}")
 
 ----
 
@@ -441,6 +483,18 @@ Options
    On Linux, ``traceroute`` requires raw-socket privileges.  Use
    ``--sudo``, run as root, or grant the capability to the binary.
    ``tracepath`` is tried automatically as a fallback.
+
+Python API
+~~~~~~~~~~
+
+.. code-block:: python
+
+   from nadzoring.network_base.traceroute import traceroute
+
+   hops = traceroute("8.8.8.8", max_hops=15)
+   for hop in hops:
+       rtts = [f"{r}ms" if r else "*" for r in hop.rtt_ms]
+       print(f"{hop.hop:2}  {hop.ip or '*':16}  {' '.join(rtts)}")
 
 ----
 

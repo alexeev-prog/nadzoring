@@ -38,9 +38,15 @@ Options
    * - ``-n / --nameserver``
      - system
      - Custom nameserver IP (e.g. ``8.8.8.8``)
+   * - ``--short``
+     - off
+     - Compact output (one line per record)
    * - ``--show-ttl``
      - off
      - Include TTL value in output
+   * - ``--format-style``
+     - ``standard``
+     - Output style: ``standard``, ``bind``, ``host``, ``dig``
    * - ``--timeout``
      - ``5.0``
      - Per-query timeout in seconds
@@ -420,9 +426,9 @@ Options
    * - ``--queries``
      - ``10``
      - Queries per server
-   * - ``--sequential``
-     - off
-     - Disable parallel benchmarking
+   * - ``--parallel/--sequential``
+     - ``--parallel``
+     - Run benchmarks concurrently or sequentially
 
 Examples
 ~~~~~~~~
@@ -479,15 +485,18 @@ Options
    * - Option
      - Default
      - Description
-   * - ``-c / --control``
+   * - ``-c / --control-server``
      - ``8.8.8.8``
      - Trusted control nameserver
-   * - ``-a / --additional``
-     - none
-     - Additional record types to check
-   * - ``-t / --type``
+   * - ``-t / --test-servers``
+     - all public
+     - Servers to test against control
+   * - ``-T / --type``
      - ``A``
      - Primary record type
+   * - ``-a / --additional-types``
+     - none
+     - Additional record types to query on control server
 
 Examples
 ~~~~~~~~
@@ -549,20 +558,42 @@ Options
    * - ``--interval``
      - ``60``
      - Seconds between check cycles
-   * - ``--cycles``
-     - unlimited
-     - Number of cycles to run (0 = infinite)
+   * - ``-t / --type``
+     - ``A``
+     - Record type: A, AAAA, MX, NS, TXT
+   * - ``-q / --queries``
+     - ``3``
+     - Queries per server per cycle
    * - ``--max-rt``
-     - ``300``
+     - ``500``
      - Alert threshold: max response time (ms)
    * - ``--min-success``
      - ``0.95``
      - Alert threshold: minimum success rate (0–1)
-   * - ``--log-file``
+   * - ``--no-health``
+     - off
+     - Skip health check each cycle
+   * - ``-l / --log-file``
      - none
      - Path to JSONL log file
+   * - ``-c / --cycles``
+     - ``0``
+     - Number of cycles to run (0 = infinite)
+
+.. code-block:: bash
+
+   nadzoring dns monitor example.com \
+       --interval 60 \
+       --log-file dns_monitor.jsonl
+
+   nadzoring dns monitor example.com \
+       -n 8.8.8.8 -n 1.1.1.1 -n 9.9.9.9 \
+       --interval 30 --max-rt 150 --min-success 0.99 \
+       --log-file /var/log/dns_monitor.jsonl
 
 ----
+
+.. _dns-monitor-report:
 
 dns monitor-report
 ------------------
@@ -573,7 +604,37 @@ Analyse a JSONL log file created by ``dns monitor``.
 
    nadzoring dns monitor-report [OPTIONS] LOG_FILE
 
+Options
+~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Option
+     - Description
+   * - ``-s / --server``
+     - Filter statistics to a specific server IP
+
 .. code-block:: bash
 
    nadzoring dns monitor-report dns_monitor.jsonl
    nadzoring dns monitor-report dns_monitor.jsonl --server 8.8.8.8 -o json
+
+Python API
+~~~~~~~~~~
+
+.. code-block:: python
+
+   from nadzoring.dns_lookup.monitor import load_log
+   from statistics import mean
+
+   cycles = load_log("dns_monitor.jsonl")
+   rts = [
+       s["avg_response_time_ms"]
+       for c in cycles
+       for s in c["samples"]
+       if s["avg_response_time_ms"] is not None
+   ]
+   print(f"Mean RT: {mean(rts):.2f}ms")
+   print(f"Total cycles: {len(cycles)}")

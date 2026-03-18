@@ -6,7 +6,7 @@
   <p align="center">
     An open source tool and python library for detecting website blocks, downdetecting and network analysis
     <br />
-    <a href="https://alexeev-prog.github.io/nadzoring/v0.1.8"><strong>Explore the docs »</strong></a>
+    <a href="https://alexeev-prog.github.io/nadzoring/v0.1.9"><strong>Explore the docs »</strong></a>
     <br />
     <br />
     <a href="#-getting-started">Getting Started</a>
@@ -84,9 +84,11 @@ This utility has high-quality typing and a library API for use in your projects.
       - [ping](#ping)
       - [http-ping](#http-ping)
       - [host-to-ip](#host-to-ip)
+      - [parse-url](#parse-url)
       - [geolocation](#geolocation)
       - [params](#params)
       - [port-scan](#port-scan)
+      - [detect-service](#detect-service)
       - [port-service](#port-service)
       - [whois](#whois)
       - [domain-info](#domain-info)
@@ -192,7 +194,7 @@ These options work with every command:
 | `--verbose` | | Enable debug output with execution timing | `False` |
 | `--quiet` | | Suppress non-error output | `False` |
 | `--no-color` | | Disable colored output | `False` |
-| `--output` | `-o` | Output format: `table`, `json`, `csv`, `html`, `html_table` | `table` |
+| `--output` | `-o` | Output format: `table`, `json`, `csv`, `html`, `html_table`, `yaml` | `table` |
 | `--save` | | Save results to file | None |
 
 ---
@@ -591,12 +593,15 @@ nadzoring dns monitor [OPTIONS] DOMAIN
 
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
-| `--nameserver` | `-n` | Nameserver to monitor (repeatable) | `8.8.8.8`, `1.1.1.1` |
-| `--interval` | | Seconds between check cycles | `60` |
-| `--cycles` | | Number of cycles to run (0 = infinite) | `0` |
-| `--max-rt` | | Alert threshold: max response time (ms) | `300` |
+| `--nameservers` | `-n` | DNS server to monitor (repeatable) | `8.8.8.8`, `1.1.1.1` |
+| `--interval` | `-i` | Seconds between monitoring cycles | `60` |
+| `--type` | `-t` | Record type: A, AAAA, MX, NS, TXT | `A` |
+| `--queries` | `-q` | Queries per server per cycle | `3` |
+| `--max-rt` | | Alert threshold: max avg response time (ms) | `500` |
 | `--min-success` | | Alert threshold: minimum success rate (0–1) | `0.95` |
-| `--log-file` | | Path to JSONL log file | None |
+| `--no-health` | | Skip DNS health check each cycle | `False` |
+| `--log-file` | `-l` | JSONL file to append all cycle results to | None |
+| `--cycles` | `-c` | Stop after N cycles (0 = indefinite) | `0` |
 
 ```bash
 # Monitor with default servers, save log
@@ -657,9 +662,34 @@ Analyse a JSONL log file produced by `dns monitor`.
 nadzoring dns monitor-report [OPTIONS] LOG_FILE
 ```
 
+| Option | Description |
+|--------|-------------|
+| `--server` | Filter statistics to a specific server IP |
+
 ```bash
 nadzoring dns monitor-report dns_monitor.jsonl
 nadzoring dns monitor-report dns_monitor.jsonl --server 8.8.8.8 -o json
+```
+
+**Python API:**
+
+```python
+from nadzoring.dns_lookup.monitor import load_log
+from statistics import mean
+
+cycles = load_log("dns_monitor.jsonl")
+
+rts = [
+    s["avg_response_time_ms"]
+    for c in cycles
+    for s in c["samples"]
+    if s["avg_response_time_ms"] is not None
+]
+alerts = [a for c in cycles for a in c.get("alerts", [])]
+
+print(f"Cycles      : {len(cycles)}")
+print(f"Avg RT (ms) : {mean(rts):.2f}")
+print(f"Alerts      : {len(alerts)}")
 ```
 
 ---
@@ -774,6 +804,37 @@ validate_ipv6("::1")      # True
 from nadzoring.network_base.router_ip import router_ip
 gateway = router_ip()         # '192.168.1.1' on most home networks
 gateway6 = router_ip(ipv6=True)
+```
+
+---
+
+#### parse-url
+
+Parse a URL into its components (scheme, hostname, port, path, query, fragment, etc.).
+
+```bash
+nadzoring network-base parse-url URLS...
+```
+
+```bash
+nadzoring network-base parse-url https://example.com/path?q=1#section
+nadzoring network-base parse-url "postgresql://user:pass@localhost:5432/db"
+```
+
+**Python API:**
+
+```python
+from nadzoring.network_base.parse_url import parse_url
+
+result = parse_url("https://user:pass@example.com:8080/path?key=value#frag")
+print(result["protocol"])   # 'https'
+print(result["hostname"])   # 'example.com'
+print(result["port"])       # 8080
+print(result["username"])   # 'user'
+print(result["password"])   # 'pass'
+print(result["path"])       # '/path'
+print(result["query_params"])  # [('key', 'value')]
+print(result["fragment"])   # 'frag'
 ```
 
 ---
@@ -895,6 +956,46 @@ for scan in results:
 
 ---
 
+#### detect-service
+
+Actively connect to ports and detect actual running services by banner analysis.
+
+```bash
+nadzoring network-base detect-service [OPTIONS] TARGET PORTS...
+```
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--timeout` | Connection timeout (seconds) | `3.0` |
+| `--no-probe` | Disable sending protocol-specific probes | `False` |
+
+```bash
+# Detect services on common ports
+nadzoring network-base detect-service example.com 80 443 22
+
+# Database ports with longer timeout
+nadzoring network-base detect-service --timeout 5 192.168.1.100 3306 5432 6379
+```
+
+**Python API:**
+
+```python
+from nadzoring.network_base.service_detector import detect_service_on_host
+
+# Detect service on port 80
+result = detect_service_on_host("example.com", 80)
+
+if result.detected_service:
+    print(f"Service: {result.detected_service} (method: {result.method})")
+    print(f"Banner: {result.banner}")
+else:
+    print(f"Fallback guess: {result.guessed_service}")
+    if result.error:
+        print(f"Error: {result.error}")
+```
+
+---
+
 #### port-service
 
 Identify the service typically running on a port number.
@@ -943,7 +1044,7 @@ nadzoring network-base whois -o json --save whois_data.json github.com
 **Python API:**
 
 ```python
-from nadzoring.network_base.whois import whois_lookup
+from nadzoring.network_base.whois_lookup import whois_lookup
 
 result = whois_lookup("example.com")
 print(result["registrar"])      # 'RESERVED-Internet Assigned Numbers Authority'
@@ -1654,13 +1755,14 @@ Use `-o` / `--output` to change the output format:
 | `csv` | Comma-separated values |
 | `html` | Complete HTML page with CSS |
 | `html_table` | HTML table fragment only |
+| `yaml` | YAML format |
 
 ```bash
 nadzoring dns resolve -o json example.com
 nadzoring dns health -o html --save health.html example.com
 nadzoring network-base connections -o csv --save conns.csv
 nadzoring security check-ssl -o json example.com
-nadzoring security check-headers -o html --save headers.html https://example.com
+nadzoring security check-headers -o json --save headers.json https://example.com
 nadzoring security check-email -o json --save email_audit.json example.com
 nadzoring security subdomains -o json --save subdomains.json example.com
 ```
@@ -1734,10 +1836,10 @@ except ARPCacheRetrievalError as exc:
     print("Cannot read ARP cache:", exc)
 ```
 
-All library exceptions inherit from `nadzoring.utils.errors.NadzorингError` and can be caught at any granularity:
+All library exceptions inherit from `nadzoring.utils.errors.NadzoringError` and can be caught at any granularity:
 
 ```python
-from nadzoring.utils.errors import NadzorингError, DNSError, NetworkError, ARPError
+from nadzoring.utils.errors import NadzoringError, DNSError, NetworkError, ARPError
 ```
 
 For a complete reference of all error patterns and possible error values, see the [Error Handling guide](https://alexeev-prog.github.io/nadzoring/main/error_handling.html) in the documentation.
@@ -1798,9 +1900,11 @@ from nadzoring.network_base.traceroute import traceroute
 from nadzoring.network_base.connections import get_connections
 from nadzoring.network_base.route_table import get_route_table
 from nadzoring.network_base.network_params import network_param
-from nadzoring.network_base.whois import whois_lookup
+from nadzoring.network_base.whois_lookup import whois_lookup
 from nadzoring.network_base.domain_info import get_domain_info
 from nadzoring.network_base.port_scanner import ScanConfig, scan_ports
+from nadzoring.network_base.service_detector import detect_service_on_host
+from nadzoring.network_base.parse_url import parse_url
 
 # Ping — returns bool
 alive = ping_addr("8.8.8.8")
@@ -1809,6 +1913,10 @@ alive = ping_addr("8.8.8.8")
 r = http_ping("https://example.com")
 if not r.error:
     print(r.ttfb_ms, r.status_code)
+
+# URL parsing
+parsed = parse_url("https://example.com/path?q=1")
+print(parsed["hostname"], parsed["path"])
 
 # Geolocation — returns {} on failure
 loc = geo_ip("8.8.8.8")
@@ -1834,6 +1942,10 @@ for conn in get_connections(protocol="tcp", state_filter="ESTABLISHED"):
 config = ScanConfig(targets=["example.com"], mode="fast", timeout=2.0)
 for result in scan_ports(config):
     print("Open ports:", result.open_ports)
+
+# Service detection on a specific port
+service = detect_service_on_host("example.com", 80)
+print(service.detected_service or service.guessed_service)
 ```
 
 ### Security API
@@ -2401,11 +2513,12 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 | Version | Link | Status |
 |---------|------|--------|
 | **main** | [Latest (development)](https://alexeev-prog.github.io/nadzoring/main) | 🟡 Development |
-| **v0.1.8** | [Stable release](https://alexeev-prog.github.io/nadzoring/v0.1.8) | 🟢 Stable |
-| v0.1.7 | [Previous release](https://alexeev-prog.github.io/nadzoring/v0.1.7) | ⚪ Legacy |
-| v0.1.6 | [Previous release](https://alexeev-prog.github.io/nadzoring/v0.1.6) | ⚪ Legacy |
-| v0.1.5 | [Previous release](https://alexeev-prog.github.io/nadzoring/v0.1.5) | ⚪ Legacy |
-| v0.1.4 | [Previous release](https://alexeev-prog.github.io/nadzoring/v0.1.4) | ⚪ Legacy |
+| **v0.1.9** | [Release](https://alexeev-prog.github.io/nadzoring/v0.1.9) | 🟢 Stable |
+| v0.1.8 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.8) | ⚪ Legacy |
+| v0.1.7 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.7) | ⚪ Legacy |
+| v0.1.6 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.6) | ⚪ Legacy |
+| v0.1.5 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.5) | ⚪ Legacy |
+| v0.1.4 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.4) | ⚪ Legacy |
 | v0.1.3 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.3) | ⚪ Legacy |
 | v0.1.2 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.2) | ⚪ Legacy |
 | v0.1.1 | [First version](https://alexeev-prog.github.io/nadzoring/v0.1.1) | ⚪ Legacy |

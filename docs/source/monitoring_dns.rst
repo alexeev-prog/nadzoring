@@ -21,6 +21,13 @@ Monitor ``example.com`` against two DNS servers every 60 seconds:
 
 Press **Ctrl-C** to stop. A statistical summary prints automatically.
 
+Analyse the log afterwards:
+
+.. code-block:: bash
+
+   nadzoring dns monitor-report dns_monitor.jsonl
+   nadzoring dns monitor-report dns_monitor.jsonl --server 8.8.8.8 -o json
+
 ----
 
 CLI Reference: ``dns monitor``
@@ -87,21 +94,24 @@ CLI Reference: ``dns monitor``
 
 .. code-block:: bash
 
-   nadzoring dns monitor example.com
+   # Monitor with default servers, save log
+   nadzoring dns monitor example.com \
+       --interval 60 \
+       --log-file dns_monitor.jsonl
 
+   # Strict thresholds — alert above 150 ms or below 99 % success
    nadzoring dns monitor example.com \
        -n 8.8.8.8 -n 1.1.1.1 -n 9.9.9.9 \
-       --interval 30 --max-rt 150 --min-success 0.99 \
-       --log-file /var/log/dns_monitor.jsonl
+       --interval 30 \
+       --max-rt 150 --min-success 0.99 \
+       --log-file dns_monitor.jsonl
 
-   nadzoring dns monitor example.com \
-       --interval 10 --no-health --queries 1
+   # Run exactly 10 cycles and save a JSON report (great for CI)
+   nadzoring dns monitor example.com --cycles 10 -o json --save report.json
 
+   # Quiet mode for cron / systemd
    nadzoring dns monitor example.com \
-       --cycles 10 -o json --save report.json
-
-   nadzoring dns monitor example.com \
-       --quiet --log-file /var/log/dns_monitor.jsonl
+       --quiet --log-file /var/log/nadzoring/dns_monitor.jsonl
 
 ----
 
@@ -110,13 +120,29 @@ CLI Reference: ``dns monitor-report``
 
 Analyse a saved JSONL log and print aggregated per-server statistics:
 
+.. code-block:: text
+
+   nadzoring dns monitor-report [OPTIONS] LOG_FILE
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Option
+     - Description
+   * - ``--server / -s``
+     - Filter statistics to a specific server IP
+
 .. code-block:: bash
 
+   # Basic analysis
    nadzoring dns monitor-report dns_monitor.jsonl
 
-   nadzoring dns monitor-report dns_monitor.jsonl --server 8.8.8.8
+   # Filter to a single server, export JSON
+   nadzoring dns monitor-report dns_monitor.jsonl --server 8.8.8.8 -o json
 
-   nadzoring dns monitor-report dns_monitor.jsonl -o json --save stats.json
+   # Save as HTML report for dashboard
+   nadzoring dns monitor-report dns_monitor.jsonl -o html --save report.html
 
 ----
 

@@ -73,6 +73,17 @@ To export as JSON for scripting:
 
    nadzoring network-base params -o json --save net_params.json
 
+**Python API:**
+
+.. code-block:: python
+
+   from nadzoring.network_base.network_params import network_param
+
+   info = network_param()
+   print(info["IPv4 address"])        # '192.168.1.42'
+   print(info["Router ip-address"])   # '192.168.1.1'
+   print(info["Public IP address"])   # your external IP
+
 ----
 
 2. Resolve a Hostname to IP
@@ -116,7 +127,31 @@ Look up specific DNS record types:
 
 ----
 
-3. Comprehensive Domain Information
+3. Parse a URL
+---------------
+
+Break a URL into its components (scheme, hostname, port, path, query, fragment):
+
+.. code-block:: bash
+
+   nadzoring network-base parse-url https://example.com/path?q=1#section
+
+**Python API:**
+
+.. code-block:: python
+
+   from nadzoring.network_base.parse_url import parse_url
+
+   result = parse_url("https://user:pass@example.com:8080/path?key=value#frag")
+   print(result["protocol"])   # 'https'
+   print(result["hostname"])   # 'example.com'
+   print(result["port"])       # 8080
+   print(result["username"])   # 'user'
+   print(result["query_params"])  # [('key', 'value')]
+
+----
+
+4. Comprehensive Domain Information
 -------------------------------------
 
 Retrieve WHOIS registration data, DNS records, IP geolocation, and reverse DNS
@@ -146,7 +181,7 @@ for a domain in a single command:
 
 ----
 
-4. Reverse DNS Lookup
+5. Reverse DNS Lookup
 -----------------------
 
 Find the hostname associated with an IP address (PTR record):
@@ -172,21 +207,15 @@ Find the hostname associated with an IP address (PTR record):
    from nadzoring.dns_lookup.reverse import reverse_dns
 
    result = reverse_dns("8.8.8.8")
-   print(result["hostname"])       # 'dns.google'
-   print(result["response_time"])  # e.g. 18.34 ms
-
-   # IPv6 also supported
-   result = reverse_dns("2001:4860:4860::8888")
-   print(result["hostname"])       # 'dns.google'
-
-   # Handle errors
-   result = reverse_dns("192.168.1.1")
    if result["error"]:
        print(result["error"])  # 'No PTR record'
+   else:
+       print(result["hostname"])       # 'dns.google'
+       print(result["response_time"])  # e.g. 18.34 ms
 
 ----
 
-5. Ping a Host
+6. Ping a Host
 ---------------
 
 Check basic network reachability:
@@ -211,7 +240,7 @@ Check basic network reachability:
 
 ----
 
-6. HTTP Probe a URL
+7. HTTP Probe a URL
 ---------------------
 
 Measure DNS resolution time, time-to-first-byte, and total download time:
@@ -233,15 +262,15 @@ Measure DNS resolution time, time-to-first-byte, and total download time:
    from nadzoring.network_base.http_ping import http_ping
 
    result = http_ping("https://example.com")
-   print(result.status_code)    # 200
-   print(result.dns_ms)         # e.g. 12.5
-   print(result.ttfb_ms)        # e.g. 87.3
-   print(result.total_ms)       # e.g. 134.6
-   print(result.content_length) # bytes
+   if not result.error:
+       print(result.status_code)    # 200
+       print(result.dns_ms)         # e.g. 12.5
+       print(result.ttfb_ms)        # e.g. 87.3
+       print(result.total_ms)       # e.g. 134.6
 
 ----
 
-7. DNS Health Check
+8. DNS Health Check
 ---------------------
 
 Score a domain's DNS configuration from 0 to 100:
@@ -267,12 +296,10 @@ Scoring thresholds:
    print(result["status"])  # 'healthy' | 'degraded' | 'unhealthy'
    for issue in result["issues"]:
        print("ISSUE:", issue)
-   for warn in result["warnings"]:
-       print("WARN:", warn)
 
 ----
 
-8. Validate DNS Records
+9. Validate DNS Records
 ------------------------
 
 Run a detailed DNS check including MX priority and SPF/DKIM validation:
@@ -297,15 +324,14 @@ Run a detailed DNS check including MX priority and SPF/DKIM validation:
        validate_txt=True,
    )
    print(result["records"])      # {'MX': ['10 mail.example.com'], ...}
-   print(result["validations"])  # {'mx': {'valid': True, 'issues': [], ...}}
+   print(result["validations"])  # {'mx': {'valid': True, 'issues': []}}
 
 ----
 
-9. Trace the DNS Resolution Path
+10. Trace the DNS Resolution Path
 ----------------------------------
 
-Follow the delegation chain from root servers to the authoritative answer,
-similar to ``dig +trace``:
+Follow the delegation chain from root servers to the authoritative answer:
 
 .. code-block:: bash
 
@@ -323,11 +349,10 @@ similar to ``dig +trace``:
    result = trace_dns("example.com")
    for hop in result["hops"]:
        print(hop["nameserver"], hop["response_time"], hop.get("records"))
-   print("Final answer:", result["final_answer"])
 
 ----
 
-10. Compare DNS Servers
+11. Compare DNS Servers
 -----------------------
 
 Detect discrepancies between multiple resolvers for the same domain:
@@ -352,13 +377,11 @@ Detect discrepancies between multiple resolvers for the same domain:
    )
    if result["differences"]:
        for diff in result["differences"]:
-           print(f"Server {diff['server']} returned different {diff['type']} records")
-           print(f"  Expected: {diff['expected']}")
-           print(f"  Got:      {diff['got']}")
+           print(f"Server {diff['server']} returned different records")
 
 ----
 
-11. Detect DNS Poisoning
+12. Detect DNS Poisoning
 --------------------------
 
 Check whether a domain's DNS responses show signs of poisoning, censorship,
@@ -374,11 +397,19 @@ or unusual CDN routing:
    # Save as HTML report
    nadzoring dns poisoning -o html --save poisoning_report.html twitter.com
 
-Severity levels: ``NONE`` → ``LOW`` → ``MEDIUM`` → ``HIGH`` → ``CRITICAL`` / ``SUSPICIOUS``
+**Python API:**
+
+.. code-block:: python
+
+   from nadzoring.dns_lookup.poisoning import check_dns_poisoning
+
+   result = check_dns_poisoning("example.com")
+   print(f"Level: {result.get('poisoning_level', 'NONE')}")
+   print(f"Confidence: {result.get('confidence', 0):.0f}%")
 
 ----
 
-12. Benchmark DNS Servers
+13. Benchmark DNS Servers
 ---------------------------
 
 Find the fastest DNS resolver for your location:
@@ -391,9 +422,6 @@ Find the fastest DNS resolver for your location:
    # Custom servers, 20 queries each
    nadzoring dns benchmark -s 8.8.8.8 -s 1.1.1.1 -s 9.9.9.9 --queries 20
 
-   # Sequential mode (one server at a time)
-   nadzoring dns benchmark -t MX -d gmail.com --sequential
-
 **Python API:**
 
 .. code-block:: python
@@ -405,11 +433,42 @@ Find the fastest DNS resolver for your location:
        queries=10,
    )
    for r in results:
-       print(f"{r['server']}: avg={r['avg_response_time']:.1f}ms  ok={r['success_rate']}%")
+       print(f"{r['server']}: avg={r['avg_response_time']:.1f}ms")
 
 ----
 
-13. Scan Ports
+14. Continuous DNS Monitoring
+-------------------------------
+
+Monitor DNS health and performance over time, with alerts and logging:
+
+.. code-block:: bash
+
+   nadzoring dns monitor example.com \
+       --interval 60 \
+       --log-file dns_monitor.jsonl
+
+   # Analyse the log later
+   nadzoring dns monitor-report dns_monitor.jsonl
+
+**Python API:**
+
+.. code-block:: python
+
+   from nadzoring.dns_lookup.monitor import DNSMonitor, MonitorConfig, load_log
+
+   # Monitor for 10 cycles
+   config = MonitorConfig(domain="example.com", interval=10.0)
+   monitor = DNSMonitor(config)
+   history = monitor.run_cycles(10)
+
+   # Analyse existing log
+   cycles = load_log("dns_monitor.jsonl")
+   print(f"Cycles: {len(cycles)}")
+
+----
+
+15. Scan Ports
 ---------------
 
 Discover open ports and running services on a target:
@@ -425,26 +484,50 @@ Discover open ports and running services on a target:
    # Custom range
    nadzoring network-base port-scan --mode custom --ports 1-1024 example.com
 
-   # UDP scan
-   nadzoring network-base port-scan --protocol udp --mode fast example.com
+**Python API:**
+
+.. code-block:: python
+
+   from nadzoring.network_base.port_scanner import ScanConfig, scan_ports
+
+   config = ScanConfig(targets=["example.com"], mode="fast")
+   for result in scan_ports(config):
+       print("Open ports:", result.open_ports)
 
 ----
 
-14. Security Auditing
------------------------
+16. Detect Service on Port
+---------------------------
 
-**SSL/TLS certificate check:**
+Actively connect to a port and identify the running service by banner:
+
+.. code-block:: bash
+
+   nadzoring network-base detect-service example.com 80 443 22
+
+**Python API:**
+
+.. code-block:: python
+
+   from nadzoring.network_base.service_detector import detect_service_on_host
+
+   result = detect_service_on_host("example.com", 80)
+   print(result.detected_service or result.guessed_service)
+
+----
+
+17. SSL/TLS Certificate Check
+-------------------------------
+
+Inspect SSL/TLS certificates for expiry and security:
 
 .. code-block:: bash
 
    # Compact summary
    nadzoring security check-ssl example.com
 
-   # 30-day warning window, multiple domains
-   nadzoring security check-ssl --days-before 30 google.com github.com
-
-   # Full details (SAN, protocols, chain)
-   nadzoring security check-ssl --full example.com
+   # 30-day warning window, full details
+   nadzoring security check-ssl --days-before 30 --full example.com
 
 **Python API:**
 
@@ -453,11 +536,15 @@ Discover open ports and running services on a target:
    from nadzoring.security.check_website_ssl_cert import check_ssl_certificate
 
    result = check_ssl_certificate("example.com", days_before=14)
-   print(result["status"])            # 'valid' | 'warning' | 'expired' | 'error'
-   print(result["remaining_days"])    # e.g. 142
-   print(result["protocols"]["supported"])  # ['TLSv1.2', 'TLSv1.3']
+   print(result["status"], result["remaining_days"])
+   print(result["protocols"]["supported"])
 
-**HTTP security header audit:**
+----
+
+18. HTTP Security Headers
+--------------------------
+
+Audit HTTP security headers for a URL:
 
 .. code-block:: bash
 
@@ -471,10 +558,14 @@ Discover open ports and running services on a target:
 
    result = check_http_security_headers("https://example.com")
    print(result["score"])    # 0–100 coverage score
-   print(result["missing"])  # list of absent recommended headers
-   print(result["leaking"])  # e.g. {'Server': 'nginx/1.18.0'}
+   print(result["missing"])  # list of absent headers
 
-**Email security (SPF / DKIM / DMARC) validation:**
+----
+
+19. Email Security
+-------------------
+
+Validate SPF, DKIM, and DMARC records:
 
 .. code-block:: bash
 
@@ -490,24 +581,38 @@ Discover open ports and running services on a target:
    print(result["overall_score"])         # 0–3
    print(result["spf"]["all_qualifier"])  # '~'
    print(result["dmarc"]["policy"])       # 'reject'
-   print(result["all_issues"])            # aggregated issue list
 
-**Subdomain discovery:**
+----
+
+20. Subdomain Discovery
+------------------------
+
+Find subdomains using CT logs and DNS brute-force:
 
 .. code-block:: bash
 
-   # CT logs + built-in wordlist
    nadzoring security subdomains example.com
 
-   # CT logs only
-   nadzoring security subdomains --no-bruteforce example.com
+**Python API:**
 
-**Continuous SSL monitoring:**
+.. code-block:: python
+
+   from nadzoring.security.subdomain_scan import scan_subdomains
+
+   results = scan_subdomains("example.com")
+   for r in results:
+       print(r["subdomain"], r["ip"], r["source"])
+
+----
+
+21. Continuous SSL Monitoring
+-------------------------------
+
+Monitor SSL certificates for changes and expiry:
 
 .. code-block:: bash
 
    nadzoring security watch-ssl example.com
-   nadzoring security watch-ssl --days-before 14 --interval 300 api.example.com
 
 **Python API:**
 
@@ -515,13 +620,13 @@ Discover open ports and running services on a target:
 
    from nadzoring.security.ssl_monitor import SSLMonitor
 
-   monitor = SSLMonitor(["example.com", "api.example.com"], interval=3600, days_before=14)
-   monitor.set_alert_callback(lambda domain, msg: print(f"ALERT {domain}: {msg}"))
-   monitor.run_cycles(cycles=5)
+   monitor = SSLMonitor(["example.com"], interval=3600)
+   monitor.set_alert_callback(lambda d, m: print(f"ALERT {d}: {m}"))
+   monitor.run_cycles(5)
 
 ----
 
-15. ARP Cache and Spoofing Detection
+22. ARP Cache and Spoofing Detection
 --------------------------------------
 
 Inspect the local ARP cache:
@@ -530,23 +635,26 @@ Inspect the local ARP cache:
 
    nadzoring arp cache
 
-Statically detect potential spoofing from current cache:
+Detect spoofing statically or in real-time:
 
 .. code-block:: bash
 
    nadzoring arp detect-spoofing
+   nadzoring arp monitor-spoofing --interface eth0
 
-   # Check only specific interfaces
-   nadzoring arp detect-spoofing eth0 wlan0
+**Python API:**
 
-Monitor ARP traffic in real time (requires root/admin):
+.. code-block:: python
 
-.. code-block:: bash
+   from nadzoring.arp.cache import ARPCache
+   from nadzoring.arp.realtime import ARPRealtimeDetector
 
-   nadzoring arp monitor-spoofing --interface eth0 --count 200 --timeout 60
+   cache = ARPCache()
+   for entry in cache.get_cache():
+       print(entry.ip_address, entry.mac_address)
 
-   # Save alerts for forensic analysis
-   nadzoring arp monitor-spoofing -o json --save arp_alerts.json
+   detector = ARPRealtimeDetector()
+   alerts = detector.monitor(interface="eth0", count=50)
 
 ----
 
@@ -561,9 +669,6 @@ Use ``-o`` to change how results are displayed or saved:
    nadzoring dns health -o html --save health_report.html example.com
    nadzoring network-base connections -o csv --save conns.csv
    nadzoring security check-ssl -o json example.com
-   nadzoring security check-headers -o json --save headers.json https://example.com
-   nadzoring security check-email -o json --save email.json example.com
-   nadzoring security subdomains -o json --save subdomains.json example.com
 
 Available formats: ``table`` (default), ``json``, ``csv``, ``html``, ``html_table``, ``yaml``
 
@@ -587,134 +692,3 @@ Getting Help
    nadzoring dns reverse --help
    nadzoring network-base port-scan --help
    nadzoring security check-ssl --help
-   nadzoring security check-email --help
-   nadzoring arp monitor-spoofing --help
-
-----
-
-16. Continuous DNS Monitoring
--------------------------------
-
-The ``dns monitor`` command runs a persistent loop that tracks health and
-performance over time, fires alerts when thresholds are breached, and logs
-everything to a structured JSONL file.
-
-.. code-block:: bash
-
-   # Monitor with default servers (Google + Cloudflare), save log
-   nadzoring dns monitor example.com \
-       --interval 60 \
-       --log-file dns_monitor.jsonl
-
-   # Strict thresholds — alert above 150 ms or below 99 % success
-   nadzoring dns monitor example.com \
-       -n 8.8.8.8 -n 1.1.1.1 -n 9.9.9.9 \
-       --interval 30 \
-       --max-rt 150 --min-success 0.99 \
-       --log-file dns_monitor.jsonl
-
-   # Run exactly 10 cycles and save a JSON report (great for CI)
-   nadzoring dns monitor example.com --cycles 10 -o json --save report.json
-
-   # Quiet mode for cron / systemd
-   nadzoring dns monitor example.com \
-       --quiet --log-file /var/log/nadzoring/dns_monitor.jsonl
-
-After Ctrl-C (or after ``--cycles`` completes), a statistical summary is
-printed automatically.
-
-**Analyse the log later:**
-
-.. code-block:: bash
-
-   nadzoring dns monitor-report dns_monitor.jsonl
-   nadzoring dns monitor-report dns_monitor.jsonl --server 8.8.8.8 -o json
-
-**Python API — embed in your own script:**
-
-.. code-block:: python
-
-   from nadzoring.dns_lookup.monitor import AlertEvent, DNSMonitor, MonitorConfig
-
-
-   def my_alert_handler(alert: AlertEvent) -> None:
-       print(f"ALERT [{alert.alert_type}]: {alert.message}")
-
-
-   config = MonitorConfig(
-       domain="example.com",
-       nameservers=["8.8.8.8", "1.1.1.1"],
-       interval=60.0,
-       queries_per_sample=3,
-       max_response_time_ms=300.0,
-       min_success_rate=0.95,
-       log_file="dns_monitor.jsonl",
-       alert_callback=my_alert_handler,
-   )
-
-   monitor = DNSMonitor(config)
-   monitor.run()
-   print(monitor.report())
-
-**Scheduling with systemd (recommended for production):**
-
-.. code-block:: bash
-
-   # Create /etc/systemd/system/nadzoring-dns-monitor.service
-   # then:
-   sudo systemctl enable --now nadzoring-dns-monitor
-   sudo journalctl -u nadzoring-dns-monitor -f
-
-See :doc:`monitoring_dns` for the full systemd unit file, cron setup, trend
-analysis examples, and alert integration patterns.
-
-----
-
-17. Error Handling Patterns
------------------------------
-
-Every public Python API function returns structured errors rather than
-raising exceptions, making it safe to use in automation scripts:
-
-.. code-block:: python
-
-   from nadzoring.dns_lookup.utils import resolve_with_timer
-   from nadzoring.dns_lookup.reverse import reverse_dns
-   from nadzoring.dns_lookup.health import health_check_dns
-   from nadzoring.security.check_website_ssl_cert import check_ssl_certificate
-   from nadzoring.security.http_headers import check_http_security_headers
-
-   # resolve_with_timer never raises — check the "error" field
-   result = resolve_with_timer("example.com", "A", timeout=3.0)
-   if result["error"]:
-       # possible: 'Domain does not exist', 'Query timeout', 'No A records'
-       print("DNS error:", result["error"])
-   else:
-       print("Records:", result["records"])
-       print("Response time:", result["response_time"], "ms")
-
-   # reverse_dns — same pattern
-   r = reverse_dns("8.8.8.8")
-   hostname = r["hostname"] or f"[{r['error']}]"
-
-   # health_check_dns always returns a complete dict
-   health = health_check_dns("example.com")
-   if health["status"] == "unhealthy":
-       for issue in health["issues"]:
-           print("CRITICAL:", issue)
-   for warning in health["warnings"]:
-       print("WARN:", warning)
-
-   # check_ssl_certificate never raises — check result["status"]
-   ssl = check_ssl_certificate("example.com")
-   if ssl["status"] == "error":
-       print("SSL check failed:", ssl.get("error"))
-   elif ssl["status"] == "warning":
-       print(f"Expiring in {ssl['remaining_days']} days")
-
-   # check_http_security_headers — check result["error"]
-   headers = check_http_security_headers("https://example.com")
-   if headers["error"]:
-       print("Header check failed:", headers["error"])
-   else:
-       print(f"Security score: {headers['score']}/100")
