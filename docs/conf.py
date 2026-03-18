@@ -149,9 +149,7 @@ def linkcode_resolve(domain: str, info: dict) -> str | None:
         except (OSError, TypeError):
             line_fragment = ""
 
-        return (
-            f"{GITHUB_BASE_URL}/blob/{_current_ref}/{rel_path}{line_fragment}"
-        )
+        return f"{GITHUB_BASE_URL}/blob/{_current_ref}/{rel_path}{line_fragment}"
 
     except Exception:  # noqa: BLE001
         return None

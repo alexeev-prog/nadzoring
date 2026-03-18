@@ -318,10 +318,12 @@ async def resolve_with_timer_async(
 
             import asyncio
 
+
             async def _run() -> None:
                 result = await resolve_with_timer_async("example.com")
                 if not result["error"]:
                     print(result["records"])
+
 
             asyncio.run(_run())
 
@@ -329,12 +331,14 @@ async def resolve_with_timer_async(
 
             import asyncio
 
+
             async def _run() -> None:
                 result = await resolve_with_timer_async(
                     "example.com",
                     nameserver="1.1.1.1",
                 )
                 print(result["response_time"])
+
 
             asyncio.run(_run())
 

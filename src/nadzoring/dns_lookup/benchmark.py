@@ -184,9 +184,7 @@ async def benchmark_dns_servers_async(
 
     Examples:
         >>> import asyncio
-        >>> results = asyncio.run(
-        ...     benchmark_dns_servers_async(servers=["8.8.8.8", "1.1.1.1"])
-        ... )
+        >>> results = asyncio.run(benchmark_dns_servers_async(servers=["8.8.8.8", "1.1.1.1"]))
         >>> fastest = results[0]
         >>> print(f"{fastest['server']}: {fastest['avg_response_time']:.2f}ms")
 
@@ -333,9 +331,7 @@ async def _benchmark_sequential_async(
 
     for i, server in enumerate(servers):
         try:
-            result: BenchmarkResult = await _benchmark_single_server_async(
-                server, domain, record_type, queries
-            )
+            result: BenchmarkResult = await _benchmark_single_server_async(server, domain, record_type, queries)
         except Exception:
             logger.exception("Benchmark failed for %s", server)
             result = _make_failed_benchmark_result(server, queries)

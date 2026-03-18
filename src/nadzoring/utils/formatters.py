@@ -362,13 +362,22 @@ def save_results(
 
         elif fileformat == "html":
             html_table = tabulate.tabulate(data, headers="keys", tablefmt="html")
-            file_path.write_text(_build_html_page("Nadzoring Analysis Results", html_table), encoding="utf-8")
+            file_path.write_text(
+                _build_html_page("Nadzoring Analysis Results", html_table),
+                encoding="utf-8",
+            )
 
         elif fileformat == "html_table":
-            file_path.write_text(tabulate.tabulate(data, headers="keys", tablefmt="html"), encoding="utf-8")
+            file_path.write_text(
+                tabulate.tabulate(data, headers="keys", tablefmt="html"),
+                encoding="utf-8",
+            )
 
         else:
-            file_path.write_text(tabulate.tabulate(data, headers="keys", tablefmt="grid"), encoding="utf-8")
+            file_path.write_text(
+                tabulate.tabulate(data, headers="keys", tablefmt="grid"),
+                encoding="utf-8",
+            )
 
         click.secho(f"Results saved to {file_path}", fg="green")
 
