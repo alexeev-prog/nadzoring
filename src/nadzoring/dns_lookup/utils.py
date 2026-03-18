@@ -99,6 +99,15 @@ def create_async_resolver(
     Returns:
         Configured :class:`dns.asyncresolver.Resolver` ready for async queries.
 
+    Examples:
+        >>> import asyncio
+        >>> async def _run() -> None:
+        ...     resolver = create_async_resolver("8.8.8.8", timeout=3.0)
+        ...     answers = await resolver.resolve("example.com", "A")
+        ...     print(len(answers) > 0)
+        >>> asyncio.run(_run())
+        True
+
     """
     resolver = dns.asyncresolver.Resolver()
     resolver.timeout = timeout
@@ -303,6 +312,31 @@ async def resolve_with_timer_async(
     Returns:
         :class:`~.types.DNSResult` dict using the same keys and error
         semantics as :func:`resolve_with_timer`.
+
+    Examples:
+        Basic A record lookup::
+
+            import asyncio
+
+            async def _run() -> None:
+                result = await resolve_with_timer_async("example.com")
+                if not result["error"]:
+                    print(result["records"])
+
+            asyncio.run(_run())
+
+        Using a custom nameserver::
+
+            import asyncio
+
+            async def _run() -> None:
+                result = await resolve_with_timer_async(
+                    "example.com",
+                    nameserver="1.1.1.1",
+                )
+                print(result["response_time"])
+
+            asyncio.run(_run())
 
     """
     result: DNSResult = _make_empty_result(domain, record_type)

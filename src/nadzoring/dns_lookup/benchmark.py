@@ -182,6 +182,14 @@ async def benchmark_dns_servers_async(
         List of :class:`BenchmarkResult` dicts sorted by
         ``avg_response_time`` ascending (fastest first).
 
+    Examples:
+        >>> import asyncio
+        >>> results = asyncio.run(
+        ...     benchmark_dns_servers_async(servers=["8.8.8.8", "1.1.1.1"])
+        ... )
+        >>> fastest = results[0]
+        >>> print(f"{fastest['server']}: {fastest['avg_response_time']:.2f}ms")
+
     """
     if servers is None:
         servers = get_public_dns_servers()
