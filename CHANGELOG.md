@@ -1,10 +1,62 @@
 # Changelog
+## [0.1.9](https://github.com/alexeev-prog/nadzoring/releases/tag/v0.1.9) - 2026-03-18
+
+### Bug Fixes
+
+- Fix typo in changelog([7823596](https://github.com/alexeev-prog/nadzoring/commit/7823596f48543620db67bc462a39da27493ef7ca))
+- Fix british spelling in readme([8e7654d](https://github.com/alexeev-prog/nadzoring/commit/8e7654d20e7b68235306dc4c492df9d2c725682e))
+
+### Build System
+
+- Build: release 0.1.9([1da60dd](https://github.com/alexeev-prog/nadzoring/commit/1da60ddca68f0313291ebd1f94fef38258cca828))
+
+### CI/CD
+
+- Workflow: add doc_request in issue templates, update noxfile and deps([b126805](https://github.com/alexeev-prog/nadzoring/commit/b12680520106bed4ae3287d8b375d24f6808cd83))
+
+### Code Refactoring
+
+- Refactor: update ruff linter rules and update codestyle([fd5f986](https://github.com/alexeev-prog/nadzoring/commit/fd5f986b6b82ef0664220ff142a61b4461d481c9))
+
+### Code Style
+
+- Style: sort dns utils imports for ruff lint([fba4b4e](https://github.com/alexeev-prog/nadzoring/commit/fba4b4edd9bf6b0d502383f0de223ed9ebb2dba2))
+
+### Documentation
+
+- Docs: update CHANGELOG.md for v0.1.8 [skip ci]([60021e4](https://github.com/alexeev-prog/nadzoring/commit/60021e411cacdb30dc2db9d9230dfcddb1544836))
+- Docs: update readme([ecdafbf](https://github.com/alexeev-prog/nadzoring/commit/ecdafbf2b5c671a2b9ebaf16db5e4d5cc984c3b7))
+- Docs: update readme([553c71c](https://github.com/alexeev-prog/nadzoring/commit/553c71c99e23611c3250bd56190c465b24f03713))
+- Docs: update readme([84c9b34](https://github.com/alexeev-prog/nadzoring/commit/84c9b34656a6f489d6b38efe59fc8b312dc4e417))
+- Docs: update readme([ad48278](https://github.com/alexeev-prog/nadzoring/commit/ad48278c5acb4f013390d5aaa3e9797a84ca0382))
+- Docs: update article([5e5c54a](https://github.com/alexeev-prog/nadzoring/commit/5e5c54ad84bf66b90553fe33e43202184f8a5d09))
+- Docs: add missing Examples sections for new async DNS APIs([217f9f2](https://github.com/alexeev-prog/nadzoring/commit/217f9f25f3d0769ec5362a67b314eb56c7008a49))
+
+### Features
+
+- Feat: add active service detection for target hosts (network-base)([0646707](https://github.com/alexeev-prog/nadzoring/commit/0646707c738c04242721e3a3e6387f631c049eec))
+- Feat: add command detect-service in network-base([8577696](https://github.com/alexeev-prog/nadzoring/commit/8577696daf4f6d1daad0e8c4dfd8a566b0d99c4b))
+- Add MDC instruction for cursor IDE([39b5f13](https://github.com/alexeev-prog/nadzoring/commit/39b5f13f2908e9693a89dbafb8f548c12e7d2de2))
+- Add SKILL.md file([698fd80](https://github.com/alexeev-prog/nadzoring/commit/698fd808a0f04424189395c3395b9ed1d1a4f6f0))
+- Feat: add YAML output format support([73d3c0e](https://github.com/alexeev-prog/nadzoring/commit/73d3c0e9923d27d5cf2dba761ae68c528092c0c1))
+
+### Other Changes
+
+- Oops, missed another typo([a28a977](https://github.com/alexeev-prog/nadzoring/commit/a28a9777c98892dd673e1fe6863d448f92ce0c2d))
+- Oops, missed the architecture docs too([9b55e97](https://github.com/alexeev-prog/nadzoring/commit/9b55e97ac280853fc12b9cecf5baf89d75b8d7dc))
+- Create SECURITY.md([eb0f514](https://github.com/alexeev-prog/nadzoring/commit/eb0f5147527136c0216349248b9780d25ded835d))
+- Update readme([2506225](https://github.com/alexeev-prog/nadzoring/commit/25062254bac63c03e737678cfed7f62b19645796))
+- Add safe async DNS benchmark API([39b6e26](https://github.com/alexeev-prog/nadzoring/commit/39b6e263f6f438cad707a91a8f06ae330e6d8137))
+- Add safe async DNS benchmark API and stabilize fallback behavior (#53)([bd6134c](https://github.com/alexeev-prog/nadzoring/commit/bd6134c891a7039a8a7613dec29dfe2a875a513d))
+- Update codestyle([3a42f8d](https://github.com/alexeev-prog/nadzoring/commit/3a42f8de3a3299851aa6a9b248bdb5646b36b560))
+- Update version([ac9be2a](https://github.com/alexeev-prog/nadzoring/commit/ac9be2ae3bf77f17a29e8a808e041717be413ed8))
+- Adds `sphinx.ext.linkcode` to the Sphinx configuration (#54)([90407a5](https://github.com/alexeev-prog/nadzoring/commit/90407a5fafbfa6ee76e770dc5b8a56e0f3812bce))
 ## [0.1.8](https://github.com/alexeev-prog/nadzoring/releases/tag/v0.1.8) - 2026-03-14
 
 ### Bug Fixes
 
 - Fix: use per-socket timeout instead of process-global setdefaulttimeout to eliminate race conditions in concurrent subdomain scanning([d17208d](https://github.com/alexeev-prog/nadzoring/commit/d17208df43e00f0f70269db9b8be7b555fb7093c))
-- Fix match wildcard DNS names in SAN entries([3f756bd](https://github.com/alexeev-prog/nadzoring/commit/3f756bd1a1bcc9d345a1946e447c382969995304))
+- Fix match wildcasrd DNS names in SAN entries([3f756bd](https://github.com/alexeev-prog/nadzoring/commit/3f756bd1a1bcc9d345a1946e447c382969995304))
 - Fix: correct misleading chain_valid field in SSL certificate check([1b9d940](https://github.com/alexeev-prog/nadzoring/commit/1b9d94022f6a7f0016c4d1627fbb7becb05b9a37))
 
 ### Documentation
@@ -37,7 +89,7 @@
 
 - Create security command group and add check-ssl-expiry command([b1355c1](https://github.com/alexeev-prog/nadzoring/commit/b1355c13c376f699cfc577e868729a75d33d99b8))
 - Create parse-url command in network-base group([6a164a6](https://github.com/alexeev-prog/nadzoring/commit/6a164a6743f788474b86458eff1d1ac53ac9f747))
-- Add domain info, email, http headers, subdomains, ssl monitor commands, update docs and deps([6f464d8](https://github.com/alexeev-prog/nadzoring/commit/6f464d8764830284299bb58fea2615b4f5fbf462))
+- Add domain info, email, http headers, subdomains, ssl monitorr commands, update docs and deps([6f464d8](https://github.com/alexeev-prog/nadzoring/commit/6f464d8764830284299bb58fea2615b4f5fbf462))
 
 ### Other Changes
 
