@@ -1,6 +1,9 @@
 """DNS lookup module for domain name resolution and DNS record checking."""
 
-from nadzoring.dns_lookup.benchmark import benchmark_dns_servers
+from nadzoring.dns_lookup.benchmark import (
+    benchmark_dns_servers,
+    benchmark_dns_servers_async,
+)
 from nadzoring.dns_lookup.compare import compare_dns_servers
 from nadzoring.dns_lookup.health import check_dns, health_check_dns
 from nadzoring.dns_lookup.poisoning import check_dns_poisoning
@@ -12,6 +15,7 @@ from nadzoring.dns_lookup.utils import resolve_with_timer as resolve_dns
 __all__: list[str] = [
     "RECORD_TYPES",
     "benchmark_dns_servers",
+    "benchmark_dns_servers_async",
     "check_dns",
     "check_dns_poisoning",
     "compare_dns_servers",

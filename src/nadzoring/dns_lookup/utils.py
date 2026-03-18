@@ -21,7 +21,9 @@ from logging import Logger
 from time import time
 
 import dns.exception
+import dns.asyncresolver
 import dns.resolver
+from dns.asyncresolver import Resolver as AsyncResolver
 from dns.resolver import Answer, Resolver
 
 from nadzoring.dns_lookup.types import DNSResult, RecordType
@@ -71,6 +73,34 @@ def create_resolver(
 
     """
     resolver = dns.resolver.Resolver()
+    resolver.timeout = timeout
+    resolver.lifetime = lifetime
+    if nameserver:
+        resolver.nameservers = [nameserver]
+    return resolver
+
+
+def create_async_resolver(
+    nameserver: str | None = None,
+    timeout: float = _DEFAULT_TIMEOUT,
+    lifetime: float = _DEFAULT_LIFETIME,
+) -> AsyncResolver:
+    """
+    Create and configure an async ``dnspython`` resolver instance.
+
+    Args:
+        nameserver: Optional nameserver IP address. When ``None`` the
+            system default resolvers are used.
+        timeout: Per-nameserver query timeout in seconds.
+            Defaults to ``5.0``.
+        lifetime: Total query lifetime in seconds, including retries
+            across nameservers. Defaults to ``10.0``.
+
+    Returns:
+        Configured :class:`dns.asyncresolver.Resolver` ready for async queries.
+
+    """
+    resolver = dns.asyncresolver.Resolver()
     resolver.timeout = timeout
     resolver.lifetime = lifetime
     if nameserver:
@@ -225,6 +255,62 @@ def resolve_with_timer(
         resolver: Resolver = create_resolver(nameserver, timeout, lifetime)
         start_time: float = time()
         answers: Answer = resolver.resolve(domain, record_type)
+        result["response_time"] = round((time() - start_time) * 1000, 2)
+
+        if answers.rrset and include_ttl:
+            result["ttl"] = answers.rrset.ttl
+
+        result["records"] = extract_records(answers, record_type)
+
+    except dns.resolver.NoAnswer:
+        result["error"] = f"No {record_type} records"
+    except dns.resolver.NXDOMAIN:
+        result["error"] = "Domain does not exist"
+    except dns.exception.Timeout:
+        result["error"] = "Query timeout"
+        logger.debug("DNS query timeout for %s %s", domain, record_type)
+    except Exception as exc:
+        result["error"] = str(exc)
+        logger.debug("DNS resolution failed for %s %s: %s", domain, record_type, exc)
+
+    return result
+
+
+async def resolve_with_timer_async(
+    domain: str,
+    record_type: RecordType = "A",
+    nameserver: str | None = None,
+    *,
+    include_ttl: bool = False,
+    timeout: float = _DEFAULT_TIMEOUT,
+    lifetime: float = _DEFAULT_LIFETIME,
+) -> DNSResult:
+    """
+    Async variant of :func:`resolve_with_timer` with identical output shape.
+
+    Args:
+        domain: Domain name to resolve (e.g. ``"example.com"``).
+        record_type: DNS record type to query. Defaults to ``"A"``.
+        nameserver: Optional nameserver IP; ``None`` uses the system
+            default.
+        include_ttl: Include TTL value in result. Defaults to
+            ``False``.
+        timeout: Per-nameserver query timeout in seconds.
+            Defaults to ``5.0``.
+        lifetime: Total query lifetime in seconds. Defaults to
+            ``10.0``.
+
+    Returns:
+        :class:`~.types.DNSResult` dict using the same keys and error
+        semantics as :func:`resolve_with_timer`.
+
+    """
+    result: DNSResult = _make_empty_result(domain, record_type)
+
+    try:
+        resolver: AsyncResolver = create_async_resolver(nameserver, timeout, lifetime)
+        start_time: float = time()
+        answers: Answer = await resolver.resolve(domain, record_type)
         result["response_time"] = round((time() - start_time) * 1000, 2)
 
         if answers.rrset and include_ttl:
