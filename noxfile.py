@@ -10,9 +10,7 @@ def test(session):
     # Install the package and test dependencies with uv
     session.run_always("uv", "pip", "install", ".", external=True)
 
-    session.install(
-        "pytest-xdist", "pytest-randomly", "pytest-sugar", "pytest-coverage"
-    )
+    session.install("pytest-xdist", "pytest-randomly", "pytest-sugar", "pytest-coverage")
 
     # Run pytest with common options
     session.run(
@@ -51,4 +49,3 @@ def mypy_typing(session):
 def ty_typing(session):
     session.install("ty")
     session.run("ty", "check", "src/nadzoring")
-
