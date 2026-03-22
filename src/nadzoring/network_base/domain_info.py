@@ -15,7 +15,7 @@ from nadzoring.network_base.whois_lookup import whois_lookup
 
 logger: Logger = get_logger(__name__)
 
-_AddrInfo = list[tuple[AddressFamily, SocketKind, int, str, tuple[Any, ...]]]
+type _AddrInfo = list[tuple[AddressFamily, SocketKind, int, str, tuple[Any, ...]]]
 
 
 def _resolve_domain(domain: str) -> dict[str, str | None]:
