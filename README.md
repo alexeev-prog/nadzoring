@@ -3,13 +3,12 @@
 <div align="center">
   <p align="center">
     <img src="https://raw.githubusercontent.com/alexeev-prog/nadzoring/refs/heads/main/docs/logo.png" width=300>
-    <h1>Nadzoring</h1>
+    <h2>Nadzoring</h2>
     <p>An open source tool and python library for detecting website blocks, downdetecting and network analysis</p>
-  </p>
-  <p align="center">
     <a href="https://alexeev-prog.github.io/nadzoring/v0.1.9"><strong>Explore the docs »</strong></a>
-    <br />
-    <br />
+  </p>
+  <hr>
+  <p align="center">
     <a href="#-getting-started">Getting Started</a>
     ·
     <a href="#-usage-examples">Basic Usage</a>
