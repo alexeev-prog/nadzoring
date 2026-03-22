@@ -27,7 +27,6 @@
 <p align="center">
     <img src="https://img.shields.io/github/languages/top/alexeev-prog/nadzoring?style=for-the-badge">
     <img src="https://img.shields.io/github/languages/count/alexeev-prog/nadzoring?style=for-the-badge">
-    <img src="https://img.shields.io/badge/Made%20with-Python%203.8-1f425f.svg?logo=python&style=for-the-badge">
     <img src="https://img.shields.io/badge/Maintained-yes-green.svg?style=for-the-badge">
     <img alt="GitHub License" src="https://img.shields.io/github/license/alexeev-prog/nadzoring?style=for-the-badge&logo=gnu">
     <img alt="GitHub forks" src="https://img.shields.io/github/forks/alexeev-prog/nadzoring?style=for-the-badge&logo=github">
