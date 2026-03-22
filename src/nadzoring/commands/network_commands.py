@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 from logging import Logger
-from typing import Any, Literal, NoReturn
+from typing import Any, Literal, Never
 
 import click
 from tqdm import tqdm
@@ -83,10 +83,10 @@ def detect_service_command(
         nadzoring network-base detect-service --timeout 5 192.168.1.1 8080 3306
 
     """
-    results: list[dict[str, int | str]] = []
+    results: list[dict[str, Any]] = []
     total: int = len(ports)
 
-    pbar: tqdm[NoReturn] | None = None if quiet else tqdm(total=total, desc="Detecting services", unit="port")
+    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Detecting services", unit="port")
 
     for port in ports:
         result: ServiceDetectionResult = detect_service_on_host(
@@ -240,7 +240,7 @@ def port_scan_command(
         ) as pbar:
 
             def _make_callback(
-                pbar: tqdm,
+                pbar: tqdm[Never],
                 target_idx: int,
                 target: str,
                 total_targets: int,
@@ -312,7 +312,7 @@ def ping_command(
     results: list[dict[str, Any]] = []
     total: int = len(addresses)
 
-    pbar: tqdm | None = None if quiet else tqdm(total=total, desc="Pinging addresses", unit="ping")
+    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Pinging addresses", unit="ping")
 
     for address in addresses:
         is_pinged: bool = ping_addr(address)
@@ -343,7 +343,7 @@ def parse_url_command(
     results: list[dict[str, Any]] = []
     total: int = len(urls)
 
-    pbar: tqdm | None = None if quiet else tqdm(total=total, desc="Parsing URLs", unit="URL")
+    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Parsing URLs", unit="URL")
 
     for url in urls:
         results.append(parse_url(url))
@@ -369,7 +369,7 @@ def geolocation_command(
     results: list[dict[str, Any]] = []
     total: int = len(ips)
 
-    pbar: tqdm | None = None if quiet else tqdm(total=total, desc="Getting geolocation", unit="ip")
+    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Getting geolocation", unit="ip")
 
     for ip in ips:
         geo: dict[str, str] = geo_ip(ip)
@@ -411,7 +411,7 @@ def host_to_ip_command(
     results: list[dict[str, Any]] = []
     total: int = len(hostnames)
 
-    pbar: tqdm | None = None if quiet else tqdm(total=total, desc="Resolving hostnames", unit="host")
+    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Resolving hostnames", unit="host")
 
     router_ipv4: str | None = router_ip(ipv6=False)
     router_ipv6: str | None = router_ip(ipv6=True)
@@ -447,7 +447,7 @@ def port_service_command(
     results: list[dict[str, Any]] = []
     total: int = len(ports)
 
-    pbar: tqdm | None = None if quiet else tqdm(total=total, desc="Looking up ports", unit="port")
+    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Looking up ports", unit="port")
 
     for port in ports:
         results.append({
@@ -503,7 +503,7 @@ def http_ping_command(
     results: list[dict[str, Any]] = []
     total: int = len(urls)
 
-    pbar: tqdm | None = None if quiet else tqdm(total=total, desc="Probing URLs", unit="url")
+    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Probing URLs", unit="url")
 
     for url in urls:
         result: HttpPingResult = http_ping(
@@ -561,7 +561,7 @@ def whois_command(
     results: list[dict[str, Any]] = []
     total: int = len(targets)
 
-    pbar: tqdm | None = None if quiet else tqdm(total=total, desc="Running WHOIS", unit="target")
+    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Running WHOIS", unit="target")
 
     for target in targets:
         info: dict[str, str | None] = whois_lookup(target)
@@ -589,7 +589,7 @@ def domain_info_command(
     results: list[dict[str, Any]] = []
     total: int = len(domains)
 
-    pbar: tqdm | None = None if quiet else tqdm(total=total, desc="Getting domain info", unit="domain")
+    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Getting domain info", unit="domain")
 
     for domain in domains:
         results.append(get_domain_info(domain))
@@ -695,7 +695,7 @@ def traceroute_command(
     results: list[dict[str, Any]] = []
     total: int = len(targets)
 
-    pbar: tqdm | None = None if quiet else tqdm(total=total, desc="Tracing routes", unit="target")
+    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Tracing routes", unit="target")
 
     for target in targets:
         if not quiet:

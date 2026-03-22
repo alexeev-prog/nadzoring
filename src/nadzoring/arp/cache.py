@@ -4,6 +4,7 @@ import ipaddress
 import re
 import subprocess
 import sys
+from collections.abc import Callable
 from re import Match
 from shutil import which
 from subprocess import CompletedProcess
@@ -67,8 +68,12 @@ class ARPCache:
 
         """
         platform: str = self._get_platform()
-        method = getattr(self, f"_get_{platform}_cache")
-        return method()
+        dispatch: dict[str, Callable[[], list[ARPEntry]]] = {
+            "linux": self._get_linux_cache,
+            "windows": self._get_windows_cache,
+            "darwin": self._get_darwin_cache,
+        }
+        return dispatch[platform]()
 
     def _get_linux_cache(self) -> list[ARPEntry]:
         """

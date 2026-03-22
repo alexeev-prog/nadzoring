@@ -33,7 +33,7 @@ GeoResult = dict[str, str]
 """Dict with keys ``lat``, ``lon``, ``country``, ``city`` (all strings)."""
 
 
-def _fetch_geo_data(ip: str) -> dict | None:
+def _fetch_geo_data(ip: str) -> dict[str, object] | None:
     """
     Fetch raw JSON from ip-api.com for *ip*.
 
@@ -51,13 +51,15 @@ def _fetch_geo_data(ip: str) -> dict | None:
             timeout=_REQUEST_TIMEOUT,
         )
         response.raise_for_status()
-        return response.json()
+        data: dict[str, object] = response.json()
     except (RequestException, ValueError):
         logger.exception("Failed to fetch geolocation data for IP %s", ip)
         return None
+    else:
+        return data
 
 
-def _parse_geo_response(data: dict, ip: str) -> GeoResult | None:
+def _parse_geo_response(data: dict[str, object], ip: str) -> GeoResult | None:
     """
     Validate and extract fields from ip-api response dict.
 
@@ -134,9 +136,9 @@ def geo_ip(ip: str) -> GeoResult:
                 print(f"{ip} → {location}")
 
     """
-    raw: dict | None = _fetch_geo_data(ip)
+    raw: dict[str, object] | None = _fetch_geo_data(ip)
     if raw is None:
         return {}
 
-    parsed: dict[str, str] | None = _parse_geo_response(raw, ip)
+    parsed: GeoResult | None = _parse_geo_response(raw, ip)
     return parsed or {}

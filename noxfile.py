@@ -1,51 +1,35 @@
 import nox
 
-# uv will handle any missing python versions
 python_versions = ["3.12", "3.13", "3.14"]
 
 
 @nox.session(python=python_versions, venv_backend="uv")
 def test(session):
     """Run tests on specified Python versions."""
-    # Install the package and test dependencies with uv
-    session.run_always("uv", "pip", "install", ".", external=True)
-
-    session.install("pytest-xdist", "pytest-randomly", "pytest-sugar", "pytest-coverage")
-
-    # Run pytest with common options
-    session.run(
+    session.run_always("uv", "sync", "--all-groups", external=True)
+    session.run("uv", "run",
         "pytest",
         "tests/",
-        "--cov-fail-under=0",  # 100% coverage
-        "-v",  # verbose output
-        "-s",  # don't capture output
-        "--tb=short",  # shorter traceback format
-        "--strict-markers",  # treat unregistered markers as errors
+        "--cov-fail-under=0",
+        "-v",
+        "-s",
+        "--tb=short",
+        "--strict-markers",
         "-n",
-        "auto",  # parallel testing
-        *session.posargs,  # allows passing additional pytest args from command line
+        "auto",
+        *session.posargs,
     )
 
 
-@nox.session
+@nox.session(venv_backend="uv")
 def lint(session):
-    session.install("ruff")
-    session.run("ruff", "check", "src/nadzoring/")
+    """Run ruff linter."""
+    session.run_always("uv", "sync", "--all-groups", external=True)
+    session.run("uv", "run", "ruff", "check", "src/nadzoring/")
 
 
-@nox.session
-def mutants(session):
-    session.install("mutmut")
-    session.run("mutmut", "run")
-
-
-@nox.session
+@nox.session(venv_backend="uv")
 def mypy_typing(session):
-    session.install("mypy")
-    session.run("mypy", "src/nadzoring")
-
-
-@nox.session
-def ty_typing(session):
-    session.install("ty")
-    session.run("ty", "check", "src/nadzoring")
+    """Run mypy type checking."""
+    session.run_always("uv", "sync", "--all-groups", external=True)
+    session.run("uv", "run", "mypy", "src/nadzoring/")

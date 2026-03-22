@@ -17,6 +17,7 @@ dict.  Callers that prefer exceptions should wrap the result themselves or
 use :mod:`nadzoring.utils.errors`.
 """
 
+from collections.abc import Callable
 from logging import Logger
 from time import time
 
@@ -144,7 +145,7 @@ def _extract_default_records(answers: Answer) -> list[str]:
     return [str(answer).rstrip(".") for answer in answers]
 
 
-_EXTRACTORS: dict[str, object] = {
+_EXTRACTORS: dict[str, Callable[[Answer], list[str]]] = {
     "MX": _extract_mx_records,
     "TXT": _extract_txt_records,
     "SOA": _extract_soa_records,
@@ -176,8 +177,8 @@ def extract_records(answers: Answer, record_type: str) -> list[str]:
         ['10 mail.example.com', '20 backup.example.com']
 
     """
-    extractor: object = _EXTRACTORS.get(record_type, _extract_default_records)
-    return extractor(answers)  # type: ignore[operator]
+    extractor: Callable[[Answer], list[str]] = _EXTRACTORS.get(record_type, _extract_default_records)
+    return extractor(answers)
 
 
 def _make_empty_result(

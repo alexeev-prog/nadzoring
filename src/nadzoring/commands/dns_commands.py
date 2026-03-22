@@ -1,7 +1,7 @@
 """DNS-related CLI commands."""
 
 from logging import Logger
-from typing import Any
+from typing import Any, Never
 
 import click
 from click import Choice
@@ -49,7 +49,7 @@ _QUERYABLE_RECORD_TYPES: list[RecordType] = [t for t in RECORD_TYPES if t != "PT
 
 _DEFAULT_NAMESERVERS: tuple[str, str] = ("8.8.8.8", "1.1.1.1")
 
-_RECORD_TYPE_CHOICE: Choice[str] = click.Choice(
+_RECORD_TYPE_CHOICE: Choice = click.Choice(
     ["A", "AAAA", "CNAME", "MX", "NS", "TXT", "ALL"],
     case_sensitive=False,
 )
@@ -82,7 +82,7 @@ def _make_pbar(
     unit: str,
     *,
     quiet: bool,
-) -> tqdm | None:
+) -> tqdm[Never] | None:
     """
     Create a tqdm progress bar or return ``None`` when in quiet mode.
 
@@ -391,7 +391,7 @@ def resolve_command(
     types_to_query: list[RecordType] = _expand_record_types(record_types)
     total: int = len(domains) * len(types_to_query)
 
-    pbar: tqdm | None = _make_pbar(total, "Resolving DNS records", "query", quiet=quiet)
+    pbar: tqdm[Never] | None = _make_pbar(total, "Resolving DNS records", "query", quiet=quiet)
 
     results: list[dict[str, Any]] = []
 
@@ -447,7 +447,7 @@ def reverse_command(
         ``response_time_ms`` for each queried address.
 
     """
-    pbar: tqdm | None = _make_pbar(len(ip_addresses), "Performing reverse lookups", "lookup", quiet=quiet)
+    pbar: tqdm[Never] | None = _make_pbar(len(ip_addresses), "Performing reverse lookups", "lookup", quiet=quiet)
 
     results: list[dict[str, Any]] = []
 
@@ -510,7 +510,7 @@ def check_command(
     """
     types_to_check: list[RecordType] = _expand_record_types(record_types)
 
-    pbar: tqdm | None = _make_pbar(len(domains), "Performing DNS checks", "domain", quiet=quiet)
+    pbar: tqdm[Never] | None = _make_pbar(len(domains), "Performing DNS checks", "domain", quiet=quiet)
 
     results: list[dict[str, Any]] = []
 
@@ -628,7 +628,7 @@ def compare_command(
     types_to_query: list[str] = list(record_types) if record_types else ["A"]
     total: int = len(servers) * len(types_to_query)
 
-    pbar: tqdm | None = _make_pbar(total, "Comparing DNS servers", "query", quiet=quiet)
+    pbar: tqdm[Never] | None = _make_pbar(total, "Comparing DNS servers", "query", quiet=quiet)
 
     def progress_callback() -> None:
         if pbar:
@@ -754,7 +754,7 @@ def benchmark_command(
     servers_list: list[str] | None = list(servers) if servers else None
     total_servers: int = len(servers_list) if servers_list else 10
 
-    pbar: tqdm | None = _make_pbar(total_servers, "Benchmarking servers", "server", quiet=quiet)
+    pbar: tqdm[Never] | None = _make_pbar(total_servers, "Benchmarking servers", "server", quiet=quiet)
 
     def progress_callback(server: str, _index: int) -> None:
         if pbar:
