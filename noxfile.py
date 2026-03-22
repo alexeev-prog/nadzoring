@@ -6,37 +6,47 @@ python_versions = ["3.12", "3.13", "3.14"]
 @nox.session(python=python_versions, venv_backend="uv")
 def test(session):
     """Run tests on specified Python versions."""
-    session.run_always("uv", "pip", "install", ".", external=True)
-
-    session.install("pytest-xdist", "pytest-randomly", "pytest-sugar", "pytest-coverage")
-
+    session.run_always(
+        "uv", "pip", "install", "--system", "-e", ".[dev]", external=True
+    )
+    
     session.run(
         "pytest",
         "tests/",
-        "--cov-fail-under=0",  # 100% coverage
-        "-v",  # verbose output
-        "-s",  # don't capture output
-        "--tb=short",  # shorter traceback format
-        "--strict-markers",  # treat unregistered markers as errors
+        "--cov-fail-under=0",
+        "-v",
+        "-s",
+        "--tb=short",
+        "--strict-markers",
         "-n",
-        "auto",  # parallel testing
-        *session.posargs,  # allows passing additional pytest args from command line
+        "auto",
+        *session.posargs,
     )
 
 
-@nox.session
+@nox.session(venv_backend="uv")
 def lint(session):
-    session.install("ruff")
+    """Run ruff linter."""
+    session.run_always("uv", "pip", "install", "--system", "-e", ".[dev]", external=True)
     session.run("ruff", "check", "src/nadzoring/")
 
 
-@nox.session
+@nox.session(venv_backend="uv")
+def mypy_typing(session):
+    """Run mypy type checking."""
+    session.run_always("uv", "pip", "install", "--system", "-e", ".[dev]", external=True)
+    session.run("mypy", "src/nadzoring/")
+
+
+@nox.session(venv_backend="uv")
 def mutants(session):
-    session.install("mutmut")
+    """Run mutation testing."""
+    session.run_always("uv", "pip", "install", "--system", "-e", ".[dev]", external=True)
     session.run("mutmut", "run")
 
 
-@nox.session
-def mypy_typing(session):
-    session.install("mypy")
-    session.run("mypy", "src/nadzoring")
+@nox.session(venv_backend="uv")
+def ty_typing(session):
+    """Run ty type checking."""
+    session.run_always("uv", "pip", "install", "--system", "-e", ".[dev]", external=True)
+    session.run("ty", "check", "src/nadzoring/")
