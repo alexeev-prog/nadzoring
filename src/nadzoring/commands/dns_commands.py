@@ -93,7 +93,7 @@ def _make_pbar(
         quiet: When ``True``, no progress bar is created.
 
     Returns:
-        A :class:`tqdm` instance, or ``None`` if *quiet* is ``True``.\
+        A :class:`tqdm` instance, or ``None`` if *quiet* is ``True``.
 
     """
     if quiet:
