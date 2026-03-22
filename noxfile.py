@@ -7,7 +7,7 @@ python_versions = ["3.12", "3.13", "3.14"]
 def test(session):
     """Run tests on specified Python versions."""
     session.run_always("uv", "sync", "--all-groups", external=True)
-    session.run(
+    session.run("uv", "run",
         "pytest",
         "tests/",
         "--cov-fail-under=0",
@@ -25,11 +25,11 @@ def test(session):
 def lint(session):
     """Run ruff linter."""
     session.run_always("uv", "sync", "--all-groups", external=True)
-    session.run("ruff", "check", "src/nadzoring/")
+    session.run("uv", "run", "ruff", "check", "src/nadzoring/")
 
 
 @nox.session(venv_backend="uv")
 def mypy_typing(session):
     """Run mypy type checking."""
     session.run_always("uv", "sync", "--all-groups", external=True)
-    session.run("mypy", "src/nadzoring/")
+    session.run("uv", "run", "mypy", "src/nadzoring/")
