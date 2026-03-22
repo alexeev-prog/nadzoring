@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 from logging import Logger
-from typing import Any
+from typing import Any, Never
 
 import click
 from scapy.all import ARP, Ether, sniff  # type: ignore
@@ -80,7 +80,7 @@ def detect_spoofing(interfaces: tuple[str, ...], *, quiet: bool) -> list[dict[st
     interfaces_to_check: list[str] = list({e.interface for e in entries})
 
     total: int = len(interfaces_to_check)
-    pbar: tqdm | None = None if quiet else tqdm(total=total, desc="Analyzing interfaces", unit="iface")
+    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Analyzing interfaces", unit="iface")
 
     results: list[dict[str, str]] = []
     for interface in interfaces_to_check:

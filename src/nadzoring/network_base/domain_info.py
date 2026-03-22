@@ -15,8 +15,10 @@ from nadzoring.network_base.whois_lookup import whois_lookup
 
 logger: Logger = get_logger(__name__)
 
+_AddrInfo = list[tuple[AddressFamily, SocketKind, int, str, tuple[Any, ...]]]
 
-def _resolve_domain(domain: str) -> dict[str, Any]:
+
+def _resolve_domain(domain: str) -> dict[str, str | None]:
     """
     Resolve a domain to its IP addresses.
 
@@ -30,21 +32,12 @@ def _resolve_domain(domain: str) -> dict[str, Any]:
     """
     result: dict[str, str | None] = {"ipv4": None, "ipv6": None}
     try:
-        info: list[
-            tuple[
-                AddressFamily,
-                SocketKind,
-                int,
-                str,
-                tuple[int, bytes] | tuple[str, int] | tuple[str, int, int, int],
-            ]
-        ] = socket.getaddrinfo(domain, None)
-        for item in info:
-            family, _, _, _, sockaddr = item
+        info: _AddrInfo = socket.getaddrinfo(domain, None)
+        for family, _, _, _, sockaddr in info:
             if family == socket.AF_INET and result["ipv4"] is None:
-                result["ipv4"] = sockaddr[0]
+                result["ipv4"] = str(sockaddr[0])
             elif family == socket.AF_INET6 and result["ipv6"] is None:
-                result["ipv6"] = sockaddr[0]
+                result["ipv6"] = str(sockaddr[0])
     except socket.gaierror:
         logger.warning("Failed to resolve domain: %s", domain)
     return result
@@ -77,33 +70,17 @@ def _get_dns_records(domain: str) -> dict[str, list[str]]:
 
     if "A" not in records:
         try:
-            a_records: list[
-                tuple[
-                    AddressFamily,
-                    SocketKind,
-                    int,
-                    str,
-                    tuple[int, bytes] | tuple[str, int] | tuple[str, int, int, int],
-                ]
-            ] = socket.getaddrinfo(domain, None, socket.AF_INET)
+            a_records: _AddrInfo = socket.getaddrinfo(domain, None, socket.AF_INET)
             if a_records:
-                records["A"] = list({s[4][0] for s in a_records})
+                records["A"] = list({str(s[4][0]) for s in a_records})
         except socket.gaierror:
             pass
 
     if "AAAA" not in records:
         try:
-            aaaa_records: list[
-                tuple[
-                    AddressFamily,
-                    SocketKind,
-                    int,
-                    str,
-                    tuple[int, bytes] | tuple[str, int] | tuple[str, int, int, int],
-                ]
-            ] = socket.getaddrinfo(domain, None, socket.AF_INET6)
+            aaaa_records: _AddrInfo = socket.getaddrinfo(domain, None, socket.AF_INET6)
             if aaaa_records:
-                records["AAAA"] = list({s[4][0] for s in aaaa_records})
+                records["AAAA"] = list({str(s[4][0]) for s in aaaa_records})
         except socket.gaierror:
             pass
 

@@ -36,7 +36,7 @@ def _get_linux_ip() -> str | None:
         return None
 
 
-def _parse_windows_network_config(config_lines: list) -> str | None:
+def _parse_windows_network_config(config_lines: list[str]) -> str | None:
     """
     Parses Windows network configuration output to extract IPv4 address.
 

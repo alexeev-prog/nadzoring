@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 from logging import Logger
-from typing import Any, NoReturn
+from typing import Any, Never
 
 import click
 from tqdm import tqdm
@@ -59,7 +59,7 @@ def check_ssl_command(
     results: list[dict[str, Any]] = []
     total: int = len(domains)
 
-    pbar: tqdm[NoReturn] | None = None if quiet else tqdm(total=total, desc="Checking SSL certificates", unit="domain")
+    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Checking SSL certificates", unit="domain")
 
     for domain in domains:
         try:
@@ -143,7 +143,7 @@ def check_headers_command(
     results: list[dict[str, Any]] = []
     total: int = len(urls)
 
-    pbar: tqdm[NoReturn] | None = None if quiet else tqdm(total=total, desc="Checking security headers", unit="url")
+    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Checking security headers", unit="url")
 
     for url in urls:
         result: dict[str, Any] = check_http_security_headers(
@@ -175,7 +175,7 @@ def check_email_command(
     results: list[dict[str, Any]] = []
     total: int = len(domains)
 
-    pbar: tqdm[NoReturn] | None = None if quiet else tqdm(total=total, desc="Checking email security", unit="domain")
+    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Checking email security", unit="domain")
 
     for domain in domains:
         result: dict[str, Any] = check_email_security(domain)

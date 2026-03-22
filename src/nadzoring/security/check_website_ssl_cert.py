@@ -119,6 +119,9 @@ class CertificateInfo:
         ):
             self._peercert = ssock.getpeercert()
             der_cert: bytes | None = ssock.getpeercert(binary_form=True)
+            if der_cert is None:
+                msg = "Server did not return a certificate."
+                raise RuntimeError(msg)
             self._cert = x509.load_der_x509_certificate(der_cert, default_backend())
 
             self._chain = []
@@ -138,6 +141,7 @@ class CertificateInfo:
         Raises:
             socket.timeout: If connection timeout occurs.
             ConnectionError: If connection cannot be established.
+            RuntimeError: If the server did not return a certificate.
 
         Warning:
             This method disables security checks and should only be used
@@ -153,6 +157,9 @@ class CertificateInfo:
             context.wrap_socket(sock, server_hostname=self.hostname) as ssock,
         ):
             der_cert: bytes | None = ssock.getpeercert(binary_form=True)
+            if der_cert is None:
+                msg = "Server did not return a certificate."
+                raise RuntimeError(msg)
             self._cert = x509.load_der_x509_certificate(der_cert, default_backend())
 
     @property
@@ -542,6 +549,45 @@ def check_protocols_and_ciphers(
     }
 
 
+def _cert_expiry(cert: Certificate) -> datetime:
+    """
+    Return the certificate's expiry datetime as a timezone-aware UTC value.
+
+    Prefers ``not_valid_after_utc`` (cryptography >= 42) and falls back to
+    ``not_valid_after`` with an explicit UTC tag for older versions.
+
+    Args:
+        cert: Parsed X.509 certificate.
+
+    Returns:
+        Timezone-aware :class:`datetime` in UTC.
+
+    """
+    if hasattr(cert, "not_valid_after_utc"):
+        date: datetime = cert.not_valid_after_utc
+        return date
+    dt: datetime = cert.not_valid_after
+    return dt.replace(tzinfo=UTC)
+
+
+def _oid_name(oid: ObjectIdentifier) -> str:
+    """
+    Return a human-readable name for an OID, falling back to dotted string.
+
+    Uses the private ``_name`` attribute that exists in the Rust-backed
+    cryptography implementation. Falls back to :attr:`dotted_string` when
+    the attribute is absent so the function is forward-compatible.
+
+    Args:
+        oid: An :class:`~cryptography.x509.ObjectIdentifier` instance.
+
+    Returns:
+        Human-readable name string or dotted OID string.
+
+    """
+    return getattr(oid, "_name", None) or oid.dotted_string
+
+
 def check_ssl_certificate(
     domain: str,
     days_before: int = 7,
@@ -612,8 +658,8 @@ def check_ssl_certificate(
 
         cert: Certificate = cert_info.cert
 
-        expiry = cert.not_valid_after_utc
-        remaining = (expiry - datetime.now(UTC)).days
+        expiry: datetime = _cert_expiry(cert)
+        remaining: int = (expiry - datetime.now(UTC)).days
         result.update({
             "remaining_days": remaining,
             "expiry_date": expiry.isoformat(),
@@ -643,7 +689,7 @@ def check_ssl_certificate(
         key_info: dict[str, int | str] = get_key_info(public_key)
         result["public_key"] = key_info
 
-        result["signature_algorithm"] = cert.signature_algorithm_oid._name  # noqa: SLF001
+        result["signature_algorithm"] = _oid_name(cert.signature_algorithm_oid)
         result["serial_number"] = str(cert.serial_number)
         result["version"] = cert.version.value
 
