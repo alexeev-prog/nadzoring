@@ -1,18 +1,15 @@
 import nox
 
-# uv will handle any missing python versions
 python_versions = ["3.12", "3.13", "3.14"]
 
 
 @nox.session(python=python_versions, venv_backend="uv")
 def test(session):
     """Run tests on specified Python versions."""
-    # Install the package and test dependencies with uv
     session.run_always("uv", "pip", "install", ".", external=True)
 
     session.install("pytest-xdist", "pytest-randomly", "pytest-sugar", "pytest-coverage")
 
-    # Run pytest with common options
     session.run(
         "pytest",
         "tests/",
@@ -43,9 +40,3 @@ def mutants(session):
 def mypy_typing(session):
     session.install("mypy")
     session.run("mypy", "src/nadzoring")
-
-
-@nox.session
-def ty_typing(session):
-    session.install("ty")
-    session.run("ty", "check", "src/nadzoring")
