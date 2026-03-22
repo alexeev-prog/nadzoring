@@ -50,6 +50,9 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+.coverage
+coverage.xml
+.coveralls.yml
 
 # Translations
 *.mo
@@ -209,3 +212,4 @@ __marimo__/
 cleanup_pycache.sh
 genapidoc.sh
 mutants/
+

@@ -1,8 +1,11 @@
-# Nadzoring
-
 <a id="readme-top"></a>
 
 <div align="center">
+  <p align="center">
+    <img src="https://raw.githubusercontent.com/alexeev-prog/nadzoring/refs/heads/main/docs/logo.png" width=300>
+    <h1>Nadzoring</h1>
+  </p>
+  <hr>
   <p align="center">
     An open source tool and python library for detecting website blocks, downdetecting and network analysis
     <br />
@@ -28,6 +31,8 @@
 <p align="center">
     <img src="https://img.shields.io/github/languages/top/alexeev-prog/nadzoring?style=for-the-badge">
     <img src="https://img.shields.io/github/languages/count/alexeev-prog/nadzoring?style=for-the-badge">
+    <img src="https://img.shields.io/badge/Made%20with-Python%203.8-1f425f.svg?logo=python&style=for-the-badge">
+    <img src="https://img.shields.io/badge/Maintained-yes-green.svg?style=for-the-badge">
     <img alt="GitHub License" src="https://img.shields.io/github/license/alexeev-prog/nadzoring?style=for-the-badge&logo=gnu">
     <img alt="GitHub forks" src="https://img.shields.io/github/forks/alexeev-prog/nadzoring?style=for-the-badge&logo=github">
     <img src="https://img.shields.io/github/stars/alexeev-prog/nadzoring?style=for-the-badge">
@@ -52,18 +57,15 @@ Nadzoring is **AI-friendly** fully typed, has a zero-warnings linter policy, and
 
 This utility has high-quality typing and a library API for use in your projects.
 
-<a href="https://deepwiki.com/alexeev-prog/nadzoring"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
-
 <p align="center">
-    <img src="https://raw.githubusercontent.com/alexeev-prog/nadzoring/refs/heads/main/docs/logo.png" width=300>
+    <a href="https://deepwiki.com/alexeev-prog/nadzoring"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
+    <img src="https://scrutinizer-ci.com/g/alexeev-prog/nadzoring/badges/quality-score.png?b=main">
+    <a href="https://sloprank.io/repo/alexeev-prog/nadzoring"><img src="https://sloprank.io/badge/alexeev-prog/nadzoring.svg" alt="sloprank"></a>
+    <a href="https://coveralls.io/github/alexeev-prog/nadzoring?branch=main"><img src="https://coveralls.io/repos/github/alexeev-prog/nadzoring/badge.svg?branch=main"></a>
 </p>
-
-<a href="https://sloprank.io/repo/alexeev-prog/nadzoring"><img src="https://sloprank.io/badge/alexeev-prog/nadzoring.svg" alt="sloprank"></a>
 
 ## Table of Contents
 
-- [Nadzoring](#nadzoring)
-  - [Table of Contents](#table-of-contents)
 - [Getting Started](#getting-started)
     - [Prerequisites](#prerequisites)
     - [Installation](#installation)

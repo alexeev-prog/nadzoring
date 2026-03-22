@@ -5,11 +5,14 @@ python_versions = ["3.12", "3.13", "3.14"]
 
 @nox.session(python=python_versions, venv_backend="uv")
 def test(session):
-    """Run tests on specified Python versions."""
+    """Run tests on specified Python versions with coverage."""
     session.run_always("uv", "sync", "--all-groups", external=True)
     session.run("uv", "run",
         "pytest",
         "tests/",
+        "--cov=src/nadzoring/",
+        "--cov-report=xml",
+        "--cov-report=term-missing",
         "--cov-fail-under=0",
         "-v",
         "-s",
