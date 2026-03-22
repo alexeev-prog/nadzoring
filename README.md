@@ -7,7 +7,6 @@
     <p>An open source tool and python library for detecting website blocks, downdetecting and network analysis</p>
     <a href="https://alexeev-prog.github.io/nadzoring/v0.1.9"><strong>Explore the docs »</strong></a>
   </p>
-  <hr>
   <p align="center">
     <a href="#-getting-started">Getting Started</a>
     ·
@@ -24,7 +23,7 @@
     <a href="https://github.com/alexeev-prog/nadzoring/blob/main/LICENSE">License</a>
   </p>
 </div>
-<br>
+<hr>
 <p align="center">
     <img src="https://img.shields.io/github/languages/top/alexeev-prog/nadzoring?style=for-the-badge">
     <img src="https://img.shields.io/github/languages/count/alexeev-prog/nadzoring?style=for-the-badge">
