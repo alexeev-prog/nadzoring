@@ -210,19 +210,41 @@ def _run_linux_traceroute(
 
     if not stdout and _is_permission_error(stderr):
         logger.error(
-            "traceroute requires elevated privileges for %s. Re-run with --sudo or execute as root.",
+            "Traceroute failed for %s due to insufficient permissions.\n\n"
+            "Possible fixes:\n"
+            "  • Re-run with sudo: --sudo flag or 'sudo traceroute %s'\n"
+            "  • Run as root user\n"
+            "  • Grant capability (Linux): sudo setcap cap_net_raw+ep $(which traceroute)",
             target,
-        )
+            target,
+    )
         return []
 
     if stdout:
         return _parse_linux_traceroute(stdout)
 
     if "not found" in stderr.lower() or "no such file" in stderr.lower():
-        logger.warning("traceroute not found, trying tracepath")
+        logger.warning(
+            "Traceroute command not found.\n\n"
+            "Possible fixes:\n"
+            "  • Install traceroute:\n"
+            "    - Ubuntu/Debian: sudo apt install traceroute\n"
+            "    - macOS: brew install traceroute\n"
+            "    - RHEL/Fedora: sudo dnf install traceroute\n"
+            "  • Falling back to 'tracepath'"
+        )
         return _run_tracepath(target, max_hops=max_hops, per_hop_timeout=per_hop_timeout)
 
-    logger.warning("traceroute produced no output for %s; stderr: %s", target, stderr.strip())
+        logger.warning(
+            "Traceroute produced no output for %s.\n\n"
+            "Possible causes:\n"
+            "  • Network unreachable or blocked\n"
+            "  • DNS resolution issues\n"
+            "  • Firewall restrictions\n\n"
+            "stderr: %s",
+            target,
+            stderr.strip(),
+        )
     return []
 
 
@@ -253,7 +275,16 @@ def _run_tracepath(
     if stdout:
         return _parse_linux_traceroute(stdout)
 
-    logger.error("tracepath also failed for %s: %s", target, stderr.strip())
+    logger.error(
+        "Tracepath also failed for %s.\n\n"
+        "Possible fixes:\n"
+        "  • Ensure 'tracepath' is installed (iputils package)\n"
+        "  • Check network connectivity\n"
+        "  • Try running with elevated privileges\n\n"
+        "stderr: %s",
+        target,
+        stderr.strip(),
+    )
     return []
 
 
@@ -291,7 +322,14 @@ def _run_windows_tracert(
                 proc.kill()
                 stdout_b, _ = proc.communicate()
     except Exception:
-        logger.exception("Failed to run tracert for %s", target)
+        logger.exception(
+            "Failed to run tracert for %s.\n\n"
+            "Possible fixes:\n"
+            "  • Ensure 'tracert' is available (Windows default)\n"
+            "  • Run command prompt as Administrator\n"
+            "  • Check network connectivity",
+            target,
+        )
         return []
 
     raw: str = stdout_b.decode("cp866", errors="replace") if stdout_b else ""

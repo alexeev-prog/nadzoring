@@ -63,7 +63,16 @@ def _run_whois_command(target: str) -> str | None:
             timeout=15,
         ).decode(encoding, errors="replace")
     except (CalledProcessError, FileNotFoundError, TimeoutError):
-        logger.exception("Failed to run whois for %s", target)
+        logger.exception(
+            "WHOIS lookup failed for %s.\n\n"
+            "Possible fixes:\n"
+            "  • Ensure 'whois' is installed:\n"
+            "    - Ubuntu/Debian: sudo apt install whois\n"
+            "    - macOS: brew install whois\n"
+            "    - RHEL/Fedora: sudo dnf install whois\n"
+            "  • Check internet connectivity",
+            target,
+        )
         return None
 
 
@@ -126,8 +135,16 @@ def whois_lookup(target: str) -> dict[str, str | None]:
         return {
             "target": target,
             "type": "ip" if _is_ip(target) else "domain",
-            "error": "WHOIS lookup failed. Ensure 'whois' is installed.",
-        }
+            "error": (
+                "WHOIS lookup failed.\n\n"
+                "Possible fixes:\n"
+                "  • Install 'whois':\n"
+                "    - Ubuntu/Debian: sudo apt install whois\n"
+                "    - macOS: brew install whois\n"
+                "    - RHEL/Fedora: sudo dnf install whois\n"
+                "  • Check internet connection"
+            ),
+                    }
 
     parsed: dict[str, str | None] = _parse_whois_output(raw)
     parsed["target"] = target

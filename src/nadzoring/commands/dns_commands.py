@@ -6,6 +6,9 @@ from typing import Any, Never
 import click
 from click import Choice
 from tqdm import tqdm
+import whois   # pip install python-whois
+from tabulate import tabulate  # optional, for nicer output
+
 
 from nadzoring.dns_lookup import (
     RECORD_TYPES,
@@ -82,7 +85,7 @@ def _make_pbar(
     unit: str,
     *,
     quiet: bool,
-) -> tqdm[Never] | None:
+) -> tqdm | None:
     """
     Create a tqdm progress bar or return ``None`` when in quiet mode.
 
@@ -104,6 +107,38 @@ def _make_pbar(
 @click.group(name="dns")
 def dns_group() -> None:
     """DNS lookup and analysis commands."""
+
+
+@dns_group.command(name="whois")
+@click.argument("domain", required=True)
+@common_cli_options(include_quiet=True)
+def whois_command(domain: str, *, quiet: bool) -> None:
+    """
+    Perform a WHOIS lookup for a domain.
+    """
+    try:
+        info = whois.whois(domain)  # updated call
+
+        # Clean up the info dict
+        clean_info = {}
+        for k, v in info.items():
+            if isinstance(v, list):
+                clean_info[k] = "\n".join(str(x) for x in v)
+            elif hasattr(v, "isoformat"):  # datetime objects
+                if isinstance(v, list):
+                    clean_info[k] = "\n".join(x.isoformat() for x in v)
+                else:
+                    clean_info[k] = v.isoformat()
+            else:
+                clean_info[k] = str(v) if v is not None else ""
+
+        if not quiet:
+            table = tabulate(clean_info.items(), headers=["Field", "Value"], tablefmt="grid")
+            click.echo(table)
+        else:
+            click.echo(clean_info)
+    except Exception as e:
+        click.echo(f"Error fetching WHOIS for {domain}: {e}", err=True)
 
 
 @dns_group.command(name="monitor")

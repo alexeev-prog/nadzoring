@@ -19,7 +19,16 @@ cli.add_command(security_group)
 
 def main() -> None:
     """Entrypoint to CLI Application."""
-    cli()
+    try:
+        cli()
+    except Exception as e:
+        raise click.ClickException(
+            f"Unexpected error: {str(e)}\n\n"
+            "Possible fixes:\n"
+            "  • Run the command with --help\n"
+            "  • Check if required tools are installed\n"
+            "  • Ensure proper permissions (try sudo if needed)"
+        )
 
 
 if __name__ == "__main__":
