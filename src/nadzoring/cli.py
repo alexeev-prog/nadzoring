@@ -23,12 +23,12 @@ def main() -> None:
         cli()
     except Exception as e:
         raise click.ClickException(
-            f"Unexpected error: {str(e)}\n\n"
+            f"Unexpected error: {e!s}\n\n"
             "Possible fixes:\n"
             "  • Run the command with --help\n"
             "  • Check if required tools are installed\n"
             "  • Ensure proper permissions (try sudo if needed)"
-        )
+        ) from e
 
 
 if __name__ == "__main__":

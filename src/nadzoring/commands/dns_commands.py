@@ -4,11 +4,10 @@ from logging import Logger
 from typing import Any, Never
 
 import click
+import whois  # pip install python-whois
 from click import Choice
-from tqdm import tqdm
-import whois   # pip install python-whois
 from tabulate import tabulate  # optional, for nicer output
-
+from tqdm import tqdm
 
 from nadzoring.dns_lookup import (
     RECORD_TYPES,
@@ -113,9 +112,7 @@ def dns_group() -> None:
 @click.argument("domain", required=True)
 @common_cli_options(include_quiet=True)
 def whois_command(domain: str, *, quiet: bool) -> None:
-    """
-    Perform a WHOIS lookup for a domain.
-    """
+    """Perform a WHOIS lookup for a domain."""
     try:
         info = whois.whois(domain)  # updated call
 
@@ -133,7 +130,9 @@ def whois_command(domain: str, *, quiet: bool) -> None:
                 clean_info[k] = str(v) if v is not None else ""
 
         if not quiet:
-            table = tabulate(clean_info.items(), headers=["Field", "Value"], tablefmt="grid")
+            table = tabulate(
+                clean_info.items(), headers=["Field", "Value"], tablefmt="grid"
+            )
             click.echo(table)
         else:
             click.echo(clean_info)
@@ -379,15 +378,19 @@ def _aggregate_log(
     rows: list[dict[str, Any]] = []
     for srv, rt_list in rts.items():
         ok_list: list[float] = successes.get(srv, [])
-        rows.append({
-            "server": srv,
-            "samples": len(rt_list),
-            "avg_rt_ms": f"{sum(rt_list) / len(rt_list):.2f}" if rt_list else "N/A",
-            "min_rt_ms": f"{min(rt_list):.2f}" if rt_list else "N/A",
-            "max_rt_ms": f"{max(rt_list):.2f}" if rt_list else "N/A",
-            "avg_success_pct": (f"{sum(ok_list) / len(ok_list) * 100:.1f}" if ok_list else "N/A"),
-            "total_alerts": alert_counts.get(srv, 0),
-        })
+        rows.append(
+            {
+                "server": srv,
+                "samples": len(rt_list),
+                "avg_rt_ms": f"{sum(rt_list) / len(rt_list):.2f}" if rt_list else "N/A",
+                "min_rt_ms": f"{min(rt_list):.2f}" if rt_list else "N/A",
+                "max_rt_ms": f"{max(rt_list):.2f}" if rt_list else "N/A",
+                "avg_success_pct": (
+                    f"{sum(ok_list) / len(ok_list) * 100:.1f}" if ok_list else "N/A"
+                ),
+                "total_alerts": alert_counts.get(srv, 0),
+            }
+        )
     return rows
 
 
@@ -426,7 +429,9 @@ def resolve_command(
     types_to_query: list[RecordType] = _expand_record_types(record_types)
     total: int = len(domains) * len(types_to_query)
 
-    pbar: tqdm[Never] | None = _make_pbar(total, "Resolving DNS records", "query", quiet=quiet)
+    pbar: tqdm[Never] | None = _make_pbar(
+        total, "Resolving DNS records", "query", quiet=quiet
+    )
 
     results: list[dict[str, Any]] = []
 
@@ -482,17 +487,21 @@ def reverse_command(
         ``response_time_ms`` for each queried address.
 
     """
-    pbar: tqdm[Never] | None = _make_pbar(len(ip_addresses), "Performing reverse lookups", "lookup", quiet=quiet)
+    pbar: tqdm[Never] | None = _make_pbar(
+        len(ip_addresses), "Performing reverse lookups", "lookup", quiet=quiet
+    )
 
     results: list[dict[str, Any]] = []
 
     for ip in ip_addresses:
         result: dict[str, Any] = reverse_dns(ip, nameserver)
-        results.append({
-            "ip_address": result["ip_address"],
-            "hostname": result["hostname"] or "Not found",
-            "response_time_ms": result["response_time"] or "N/A",
-        })
+        results.append(
+            {
+                "ip_address": result["ip_address"],
+                "hostname": result["hostname"] or "Not found",
+                "response_time_ms": result["response_time"] or "N/A",
+            }
+        )
 
         if pbar:
             pbar.set_description(f"Looking up {ip}")
@@ -545,7 +554,9 @@ def check_command(
     """
     types_to_check: list[RecordType] = _expand_record_types(record_types)
 
-    pbar: tqdm[Never] | None = _make_pbar(len(domains), "Performing DNS checks", "domain", quiet=quiet)
+    pbar: tqdm[Never] | None = _make_pbar(
+        len(domains), "Performing DNS checks", "domain", quiet=quiet
+    )
 
     results: list[dict[str, Any]] = []
 
@@ -563,7 +574,9 @@ def check_command(
         for rtype in types_to_check:
             if rtype in result["records"] and result["records"][rtype]:
                 if rtype == "MX":
-                    row[rtype] = "\n".join(f"Priority {r}" for r in result["records"][rtype])
+                    row[rtype] = "\n".join(
+                        f"Priority {r}" for r in result["records"][rtype]
+                    )
                 else:
                     row[rtype] = "\n".join(result["records"][rtype])
             elif rtype in result["errors"]:
@@ -663,7 +676,9 @@ def compare_command(
     types_to_query: list[str] = list(record_types) if record_types else ["A"]
     total: int = len(servers) * len(types_to_query)
 
-    pbar: tqdm[Never] | None = _make_pbar(total, "Comparing DNS servers", "query", quiet=quiet)
+    pbar: tqdm[Never] | None = _make_pbar(
+        total, "Comparing DNS servers", "query", quiet=quiet
+    )
 
     def progress_callback() -> None:
         if pbar:
@@ -789,7 +804,9 @@ def benchmark_command(
     servers_list: list[str] | None = list(servers) if servers else None
     total_servers: int = len(servers_list) if servers_list else 10
 
-    pbar: tqdm[Never] | None = _make_pbar(total_servers, "Benchmarking servers", "server", quiet=quiet)
+    pbar: tqdm[Never] | None = _make_pbar(
+        total_servers, "Benchmarking servers", "server", quiet=quiet
+    )
 
     def progress_callback(server: str, _index: int) -> None:
         if pbar:

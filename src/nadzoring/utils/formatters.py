@@ -148,7 +148,9 @@ def print_results_table(
         return
 
     if not no_color:
-        data = [{key: colorize_value(value) for key, value in row.items()} for row in data]
+        data = [
+            {key: colorize_value(value) for key, value in row.items()} for row in data
+        ]
 
     term_width: int = get_terminal_width()
     headers: list[str] = list(data[0].keys())
@@ -221,7 +223,9 @@ def _calculate_column_widths(
         return [min_widths[h] for h in headers]
 
     extra: float = (available - total_min) / len(headers)
-    col_widths: dict[str, int] = {h: min(int(min_widths[h] + extra), max_widths[h]) for h in headers}
+    col_widths: dict[str, int] = {
+        h: min(int(min_widths[h] + extra), max_widths[h]) for h in headers
+    }
 
     overflow: int = sum(col_widths.values()) - available
     if overflow > 0:
@@ -289,7 +293,9 @@ def _build_html_page(title: str, html_table: str) -> str:
 </html>"""
 
 
-def print_html_table(data: Sequence[dict[str, Any]], *, full_page: bool = False) -> None:
+def print_html_table(
+    data: Sequence[dict[str, Any]], *, full_page: bool = False
+) -> None:
     """
     Print results as an HTML table or complete HTML page.
 
@@ -382,7 +388,9 @@ def save_results(
         click.secho(f"Results saved to {file_path}", fg="green")
 
     except PermissionError:
-        click.secho(f"Permission denied: cannot write to {filename}", fg="red", err=True)
+        click.secho(
+            f"Permission denied: cannot write to {filename}", fg="red", err=True
+        )
     except OSError as exc:
         click.secho(f"OS error while saving results: {exc}", fg="red", err=True)
     except Exception as exc:
@@ -433,7 +441,9 @@ def format_dns_record(
         for rtype, data in result["records"].items():
             if data.get("records"):
                 if show_ttl and data.get("ttl"):
-                    values: list[str] = [f"{r} (TTL: {data['ttl']}s)" for r in data["records"]]
+                    values: list[str] = [
+                        f"{r} (TTL: {data['ttl']}s)" for r in data["records"]
+                    ]
                 else:
                     values = data["records"]
                 row[rtype] = "\n".join(values)
@@ -447,7 +457,9 @@ def format_dns_record(
     return formatted
 
 
-def format_scan_results(results: list[ScanResult], *, show_closed: bool) -> list[dict[str, Any]]:
+def format_scan_results(
+    results: list[ScanResult], *, show_closed: bool
+) -> list[dict[str, Any]]:
     """
     Convert :class:`ScanResult` objects into CLI-displayable dicts.
 
@@ -466,7 +478,9 @@ def format_scan_results(results: list[ScanResult], *, show_closed: bool) -> list
     return _format_scan_results(results, show_closed=show_closed)
 
 
-def _format_scan_results(results: list[ScanResult], *, show_closed: bool) -> list[dict[str, Any]]:
+def _format_scan_results(
+    results: list[ScanResult], *, show_closed: bool
+) -> list[dict[str, Any]]:
     """
     Convert :class:`ScanResult` objects into CLI-displayable dicts.
 
@@ -484,28 +498,36 @@ def _format_scan_results(results: list[ScanResult], *, show_closed: bool) -> lis
 
     for result in results:
         if not result.open_ports and not show_closed:
-            formatted.append({
-                "target": result.target,
-                "ip": result.target_ip,
-                "port": "—",
-                "state": "NO OPEN PORTS",
-                "service": "—",
-                "banner": "—",
-                "response_time_ms": "—",
-            })
+            formatted.append(
+                {
+                    "target": result.target,
+                    "ip": result.target_ip,
+                    "port": "—",
+                    "state": "NO OPEN PORTS",
+                    "service": "—",
+                    "banner": "—",
+                    "response_time_ms": "—",
+                }
+            )
             continue
 
         for port, port_result in sorted(result.results.items()):
             if port_result.state == "open" or show_closed:
-                formatted.append({
-                    "target": result.target,
-                    "ip": result.target_ip,
-                    "port": str(port),
-                    "state": port_result.state.upper(),
-                    "service": port_result.service,
-                    "banner": port_result.banner or "",
-                    "response_time_ms": (str(port_result.response_time) if port_result.response_time else ""),
-                })
+                formatted.append(
+                    {
+                        "target": result.target,
+                        "ip": result.target_ip,
+                        "port": str(port),
+                        "state": port_result.state.upper(),
+                        "service": port_result.service,
+                        "banner": port_result.banner or "",
+                        "response_time_ms": (
+                            str(port_result.response_time)
+                            if port_result.response_time
+                            else ""
+                        ),
+                    }
+                )
 
     return formatted
 
@@ -542,29 +564,39 @@ def format_dns_trace(trace_result: dict[str, Any]) -> list[dict[str, Any]]:
             time_str = str(response_time_value)
 
         records = hop.get("records", [])
-        records_str: str = "\n".join(str(r) for r in records) if records else hop.get("error", "No records")
+        records_str: str = (
+            "\n".join(str(r) for r in records)
+            if records
+            else hop.get("error", "No records")
+        )
 
-        formatted.append({
-            "hop": i,
-            "nameserver": hop.get("nameserver", "N/A"),
-            "response_time": time_str,
-            "records": records_str,
-            "next": hop.get("next", "N/A"),
-        })
+        formatted.append(
+            {
+                "hop": i,
+                "nameserver": hop.get("nameserver", "N/A"),
+                "response_time": time_str,
+                "records": records_str,
+                "next": hop.get("next", "N/A"),
+            }
+        )
 
     final: dict[str, Any] | None = trace_result.get("final_answer")
     if final and final not in hops:
         response_time_final = final.get("response_time")
-        time_str_final: str = f"{response_time_final:.2f}ms" if response_time_final else "N/A"
+        time_str_final: str = (
+            f"{response_time_final:.2f}ms" if response_time_final else "N/A"
+        )
         final_records = final.get("records", ["Answer received"])
 
-        formatted.append({
-            "hop": len(hops),
-            "nameserver": final.get("nameserver", "N/A"),
-            "response_time": time_str_final,
-            "records": "\n".join(str(r) for r in final_records),
-            "next": "Complete",
-        })
+        formatted.append(
+            {
+                "hop": len(hops),
+                "nameserver": final.get("nameserver", "N/A"),
+                "response_time": time_str_final,
+                "records": "\n".join(str(r) for r in final_records),
+                "next": "Complete",
+            }
+        )
 
     return formatted
 
@@ -639,13 +671,15 @@ def format_dns_health(health_result: dict[str, Any]) -> list[dict[str, Any]]:
         status: Literal["BAD", "GOOD", "WARN"] = (
             "GOOD" if record_score >= 80 else "WARN" if record_score >= 50 else "BAD"
         )
-        rows.append({
-            "domain": f"  {record_type}:",
-            "overall_score": f"{record_score}/100",
-            "status": status,
-            "issues": "",
-            "warnings": "",
-        })
+        rows.append(
+            {
+                "domain": f"  {record_type}:",
+                "overall_score": f"{record_score}/100",
+                "status": status,
+                "issues": "",
+                "warnings": "",
+            }
+        )
 
     return rows
 
@@ -691,13 +725,17 @@ def format_dns_poisoning(  # noqa: C901
     cdn_owner = poisoning_result.get("cdn_owner", "Unknown")
     cdn_percentage = poisoning_result.get("cdn_percentage", 0)
 
-    status_text: Literal["CDN DETECTED", "POISONING CHECK"] = "CDN DETECTED" if cdn_detected else "POISONING CHECK"
-    formatted.append({
-        "section": "DNS ANALYSIS",
-        "detail": f"{domain} ({record_type})",
-        "value": f"{level} (confidence: {confidence}%)",
-        "note": status_text,
-    })
+    status_text: Literal["CDN DETECTED", "POISONING CHECK"] = (
+        "CDN DETECTED" if cdn_detected else "POISONING CHECK"
+    )
+    formatted.append(
+        {
+            "section": "DNS ANALYSIS",
+            "detail": f"{domain} ({record_type})",
+            "value": f"{level} (confidence: {confidence}%)",
+            "note": status_text,
+        }
+    )
 
     control = poisoning_result.get("control_server", "")
     control_name = poisoning_result.get("control_name", "Unknown")
@@ -705,29 +743,33 @@ def format_dns_poisoning(  # noqa: C901
     control_records = poisoning_result.get("control_result", {}).get("records", [])
     control_owner = poisoning_result.get("control_owner", "Unknown")
 
-    formatted.append({
-        "section": "CONTROL SERVER",
-        "detail": f"{control} ({control_name}, {control_country})",
-        "value": f"{len(control_records)} IPs",
-        "note": f"Owner: {control_owner}",
-    })
+    formatted.append(
+        {
+            "section": "CONTROL SERVER",
+            "detail": f"{control} ({control_name}, {control_country})",
+            "value": f"{len(control_records)} IPs",
+            "note": f"Owner: {control_owner}",
+        }
+    )
 
     control_analysis = poisoning_result.get("control_analysis", {})
     if control_analysis:
         owners: set[str] = set(control_analysis.get("owners", []))
         owner_str: str = ", ".join(owners) if owners else "Unknown"
-        formatted.append({
-            "section": "CONTROL IP ANALYSIS",
-            "detail": (
-                f"Unique: {control_analysis.get('unique', 0)} | "
-                f"IPv4: {control_analysis.get('ipv4', 0)} | "
-                f"IPv6: {control_analysis.get('ipv6', 0)}"
-            ),
-            "value": f"Owner: {owner_str}",
-            "note": (
-                f"Private: {control_analysis.get('private', 0)} | Reserved: {control_analysis.get('reserved', 0)}"
-            ),
-        })
+        formatted.append(
+            {
+                "section": "CONTROL IP ANALYSIS",
+                "detail": (
+                    f"Unique: {control_analysis.get('unique', 0)} | "
+                    f"IPv4: {control_analysis.get('ipv4', 0)} | "
+                    f"IPv6: {control_analysis.get('ipv6', 0)}"
+                ),
+                "value": f"Owner: {owner_str}",
+                "note": (
+                    f"Private: {control_analysis.get('private', 0)} | Reserved: {control_analysis.get('reserved', 0)}"
+                ),
+            }
+        )
 
     total = poisoning_result.get("test_servers_count", 0)
     mismatches = poisoning_result.get("mismatches", 0)
@@ -735,67 +777,82 @@ def format_dns_poisoning(  # noqa: C901
     severity = poisoning_result.get("severity", {})
     unique_ips = poisoning_result.get("unique_ips_seen", 0)
 
-    formatted.append({
-        "section": "SUMMARY",
-        "detail": f"Servers tested: {total}",
-        "value": f"Mismatches: {mismatches} | CDN variations: {cdn_variations}",
-        "note": (
-            f"High: {severity.get('high', 0)} "
-            f"Med: {severity.get('medium', 0)} "
-            f"Low: {severity.get('low', 0)} "
-            f"Info: {severity.get('info', 0)}"
-        ),
-    })
+    formatted.append(
+        {
+            "section": "SUMMARY",
+            "detail": f"Servers tested: {total}",
+            "value": f"Mismatches: {mismatches} | CDN variations: {cdn_variations}",
+            "note": (
+                f"High: {severity.get('high', 0)} "
+                f"Med: {severity.get('medium', 0)} "
+                f"Low: {severity.get('low', 0)} "
+                f"Info: {severity.get('info', 0)}"
+            ),
+        }
+    )
 
     if cdn_detected:
-        formatted.append({
-            "section": "CDN DETECTION",
-            "detail": f"CDN Provider: {cdn_owner}",
-            "value": f"{cdn_percentage}% of IPs match",
-            "note": "Different IPs from same provider - normal CDN behavior",
-        })
+        formatted.append(
+            {
+                "section": "CDN DETECTION",
+                "detail": f"CDN Provider: {cdn_owner}",
+                "value": f"{cdn_percentage}% of IPs match",
+                "note": "Different IPs from same provider - normal CDN behavior",
+            }
+        )
 
     ip_diversity = poisoning_result.get("ip_diversity", 0)
-    formatted.append({
-        "section": "IP DIVERSITY",
-        "detail": f"Unique IPs seen: {unique_ips}",
-        "value": f"IPs outside control: {ip_diversity}",
-        "note": f"Geo diversity: {poisoning_result.get('geo_diversity', 0)} countries",
-    })
+    formatted.append(
+        {
+            "section": "IP DIVERSITY",
+            "detail": f"Unique IPs seen: {unique_ips}",
+            "value": f"IPs outside control: {ip_diversity}",
+            "note": f"Geo diversity: {poisoning_result.get('geo_diversity', 0)} countries",
+        }
+    )
 
     consensus = poisoning_result.get("consensus_top", [])
     if consensus:
         top = consensus[0]
-        formatted.append({
-            "section": "CONSENSUS",
-            "detail": f"Most common IP: {top['ip']}",
-            "value": f"{top['percentage']}% of servers",
-            "note": (
-                f"Owner: {top.get('owner', 'Unknown')} | Consensus rate: {poisoning_result.get('consensus_rate', 0)}%"
-            ),
-        })
+        formatted.append(
+            {
+                "section": "CONSENSUS",
+                "detail": f"Most common IP: {top['ip']}",
+                "value": f"{top['percentage']}% of servers",
+                "note": (
+                    f"Owner: {top.get('owner', 'Unknown')} |"
+                    f"Consensus rate: {poisoning_result.get('consensus_rate', 0)}%"
+                ),
+            }
+        )
 
     if poisoning_result.get("cdn_likely"):
-        formatted.append({
-            "section": "ANALYSIS",
-            "detail": "CDN NETWORK DETECTED",
-            "value": "Normal behavior",
-            "note": "Different IPs per region expected - not poisoning",
-        })
+        formatted.append(
+            {
+                "section": "ANALYSIS",
+                "detail": "CDN NETWORK DETECTED",
+                "value": "Normal behavior",
+                "note": "Different IPs per region expected - not poisoning",
+            }
+        )
     elif poisoning_result.get("anycast_likely"):
-        formatted.append({
-            "section": "ANALYSIS",
-            "detail": "Anycast/GeoDNS detected",
-            "value": "Normal CDN behavior",
-            "note": "Different IPs per region expected",
-        })
+        formatted.append(
+            {
+                "section": "ANALYSIS",
+                "detail": "Anycast/GeoDNS detected",
+                "value": "Normal CDN behavior",
+                "note": "Different IPs per region expected",
+            }
+        )
     elif poisoning_result.get("poisoning_likely"):
-        formatted.append({
-            "section": "ANALYSIS",
-            "detail": "SUSPICIOUS PATTERN",
-            "value": "Possible DNS poisoning",
-            "note": "All servers return same wrong IP",
-        })
+        formatted.append(
+            {
+                "section": "ANALYSIS",
+                "detail": "SUSPICIOUS PATTERN",
+                "value": "Possible DNS poisoning",
+                "note": "All servers return same wrong IP",
+            }
+        )
 
     inconsistencies = poisoning_result.get("inconsistencies", [])
     if inconsistencies:
@@ -809,7 +866,9 @@ def format_dns_poisoning(  # noqa: C901
             inc_severity = inc["severity"].upper()
 
             if itype == "Cdn Variation":
-                note: str = f"CDN node variation - same provider: {inc.get('owner', 'Unknown')}"
+                note: str = (
+                    f"CDN node variation - same provider: {inc.get('owner', 'Unknown')}"
+                )
             elif itype == "Record Mismatch":
                 note = f"Control owner: {inc.get('control_owner', 'Unknown')} | Test owner: {inc.get('test_owner', 'Unknown')}"  # noqa: E501
             elif itype == "Error Mismatch":
@@ -817,12 +876,14 @@ def format_dns_poisoning(  # noqa: C901
             else:
                 note = f"TTL diff: {inc['diff']}s"
 
-            formatted.append({
-                "section": f"  -> {server} ({sname}, {country})",
-                "detail": f"[{inc_severity}] {itype}",
-                "value": "",
-                "note": note[:60] + "..." if len(note) > 60 else note,
-            })
+            formatted.append(
+                {
+                    "section": f"  -> {server} ({sname}, {country})",
+                    "detail": f"[{inc_severity}] {itype}",
+                    "value": "",
+                    "note": note[:60] + "..." if len(note) > 60 else note,
+                }
+            )
 
     if poisoning_result.get("cdn_detected"):
         verdict = "CLEAN (CDN DETECTED)"
@@ -834,11 +895,13 @@ def format_dns_poisoning(  # noqa: C901
         verdict = "POISONED"
         explanation = f"{mismatches}/{total} servers show inconsistencies"
 
-    formatted.append({
-        "section": "VERDICT",
-        "detail": verdict,
-        "value": f"Level: {poisoning_result.get('poisoning_level', 'NONE')}",
-        "note": explanation,
-    })
+    formatted.append(
+        {
+            "section": "VERDICT",
+            "detail": verdict,
+            "value": f"Level: {poisoning_result.get('poisoning_level', 'NONE')}",
+            "note": explanation,
+        }
+    )
 
     return formatted
