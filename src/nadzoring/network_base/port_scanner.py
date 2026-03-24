@@ -10,6 +10,7 @@ from logging import Logger
 from typing import Literal
 
 from nadzoring.logger import get_logger
+from nadzoring.network_base.base import DEFAULT_TIMEOUT, HTTP_PORTS
 from nadzoring.network_base.service_on_port import get_service_on_port
 
 logger: Logger = get_logger(__name__)
@@ -138,11 +139,11 @@ def get_ports_from_mode(config: ScanConfig) -> list[int]:
     return []
 
 
-def _grab_banner(sock: socket.socket, target_ip: str, port: int) -> str | None:
+def _grab_banner(sock: socket.socket, target_ip: str, port: int, timeout: float = DEFAULT_TIMEOUT) -> str | None:
     """Attempt to grab banner from open port."""
     try:
-        sock.settimeout(1.0)
-        if port in {80, 443, 8080, 8443}:
+        sock.settimeout(timeout)
+        if port in HTTP_PORTS:
             sock.send(b"HEAD / HTTP/1.0\r\n\r\n")
         elif port == 21:
             sock.send(b"HELP\r\n")
@@ -160,7 +161,9 @@ def _grab_banner(sock: socket.socket, target_ip: str, port: int) -> str | None:
         return None
 
 
-def _scan_tcp_port(target_ip: str, port: int, timeout: float, *, grab_banner: bool) -> tuple[int, PortResult]:
+def _scan_tcp_port(
+    target_ip: str, port: int, timeout: float = DEFAULT_TIMEOUT, *, grab_banner: bool
+) -> tuple[int, PortResult]:
     """Scan a single TCP port on a target."""
     result = PortResult(port=port, state="filtered", service="unknown")
     sock = None
@@ -200,7 +203,7 @@ def _scan_tcp_port(target_ip: str, port: int, timeout: float, *, grab_banner: bo
     return port, result
 
 
-def _scan_udp_port(target_ip: str, port: int, timeout: float) -> tuple[int, PortResult]:
+def _scan_udp_port(target_ip: str, port: int, timeout: float = DEFAULT_TIMEOUT) -> tuple[int, PortResult]:
     """Scan a single UDP port on a target."""
     result = PortResult(port=port, state="filtered", service="unknown")
     sock = None
@@ -233,13 +236,7 @@ def _scan_udp_port(target_ip: str, port: int, timeout: float) -> tuple[int, Port
     return port, result
 
 
-def _scan_target_ports(
-    target_ip: str,
-    ports: list[int],
-    config: ScanConfig,
-    target: str,
-    total_targets: int,
-) -> ScanResult:
+def _scan_target_ports(target_ip: str, ports: list[int], config: ScanConfig, target: str) -> ScanResult:
     """Perform port scan on a single target."""
     total_ports: int = len(ports)
     batch_size: int = config.max_workers
@@ -338,7 +335,7 @@ def scan_ports(config: ScanConfig) -> list[ScanResult]:
             logger.warning("Skipping target %s: resolution failed", target)
             continue
 
-        result: ScanResult = _scan_target_ports(target_ip, ports, config, target, len(config.targets))
+        result: ScanResult = _scan_target_ports(target_ip, ports, config, target)
         results.append(result)
 
     return results

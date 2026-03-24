@@ -35,6 +35,22 @@ _STATUS_HEALTHY = "healthy"
 _STATUS_DEGRADED = "degraded"
 _STATUS_UNHEALTHY = "unhealthy"
 
+_MX_DUPLICATE_PENALTY = 20
+_MX_FORMAT_PENALTY = 20
+
+_SPF_PREFIX = "v=spf1"
+_DKIM_PREFIX = "v=DKIM1"
+_SPF_SOFTFAIL = "~all"
+_SPF_HARDFAIL = "-all"
+_DKIM_KEY_TAG = "p="
+
+_SPF_MISSING_TERMINATOR_PENALTY = 10
+_DKIM_MISSING_KEY_PENALTY = 20
+
+_ERROR_MISSING_PENALTY = 30
+_ERROR_QUERY_PENALTY = 50
+_EMPTY_RECORDS_PENALTY = 20
+
 
 def determine_status(score: int) -> str:
     """
@@ -42,9 +58,9 @@ def determine_status(score: int) -> str:
 
     Thresholds:
 
-    - ``score >= 80`` → ``"healthy"``
-    - ``score >= 50`` → ``"degraded"``
-    - ``score < 50``  → ``"unhealthy"``
+    - ``score >= _SCORE_HEALTHY`` → ``"healthy"``
+    - ``score >= _SCORE_DEGRADED`` → ``"degraded"``
+    - ``score < _SCORE_HEALTHY``  → ``"unhealthy"``
 
     Args:
         score: Numeric score in the range 0-100.
@@ -66,10 +82,6 @@ def determine_status(score: int) -> str:
     if score >= _SCORE_DEGRADED:
         return _STATUS_DEGRADED
     return _STATUS_UNHEALTHY
-
-
-_MX_DUPLICATE_PENALTY = 20
-_MX_FORMAT_PENALTY = 20
 
 
 def _parse_mx_priority(mx: str) -> int | None:
@@ -149,16 +161,6 @@ def validate_mx_records(
             seen_priorities.append(priority)
 
     return validation
-
-
-_SPF_PREFIX = "v=spf1"
-_DKIM_PREFIX = "v=DKIM1"
-_SPF_SOFTFAIL = "~all"
-_SPF_HARDFAIL = "-all"
-_DKIM_KEY_TAG = "p="
-
-_SPF_MISSING_TERMINATOR_PENALTY = 10
-_DKIM_MISSING_KEY_PENALTY = 20
 
 
 def _validate_spf(txt: str) -> tuple[list[str], list[str]]:
@@ -244,11 +246,6 @@ def validate_txt_records(
             validation["valid"] = False
 
     return validation
-
-
-_ERROR_MISSING_PENALTY = 30
-_ERROR_QUERY_PENALTY = 50
-_EMPTY_RECORDS_PENALTY = 20
 
 
 def calculate_record_score(
