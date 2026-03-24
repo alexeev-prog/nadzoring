@@ -57,5 +57,6 @@ dev = [
     "types-pyyaml>=6.0.12.20250915",
     "pytest-xdist>=3.8.0",
     "coveralls>=4.1.0",
+    "basedpyright>=1.38.3",
 ]
 
