@@ -107,9 +107,6 @@ def dns_group() -> None:
     """DNS lookup and analysis commands."""
 
 
-@dns_group.command(name="whois")
-@click.argument("domain", required=True)
-@common_cli_options(include_quiet=True)
 def _format_whois_value(value: Any) -> str:
     """Convert WHOIS values into display-friendly strings."""
     if value is None:
@@ -121,6 +118,9 @@ def _format_whois_value(value: Any) -> str:
     return str(value)
 
 
+@dns_group.command(name="whois")
+@click.argument("domain", required=True)
+@common_cli_options(include_quiet=True)
 def whois_command(domain: str, *, quiet: bool) -> list[dict[str, str]]:
     """Perform a WHOIS lookup for a domain."""
     _ = quiet
