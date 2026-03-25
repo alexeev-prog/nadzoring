@@ -26,7 +26,7 @@ def _get_linux_ip() -> str | None:
 
     """
     try:
-        output: str = check_output(shlex.split("ip -h -br a | grep UP"), text=True)
+        output: str = check_output(shlex.split("ip -h -br a"), text=True)
         up_interfaces = grep_in_line(output, filter_key="UP")
 
         if not up_interfaces:
