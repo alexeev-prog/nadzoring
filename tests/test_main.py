@@ -100,7 +100,9 @@ class TestCheckIpv4:
         mock_get_ip_from_host.assert_called_once_with("example.com")
 
     @patch("nadzoring.network_base.router_ip.get_ip_from_host")
-    def test_ipv4_with_too_many_octets_calls_get_ip_from_host(self, mock_get_ip_from_host):
+    def test_ipv4_with_too_many_octets_calls_get_ip_from_host(
+        self, mock_get_ip_from_host
+    ):
         """Test that string with too many octets is invalid IPv4."""
         mock_get_ip_from_host.return_value = "192.168.1.1.5"
         result = check_ipv4("192.168.1.1.5")
@@ -108,7 +110,9 @@ class TestCheckIpv4:
         mock_get_ip_from_host.assert_called_once_with("192.168.1.1.5")
 
     @patch("nadzoring.network_base.router_ip.get_ip_from_host")
-    def test_ipv4_with_octet_out_of_range_calls_get_ip_from_host(self, mock_get_ip_from_host):
+    def test_ipv4_with_octet_out_of_range_calls_get_ip_from_host(
+        self, mock_get_ip_from_host
+    ):
         """Test that octet value >255 makes IPv4 invalid."""
         mock_get_ip_from_host.return_value = "256.168.1.1"
         result = check_ipv4("256.168.1.1")
@@ -174,7 +178,9 @@ class TestCheckIpv6:
         mock_get_ip_from_host.assert_called_once_with("example.com")
 
     @patch("nadzoring.network_base.router_ip.get_ip_from_host")
-    def test_ipv6_with_too_many_blocks_calls_get_ip_from_host(self, mock_get_ip_from_host):
+    def test_ipv6_with_too_many_blocks_calls_get_ip_from_host(
+        self, mock_get_ip_from_host
+    ):
         """Test that string with too many blocks is invalid IPv6."""
         mock_get_ip_from_host.return_value = "2001:db8::1:2:3:4:5:6"
         result = check_ipv6("2001:db8::1:2:3:4:5:6")
@@ -204,7 +210,9 @@ class TestRouterIp:
     @patch("nadzoring.network_base.router_ip.system")
     @patch("nadzoring.network_base.router_ip.check_output")
     @patch("nadzoring.network_base.router_ip.check_ipv4")
-    def test_linux_router_ipv4_success(self, mock_check_ipv4, mock_check_output, mock_system):
+    def test_linux_router_ipv4_success(
+        self, mock_check_ipv4, mock_check_output, mock_system
+    ):
         """Test successful IPv4 router IP retrieval on Linux."""
         mock_system.return_value = "Linux"
 
@@ -223,7 +231,9 @@ class TestRouterIp:
     @patch("nadzoring.network_base.router_ip.system")
     @patch("nadzoring.network_base.router_ip.check_output")
     @patch("nadzoring.network_base.router_ip.check_ipv6")
-    def test_linux_router_ipv6_success(self, mock_check_ipv6, mock_check_output, mock_system):
+    def test_linux_router_ipv6_success(
+        self, mock_check_ipv6, mock_check_output, mock_system
+    ):
         """Test successful IPv6 router IP retrieval on Linux."""
         mock_system.return_value = "Linux"
 
@@ -242,14 +252,14 @@ class TestRouterIp:
     @patch("nadzoring.network_base.router_ip.system")
     @patch("nadzoring.network_base.router_ip.check_output")
     @patch("nadzoring.network_base.router_ip.check_ipv4")
-    def test_linux_router_ip_with_domain_name_gateway(self, mock_check_ipv4, mock_check_output, mock_system):
+    def test_linux_router_ip_with_domain_name_gateway(
+        self, mock_check_ipv4, mock_check_output, mock_system
+    ):
         """Test Linux router IP when gateway is a hostname."""
         mock_system.return_value = "Linux"
 
         mock_bytes = MagicMock()
-        mock_bytes.decode.return_value = (
-            "default        gateway.local    0.0.0.0         UG    100    0        0 eth0\n"
-        )
+        mock_bytes.decode.return_value = "default        gateway.local    0.0.0.0         UG    100    0        0 eth0\n"
         mock_check_output.return_value = mock_bytes
 
         mock_check_ipv4.return_value = "192.168.1.1"
@@ -262,7 +272,9 @@ class TestRouterIp:
     @patch("nadzoring.network_base.router_ip.system")
     @patch("nadzoring.network_base.router_ip.check_output")
     @patch("nadzoring.network_base.router_ip.check_ipv4")
-    def test_linux_multiple_default_routes_takes_first(self, mock_check_ipv4, mock_check_output, mock_system):
+    def test_linux_multiple_default_routes_takes_first(
+        self, mock_check_ipv4, mock_check_output, mock_system
+    ):
         """Test that with multiple default routes, the first one is taken."""
         mock_system.return_value = "Linux"
 
@@ -287,7 +299,9 @@ class TestRouterIp:
         mock_system.return_value = "Linux"
 
         mock_bytes = MagicMock()
-        mock_bytes.decode.return_value = "default   192.168.1.1   0.0.0.0   UG   100   0   0   eth0\n"
+        mock_bytes.decode.return_value = (
+            "default   192.168.1.1   0.0.0.0   UG   100   0   0   eth0\n"
+        )
         mock_check_output.return_value = mock_bytes
 
         with patch("nadzoring.network_base.router_ip.check_ipv4") as mock_check_ipv4:

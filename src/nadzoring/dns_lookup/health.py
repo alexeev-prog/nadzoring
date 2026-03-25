@@ -109,7 +109,9 @@ def health_check_dns(domain: str, nameserver: str | None = None) -> HealthCheckR
             continue
 
         record_result: DNSResult = resolve_with_timer(domain, rtype, nameserver)
-        record_score: int = max(0, calculate_record_score(rtype, dict(record_result), result_dict))
+        record_score: int = max(
+            0, calculate_record_score(rtype, dict(record_result), result_dict)
+        )
 
         result_dict["record_scores"][rtype] = record_score
         total_score += record_score

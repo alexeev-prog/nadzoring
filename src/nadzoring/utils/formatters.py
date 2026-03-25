@@ -820,7 +820,7 @@ def format_dns_poisoning(  # noqa: C901
                 "detail": f"Most common IP: {top['ip']}",
                 "value": f"{top['percentage']}% of servers",
                 "note": (
-                    f"Owner: {top.get('owner', 'Unknown')} |"
+                    f"Owner: {top.get('owner', 'Unknown')} | "
                     f"Consensus rate: {poisoning_result.get('consensus_rate', 0)}%"
                 ),
             }

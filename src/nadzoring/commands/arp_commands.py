@@ -51,7 +51,9 @@ def show_cache() -> list[dict[str, Any]]:
 @arp_group.command(name="detect-spoofing")
 @common_cli_options(include_quiet=True)
 @click.argument("interfaces", nargs=-1, required=False)
-def detect_spoofing(interfaces: tuple[str, ...], *, quiet: bool) -> list[dict[str, Any]]:
+def detect_spoofing(
+    interfaces: tuple[str, ...], *, quiet: bool
+) -> list[dict[str, Any]]:
     """
     Detect potential ARP spoofing attacks on one or more interfaces.
 
@@ -80,11 +82,15 @@ def detect_spoofing(interfaces: tuple[str, ...], *, quiet: bool) -> list[dict[st
     interfaces_to_check: list[str] = list({e.interface for e in entries})
 
     total: int = len(interfaces_to_check)
-    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Analyzing interfaces", unit="iface")
+    pbar: tqdm[Never] | None = (
+        None if quiet else tqdm(total=total, desc="Analyzing interfaces", unit="iface")
+    )
 
     results: list[dict[str, str]] = []
     for interface in interfaces_to_check:
-        interface_alerts: list[SpoofingAlert] = [alert for alert in all_alerts if interface in alert.interfaces]
+        interface_alerts: list[SpoofingAlert] = [
+            alert for alert in all_alerts if interface in alert.interfaces
+        ]
 
         results.extend(
             {
@@ -166,7 +172,9 @@ def monitor_spoofing(
                     click.secho(f"\n! {alert}", fg="red", bold=True)
 
         if not quiet:
-            click.echo(f"Monitoring ARP spoofing on {interface or 'all interfaces'}...\nPress Ctrl+C to stop.")
+            click.echo(
+                f"Monitoring ARP spoofing on {interface or 'all interfaces'}...\nPress Ctrl+C to stop."
+            )
 
         packets = sniff(
             iface=interface,

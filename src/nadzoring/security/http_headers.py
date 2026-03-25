@@ -25,18 +25,22 @@ _SECURITY_HEADERS: dict[str, str] = {
     "Cache-Control": "cache_control",
 }
 
-_DEPRECATED_HEADERS: frozenset[str] = frozenset({
-    "X-XSS-Protection",
-    "Expect-CT",
-})
+_DEPRECATED_HEADERS: frozenset[str] = frozenset(
+    {
+        "X-XSS-Protection",
+        "Expect-CT",
+    }
+)
 
-_LEAK_HEADERS: frozenset[str] = frozenset({
-    "Server",
-    "X-Powered-By",
-    "X-AspNet-Version",
-    "X-AspNetMvc-Version",
-    "X-Generator",
-})
+_LEAK_HEADERS: frozenset[str] = frozenset(
+    {
+        "Server",
+        "X-Powered-By",
+        "X-AspNet-Version",
+        "X-AspNetMvc-Version",
+        "X-Generator",
+    }
+)
 
 
 @dataclass
@@ -112,9 +116,13 @@ def _analyse_response(url: str, response: Response) -> HeaderAnalysis:
         else:
             missing.append(header)
 
-    deprecated: list[str] = [h for h in _DEPRECATED_HEADERS if h.lower() in headers_lower]
+    deprecated: list[str] = [
+        h for h in _DEPRECATED_HEADERS if h.lower() in headers_lower
+    ]
 
-    leaking: dict[str, str] = {h: headers_lower[h.lower()] for h in _LEAK_HEADERS if h.lower() in headers_lower}
+    leaking: dict[str, str] = {
+        h: headers_lower[h.lower()] for h in _LEAK_HEADERS if h.lower() in headers_lower
+    }
 
     score: int = _score_headers(present, missing)
 

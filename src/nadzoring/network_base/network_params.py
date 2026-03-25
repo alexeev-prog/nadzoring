@@ -79,7 +79,9 @@ def _get_linux_interface_info() -> dict[str, str | None]:
 def _get_linux_gateway() -> str | None:
     """Get default gateway on Linux."""
     try:
-        gateway_candidate: str = check_output("route -n | grep UG", shell=True).decode().split()[1]
+        gateway_candidate: str = (
+            check_output("route -n | grep UG", shell=True).decode().split()[1]
+        )
 
         try:
             IPv4Address(gateway_candidate)
@@ -104,7 +106,9 @@ def _get_linux_mac_address(interface_name: str | None) -> str | None:
         return None
 
     try:
-        mac_output: str = check_output(f'ifconfig {interface_name} | grep -E "ether|HWaddr"', shell=True).decode()
+        mac_output: str = check_output(
+            f'ifconfig {interface_name} | grep -E "ether|HWaddr"', shell=True
+        ).decode()
 
         parts: list[str] = mac_output.split()
         for i, part in enumerate(parts):
@@ -188,7 +192,9 @@ def _extract_interface_details(interface_parts: list[str]) -> dict[str, str | No
         if key == "SettingID":
             details["Default Interface"] = value
         elif key == "DefaultIPGateway":
-            details["Router ip-address"] = value.replace("{", "").replace("}", "").replace('"', "")
+            details["Router ip-address"] = (
+                value.replace("{", "").replace("}", "").replace('"', "")
+            )
         elif key == "MACAddress":
             details["MAC-address"] = value
         elif key == "IPAddress":

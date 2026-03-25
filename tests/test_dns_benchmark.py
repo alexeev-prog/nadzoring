@@ -8,6 +8,7 @@ from nadzoring.dns_lookup.benchmark import (
     benchmark_dns_servers,
     benchmark_dns_servers_async,
 )
+from nadzoring.dns_lookup.benchmark import _benchmark_single_server_async
 
 
 def _result(server: str, avg: float, *, total: int = 2, failed: int = 0) -> dict:
@@ -16,14 +17,18 @@ def _result(server: str, avg: float, *, total: int = 2, failed: int = 0) -> dict
         "avg_response_time": avg,
         "min_response_time": avg,
         "max_response_time": avg,
-        "success_rate": (round(((total - failed) / total) * 100, 2) if total > 0 else 0.0),
+        "success_rate": (
+            round(((total - failed) / total) * 100, 2) if total > 0 else 0.0
+        ),
         "total_queries": total,
         "failed_queries": failed,
         "responses": [] if failed == total else [avg],
     }
 
 
-@patch("nadzoring.dns_lookup.benchmark.resolve_with_timer_async", new_callable=AsyncMock)
+@patch(
+    "nadzoring.dns_lookup.benchmark.resolve_with_timer_async", new_callable=AsyncMock
+)
 def test_benchmark_single_server_async_collects_success_and_failures(
     mock_resolve_async,
 ):
@@ -80,7 +85,9 @@ def test_benchmark_single_server_async_collects_success_and_failures(
     new_callable=AsyncMock,
 )
 def test_benchmark_dns_servers_parallel_returns_sorted_results(mock_single_async):
-    async def _fake(server: str, domain: str, record_type: str, queries: int, delay: float = 0.1):
+    async def _fake(
+        server: str, domain: str, record_type: str, queries: int, delay: float = 0.1
+    ):
         await asyncio.sleep(0)
         if server == "8.8.8.8":
             return _result(server, 25.0, total=queries)
@@ -107,7 +114,9 @@ def test_benchmark_dns_servers_parallel_returns_sorted_results(mock_single_async
     new_callable=AsyncMock,
 )
 @patch("nadzoring.dns_lookup.benchmark.get_public_dns_servers")
-def test_benchmark_dns_servers_parallel_uses_default_servers(mock_get_servers, mock_single_async):
+def test_benchmark_dns_servers_parallel_uses_default_servers(
+    mock_get_servers, mock_single_async
+):
     mock_get_servers.return_value = ["8.8.8.8", "1.1.1.1"]
     mock_single_async.side_effect = [
         _result("8.8.8.8", 20.0),
@@ -200,7 +209,9 @@ def test_benchmark_dns_servers_async_works_inside_running_loop(mock_single_async
 def test_benchmark_dns_servers_parallel_returns_fallback_on_unexpected_error(
     mock_single_async,
 ):
-    async def _fake(server: str, domain: str, record_type: str, queries: int, delay: float = 0.1):
+    async def _fake(
+        server: str, domain: str, record_type: str, queries: int, delay: float = 0.1
+    ):
         await asyncio.sleep(0)
         if server == "8.8.8.8":
             raise RuntimeError("boom")

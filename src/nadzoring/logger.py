@@ -122,7 +122,9 @@ class ColoredFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-def setup_cli_logging(*, verbose: bool = False, quiet: bool = False, no_color: bool = False) -> None:
+def setup_cli_logging(
+    *, verbose: bool = False, quiet: bool = False, no_color: bool = False
+) -> None:
     """
     Configure logging for command-line interface mode.
 

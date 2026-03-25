@@ -408,7 +408,9 @@ def is_likely_cdn(ips: list[str]) -> tuple[bool, str, float]:
     if not ips:
         return False, "Unknown", 0.0
 
-    known_owners: list[str] = [get_ip_owner(ip) for ip in ips if get_ip_owner(ip) != "Unknown"]
+    known_owners: list[str] = [
+        get_ip_owner(ip) for ip in ips if get_ip_owner(ip) != "Unknown"
+    ]
 
     if not known_owners:
         return False, "Unknown", 0.0
@@ -498,7 +500,9 @@ def _compare_results(
 
     """
     if test.get("error") != control.get("error"):
-        level: Literal["high", "medium"] = "high" if "NXDOMAIN" in str(test.get("error")) else "medium"
+        level: Literal["high", "medium"] = (
+            "high" if "NXDOMAIN" in str(test.get("error")) else "medium"
+        )
         return InconsistencyDetail(
             server=server,
             server_name=SERVER_NAMES.get(server, "Unknown"),
@@ -523,13 +527,17 @@ def _compare_results(
     if test.get("error") or control.get("error"):
         return None
 
-    control_analysis: IPAnalysisResult = _analyze_ip_patterns(control.get("records", []))
+    control_analysis: IPAnalysisResult = _analyze_ip_patterns(
+        control.get("records", [])
+    )
     test_analysis: IPAnalysisResult = _analyze_ip_patterns(test.get("records", []))
 
     if test.get("records") != control.get("records"):
         control_owners: set[str] = set(control_analysis.get("owners", []))
         test_owners: set[str] = set(test_analysis.get("owners", []))
-        common: set[str] = set(control.get("records", [])).intersection(test.get("records", []))
+        common: set[str] = set(control.get("records", [])).intersection(
+            test.get("records", [])
+        )
 
         if control_owners and test_owners and control_owners == test_owners:
             return InconsistencyDetail(
@@ -574,7 +582,9 @@ def _compare_results(
             control_analysis=control_analysis,
             test_analysis=test_analysis,
             owner=None,
-            control_owner=(control_owners_list[0] if control_owners_list else "Unknown"),
+            control_owner=(
+                control_owners_list[0] if control_owners_list else "Unknown"
+            ),
             test_owner=test_owners_list[0] if test_owners_list else "Unknown",
         )
 
@@ -644,15 +654,21 @@ def check_dns_poisoning(
 
     record_type_literal: RecordType = "A" if record_type == "A" else record_type  # type: ignore
 
-    control_result: DNSResult = resolve_with_timer(domain, record_type_literal, control_server, include_ttl=True)
+    control_result: DNSResult = resolve_with_timer(
+        domain, record_type_literal, control_server, include_ttl=True
+    )
 
-    additional_results: dict[str, DNSResult] | None = _get_additional_records(domain, additional_types, control_server)
+    additional_results: dict[str, DNSResult] | None = _get_additional_records(
+        domain, additional_types, control_server
+    )
 
     test_results, inconsistencies, mismatches, cdn_variations = _test_dns_servers(
         domain, record_type_literal, test_servers, control_result, control_server
     )
 
-    metrics: MetricsResult = _calculate_metrics(test_results, control_result, mismatches, cdn_variations)
+    metrics: MetricsResult = _calculate_metrics(
+        test_results, control_result, mismatches, cdn_variations
+    )
 
     poisoning_level: str = _determine_poisoning_level(
         metrics["confidence"],
@@ -698,7 +714,9 @@ def _get_additional_records(
     result: dict[str, DNSResult] = {}
     for rtype in additional_types:
         rtype_literal: RecordType = rtype  # type: ignore
-        result[rtype] = resolve_with_timer(domain, rtype_literal, control_server, include_ttl=True)
+        result[rtype] = resolve_with_timer(
+            domain, rtype_literal, control_server, include_ttl=True
+        )
     return result
 
 
@@ -735,10 +753,14 @@ def _test_dns_servers(
         if server == control_server:
             continue
 
-        test_result: DNSResult = resolve_with_timer(domain, record_type, server, include_ttl=True)
+        test_result: DNSResult = resolve_with_timer(
+            domain, record_type, server, include_ttl=True
+        )
         test_results[server] = test_result
 
-        inconsistency: InconsistencyDetail | None = _compare_results(control_result, test_result, server)
+        inconsistency: InconsistencyDetail | None = _compare_results(
+            control_result, test_result, server
+        )
         if inconsistency is None:
             continue
 
@@ -773,23 +795,33 @@ def _calculate_metrics(
     """
     total: int = len(test_results)
 
-    all_ips: list[str] = [ip for res in test_results.values() for ip in res.get("records", [])]
+    all_ips: list[str] = [
+        ip for res in test_results.values() for ip in res.get("records", [])
+    ]
 
     is_cdn, cdn_owner, cdn_percentage = is_likely_cdn(all_ips)
 
     if is_cdn:
         poisoned: bool = mismatches > 0 and cdn_percentage < 50
-        confidence: float = mismatches / total * 100 * (1 - cdn_percentage / 100) if total > 0 else 0.0
+        confidence: float = (
+            mismatches / total * 100 * (1 - cdn_percentage / 100) if total > 0 else 0.0
+        )
     else:
         poisoned = mismatches > 0
         confidence = (mismatches / total * 100) if total > 0 else 0.0
 
     control_ips: set[str] = set(control_result.get("records", []))
-    all_test_ips: set[str] = {ip for res in test_results.values() for ip in res.get("records", [])}
+    all_test_ips: set[str] = {
+        ip for res in test_results.values() for ip in res.get("records", [])
+    }
 
-    ip_counter: Counter[str] = Counter(ip for res in test_results.values() for ip in res.get("records", []))
+    ip_counter: Counter[str] = Counter(
+        ip for res in test_results.values() for ip in res.get("records", [])
+    )
     top_consensus: list[tuple[str, int]] = ip_counter.most_common(3)
-    consensus_rate: float = (top_consensus[0][1] / total * 100) if top_consensus and total > 0 else 0.0
+    consensus_rate: float = (
+        (top_consensus[0][1] / total * 100) if top_consensus and total > 0 else 0.0
+    )
 
     geo_diversity: int = len({SERVER_COUNTRIES.get(s, "Unknown") for s in test_results})
 
@@ -810,7 +842,12 @@ def _calculate_metrics(
         "geo_diversity": geo_diversity,
         "anycast_likely": len(all_test_ips) > 3 and len(control_ips) == 1,
         "cdn_likely": is_cdn,
-        "poisoning_likely": (mismatches == total and not is_cdn and len(control_ips) > 1 and len(all_test_ips) == 1),
+        "poisoning_likely": (
+            mismatches == total
+            and not is_cdn
+            and len(control_ips) > 1
+            and len(all_test_ips) == 1
+        ),
     }
 
 
@@ -879,14 +916,20 @@ def _build_result(
         Complete :class:`PoisoningCheckResult`.
 
     """
-    control_analysis: IPAnalysisResult = _analyze_ip_patterns(control_result.get("records", []))
+    control_analysis: IPAnalysisResult = _analyze_ip_patterns(
+        control_result.get("records", [])
+    )
     control_owners: list[str] = control_analysis.get("owners", [])
 
     formatted_consensus: list[dict[str, float | int | str]] = [
         {
             "ip": ip,
             "count": count,
-            "percentage": (round(count / metrics["total_tested"] * 100, 1) if metrics["total_tested"] > 0 else 0.0),
+            "percentage": (
+                round(count / metrics["total_tested"] * 100, 1)
+                if metrics["total_tested"] > 0
+                else 0.0
+            ),
             "owner": get_ip_owner(ip),
         }
         for ip, count in metrics["consensus_top"]

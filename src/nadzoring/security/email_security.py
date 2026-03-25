@@ -220,7 +220,9 @@ def _analyse_spf(domain: str) -> SpfResult:
         result.issues.append("Missing 'all' mechanism")
 
     lookup_count: int = sum(
-        1 for m in result.mechanisms if any(m.startswith(p) for p in ("include:", "a", "mx", "ptr", "exists:"))
+        1
+        for m in result.mechanisms
+        if any(m.startswith(p) for p in ("include:", "a", "mx", "ptr", "exists:"))
     )
     if lookup_count > 10:
         result.issues.append(f"Exceeds 10 DNS lookup limit ({lookup_count} lookups)")
@@ -312,7 +314,9 @@ def _analyse_dmarc(domain: str) -> DmarcResult:  # noqa: C901
         result.issues.append("No aggregate report address (rua=) configured")
 
     if result.pct is not None and result.pct < 100:
-        result.issues.append(f"Policy applies to only {result.pct}% of messages (pct={result.pct})")
+        result.issues.append(
+            f"Policy applies to only {result.pct}% of messages (pct={result.pct})"
+        )
 
     return result
 

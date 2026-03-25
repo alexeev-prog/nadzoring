@@ -4,9 +4,8 @@ from logging import Logger
 from typing import Any, Never
 
 import click
-import whois  # pip install python-whois
+import whois  # type: ignore
 from click import Choice
-from tabulate import tabulate  # optional, for nicer output
 from tqdm import tqdm
 
 from nadzoring.dns_lookup import (
@@ -111,33 +110,30 @@ def dns_group() -> None:
 @dns_group.command(name="whois")
 @click.argument("domain", required=True)
 @common_cli_options(include_quiet=True)
-def whois_command(domain: str, *, quiet: bool) -> None:
+def _format_whois_value(value: Any) -> str:
+    """Convert WHOIS values into display-friendly strings."""
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        return "\n".join(_format_whois_value(item) for item in value)
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return str(value)
+
+
+def whois_command(domain: str, *, quiet: bool) -> list[dict[str, str]]:
     """Perform a WHOIS lookup for a domain."""
+    _ = quiet
+
     try:
-        info = whois.whois(domain)  # updated call
-
-        # Clean up the info dict
-        clean_info = {}
-        for k, v in info.items():
-            if isinstance(v, list):
-                clean_info[k] = "\n".join(str(x) for x in v)
-            elif hasattr(v, "isoformat"):  # datetime objects
-                if isinstance(v, list):
-                    clean_info[k] = "\n".join(x.isoformat() for x in v)
-                else:
-                    clean_info[k] = v.isoformat()
-            else:
-                clean_info[k] = str(v) if v is not None else ""
-
-        if not quiet:
-            table = tabulate(
-                clean_info.items(), headers=["Field", "Value"], tablefmt="grid"
-            )
-            click.echo(table)
-        else:
-            click.echo(clean_info)
+        info = whois.whois(domain)
     except Exception as e:
-        click.echo(f"Error fetching WHOIS for {domain}: {e}", err=True)
+        raise click.ClickException(f"Error fetching WHOIS for {domain}: {e}") from e
+
+    return [
+        {"Field": str(key), "Value": _format_whois_value(value)}
+        for key, value in info.items()
+    ]
 
 
 @dns_group.command(name="monitor")

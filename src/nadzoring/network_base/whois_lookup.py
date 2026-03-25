@@ -144,7 +144,7 @@ def whois_lookup(target: str) -> dict[str, str | None]:
                 "    - RHEL/Fedora: sudo dnf install whois\n"
                 "  • Check internet connection"
             ),
-                    }
+        }
 
     parsed: dict[str, str | None] = _parse_whois_output(raw)
     parsed["target"] = target

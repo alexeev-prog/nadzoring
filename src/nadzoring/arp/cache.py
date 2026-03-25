@@ -254,7 +254,9 @@ class ARPCache:
                 ip: str = parts[0]
                 mac_value: str = parts[1].replace("-", ":")
                 state: ARPEntryState = (
-                    ARPEntryState.REACHABLE if parts[2].lower() == "dynamic" else ARPEntryState.PERMANENT
+                    ARPEntryState.REACHABLE
+                    if parts[2].lower() == "dynamic"
+                    else ARPEntryState.PERMANENT
                 )
 
                 entries.append(

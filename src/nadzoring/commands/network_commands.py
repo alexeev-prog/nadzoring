@@ -86,7 +86,9 @@ def detect_service_command(
     results: list[dict[str, Any]] = []
     total: int = len(ports)
 
-    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Detecting services", unit="port")
+    pbar: tqdm[Never] | None = (
+        None if quiet else tqdm(total=total, desc="Detecting services", unit="port")
+    )
 
     for port in ports:
         result: ServiceDetectionResult = detect_service_on_host(
@@ -101,14 +103,16 @@ def detect_service_command(
         if result.error:
             status = f"error: {result.error}"
 
-        results.append({
-            "target": target,
-            "port": port,
-            "detected_service": detected,
-            "status": status,
-            "banner": result.banner or "",
-            "method": result.method,
-        })
+        results.append(
+            {
+                "target": target,
+                "port": port,
+                "detected_service": detected,
+                "status": status,
+                "banner": result.banner or "",
+                "method": result.method,
+            }
+        )
 
         if pbar:
             pbar.set_description(f"Port {port}")
@@ -178,9 +182,13 @@ def port_scan_command(
     quiet: bool,
 ) -> list[dict[str, Any]]:
     """Scan for open ports on one or more targets."""
-    parsed_ports: tuple[list[int] | None, tuple[int, int] | None] = _parse_port_specification(mode, ports)
+    parsed_ports: tuple[list[int] | None, tuple[int, int] | None] = (
+        _parse_port_specification(mode, ports)
+    )
 
-    mode_literal: ScanMode = "fast" if mode == "fast" else "full" if mode == "full" else "custom"
+    mode_literal: ScanMode = (
+        "fast" if mode == "fast" else "full" if mode == "full" else "custom"
+    )
     protocol_literal: Literal["tcp", "udp"] = "tcp" if protocol == "tcp" else "udp"
 
     base_config = ScanConfig(
@@ -254,7 +262,9 @@ def port_scan_command(
 
                 return progress_callback
 
-            target_config.progress_callback = _make_callback(pbar, target_idx, target, len(targets))
+            target_config.progress_callback = _make_callback(
+                pbar, target_idx, target, len(targets)
+            )
             result_scan: list[ScanResult] = scan_ports(target_config)
             if result_scan:
                 scan_results.extend(result_scan)
@@ -289,7 +299,9 @@ def _parse_port_specification(
         try:
             start, end = map(int, ports.split("-"))
         except ValueError as err:
-            raise click.BadParameter("Port range must be in format 'start-end' (e.g., '1-1024')") from err
+            raise click.BadParameter(
+                "Port range must be in format 'start-end' (e.g., '1-1024')"
+            ) from err
         return None, (start, end)
 
     try:
@@ -312,15 +324,19 @@ def ping_command(
     results: list[dict[str, Any]] = []
     total: int = len(addresses)
 
-    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Pinging addresses", unit="ping")
+    pbar: tqdm[Never] | None = (
+        None if quiet else tqdm(total=total, desc="Pinging addresses", unit="ping")
+    )
 
     for address in addresses:
         is_pinged: bool = ping_addr(address)
-        results.append({
-            "address": address,
-            "is_pinged": "yes" if is_pinged else "no",
-            "status": "up" if is_pinged else "down",
-        })
+        results.append(
+            {
+                "address": address,
+                "is_pinged": "yes" if is_pinged else "no",
+                "status": "up" if is_pinged else "down",
+            }
+        )
         if pbar:
             pbar.set_description(f"Pinging {address}")
             pbar.update(1)
@@ -343,7 +359,9 @@ def parse_url_command(
     results: list[dict[str, Any]] = []
     total: int = len(urls)
 
-    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Parsing URLs", unit="URL")
+    pbar: tqdm[Never] | None = (
+        None if quiet else tqdm(total=total, desc="Parsing URLs", unit="URL")
+    )
 
     for url in urls:
         results.append(parse_url(url))
@@ -369,17 +387,21 @@ def geolocation_command(
     results: list[dict[str, Any]] = []
     total: int = len(ips)
 
-    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Getting geolocation", unit="ip")
+    pbar: tqdm[Never] | None = (
+        None if quiet else tqdm(total=total, desc="Getting geolocation", unit="ip")
+    )
 
     for ip in ips:
         geo: dict[str, str] = geo_ip(ip)
-        results.append({
-            "ip_address": ip,
-            "latitude": geo.get("lat", "Unknown"),
-            "longitude": geo.get("lon", "Unknown"),
-            "country": geo.get("country", "Unknown"),
-            "city": geo.get("city", "Unknown"),
-        })
+        results.append(
+            {
+                "ip_address": ip,
+                "latitude": geo.get("lat", "Unknown"),
+                "longitude": geo.get("lon", "Unknown"),
+                "country": geo.get("country", "Unknown"),
+                "city": geo.get("city", "Unknown"),
+            }
+        )
         if pbar:
             pbar.set_description(f"Locating {ip}")
             pbar.update(1)
@@ -411,20 +433,24 @@ def host_to_ip_command(
     results: list[dict[str, Any]] = []
     total: int = len(hostnames)
 
-    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Resolving hostnames", unit="host")
+    pbar: tqdm[Never] | None = (
+        None if quiet else tqdm(total=total, desc="Resolving hostnames", unit="host")
+    )
 
     router_ipv4: str | None = router_ip(ipv6=False)
     router_ipv6: str | None = router_ip(ipv6=True)
 
     for hostname in hostnames:
-        results.append({
-            "hostname": hostname,
-            "ip_address": get_ip_from_host(hostname),
-            "ipv4_check": check_ipv4(hostname),
-            "ipv6_check": check_ipv6(hostname),
-            "router_ipv4": router_ipv4 or "Not found",
-            "router_ipv6": router_ipv6 or "Not found",
-        })
+        results.append(
+            {
+                "hostname": hostname,
+                "ip_address": get_ip_from_host(hostname),
+                "ipv4_check": check_ipv4(hostname),
+                "ipv6_check": check_ipv6(hostname),
+                "router_ipv4": router_ipv4 or "Not found",
+                "router_ipv6": router_ipv6 or "Not found",
+            }
+        )
         if pbar:
             pbar.set_description(f"Resolving {hostname}")
             pbar.update(1)
@@ -447,14 +473,18 @@ def port_service_command(
     results: list[dict[str, Any]] = []
     total: int = len(ports)
 
-    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Looking up ports", unit="port")
+    pbar: tqdm[Never] | None = (
+        None if quiet else tqdm(total=total, desc="Looking up ports", unit="port")
+    )
 
     for port in ports:
-        results.append({
-            "port": port,
-            "service": get_service_on_port(port),
-            "protocol": "tcp/udp",
-        })
+        results.append(
+            {
+                "port": port,
+                "service": get_service_on_port(port),
+                "protocol": "tcp/udp",
+            }
+        )
         if pbar:
             pbar.set_description(f"Port {port}")
             pbar.update(1)
@@ -503,7 +533,9 @@ def http_ping_command(
     results: list[dict[str, Any]] = []
     total: int = len(urls)
 
-    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Probing URLs", unit="url")
+    pbar: tqdm[Never] | None = (
+        None if quiet else tqdm(total=total, desc="Probing URLs", unit="url")
+    )
 
     for url in urls:
         result: HttpPingResult = http_ping(
@@ -520,7 +552,9 @@ def http_ping_command(
             "dns_ms": result.dns_ms if result.dns_ms is not None else "n/a",
             "ttfb_ms": result.ttfb_ms if result.ttfb_ms is not None else "n/a",
             "total_ms": result.total_ms if result.total_ms is not None else "n/a",
-            "size_bytes": (result.content_length if result.content_length is not None else "n/a"),
+            "size_bytes": (
+                result.content_length if result.content_length is not None else "n/a"
+            ),
         }
 
         if result.final_url:
@@ -533,7 +567,9 @@ def http_ping_command(
                 "Cache-Control",
                 "X-Powered-By",
             ):
-                value: str | None = result.headers.get(header_key) or result.headers.get(header_key.lower())
+                value: str | None = result.headers.get(
+                    header_key
+                ) or result.headers.get(header_key.lower())
                 if value:
                     row[f"header_{header_key.lower().replace('-', '_')}"] = value
 
@@ -561,7 +597,9 @@ def whois_command(
     results: list[dict[str, Any]] = []
     total: int = len(targets)
 
-    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Running WHOIS", unit="target")
+    pbar: tqdm[Never] | None = (
+        None if quiet else tqdm(total=total, desc="Running WHOIS", unit="target")
+    )
 
     for target in targets:
         info: dict[str, str | None] = whois_lookup(target)
@@ -589,7 +627,9 @@ def domain_info_command(
     results: list[dict[str, Any]] = []
     total: int = len(domains)
 
-    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Getting domain info", unit="domain")
+    pbar: tqdm[Never] | None = (
+        None if quiet else tqdm(total=total, desc="Getting domain info", unit="domain")
+    )
 
     for domain in domains:
         results.append(get_domain_info(domain))
@@ -695,7 +735,9 @@ def traceroute_command(
     results: list[dict[str, Any]] = []
     total: int = len(targets)
 
-    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Tracing routes", unit="target")
+    pbar: tqdm[Never] | None = (
+        None if quiet else tqdm(total=total, desc="Tracing routes", unit="target")
+    )
 
     for target in targets:
         if not quiet:
@@ -709,14 +751,18 @@ def traceroute_command(
         )
 
         for hop in hops:
-            rtt_values: list[str] = [f"{r:.1f} ms" if r is not None else "*" for r in hop.rtt_ms]
-            results.append({
-                "target": target,
-                "hop": hop.hop,
-                "host": hop.host or "*",
-                "ip": hop.ip or "*",
-                "rtt": " / ".join(rtt_values),
-            })
+            rtt_values: list[str] = [
+                f"{r:.1f} ms" if r is not None else "*" for r in hop.rtt_ms
+            ]
+            results.append(
+                {
+                    "target": target,
+                    "hop": hop.hop,
+                    "host": hop.host or "*",
+                    "ip": hop.ip or "*",
+                    "rtt": " / ".join(rtt_values),
+                }
+            )
 
         if not hops and not quiet:
             click.echo(f"No hops returned for {target}.", err=True)

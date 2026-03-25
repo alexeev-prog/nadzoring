@@ -58,7 +58,9 @@ def _parse_linux_traceroute(raw: str) -> list[TraceHop]:
         ip: str | None = None
         rtts: list[float | None] = []
 
-        host_match: Match[str] | None = re.match(r"^([^\s(]+)\s*\(([^)]+)\)\s*(.*)", rest)
+        host_match: Match[str] | None = re.match(
+            r"^([^\s(]+)\s*\(([^)]+)\)\s*(.*)", rest
+        )
         if host_match:
             host = host_match.group(1)
             ip = host_match.group(2)
@@ -126,7 +128,9 @@ def _parse_windows_tracert(raw: str) -> list[TraceHop]:
         ip_match: Match[str] | None = re.search(r"([\d.]+)\s*$", rest)
         ip: str | None = ip_match.group(1) if ip_match else None
 
-        host_match: Match[str] | None = re.search(r"([a-zA-Z][^\s]+)\s+[\d.]+\s*$", rest)
+        host_match: Match[str] | None = re.search(
+            r"([a-zA-Z][^\s]+)\s+[\d.]+\s*$", rest
+        )
         host: str | None = host_match.group(1) if host_match else ip
 
         hops.append(
@@ -170,7 +174,9 @@ def _stream_process(cmd: str, *, wall_timeout: float) -> tuple[str, str]:
         except TimeoutExpired:
             proc.kill()
             stdout, stderr = proc.communicate()
-            logger.warning("Command timed out after %.0f s, returning partial output", wall_timeout)
+            logger.warning(
+                "Command timed out after %.0f s, returning partial output", wall_timeout
+            )
 
     return stdout or "", stderr or ""
 
@@ -217,7 +223,7 @@ def _run_linux_traceroute(
             "  • Grant capability (Linux): sudo setcap cap_net_raw+ep $(which traceroute)",
             target,
             target,
-    )
+        )
         return []
 
     if stdout:
@@ -233,18 +239,20 @@ def _run_linux_traceroute(
             "    - RHEL/Fedora: sudo dnf install traceroute\n"
             "  • Falling back to 'tracepath'"
         )
-        return _run_tracepath(target, max_hops=max_hops, per_hop_timeout=per_hop_timeout)
+        return _run_tracepath(
+            target, max_hops=max_hops, per_hop_timeout=per_hop_timeout
+        )
 
-        logger.warning(
-            "Traceroute produced no output for %s.\n\n"
-            "Possible causes:\n"
+    logger.warning(
+        "Traceroute produced no output for %s.\n\n"
+        "Possible causes:\n"
             "  • Network unreachable or blocked\n"
             "  • DNS resolution issues\n"
             "  • Firewall restrictions\n\n"
-            "stderr: %s",
-            target,
-            stderr.strip(),
-        )
+        "stderr: %s",
+        target,
+        stderr.strip(),
+    )
     return []
 
 

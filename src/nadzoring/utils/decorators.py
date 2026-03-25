@@ -67,11 +67,15 @@ def common_cli_options(
     def decorator(func: F) -> F:
         """Apply common CLI options decorators to the function."""
         decorated_func: F = func
-        decorated_func = click.option("--verbose", is_flag=True, help="Verbose output (DEBUG level)")(decorated_func)
-        decorated_func = click.option("--quiet", is_flag=True, help="Quiet mode (no logs, only results)")(
-            decorated_func
-        )
-        decorated_func = click.option("--no-color", is_flag=True, help="Disable colored output")(decorated_func)
+        decorated_func = click.option(
+            "--verbose", is_flag=True, help="Verbose output (DEBUG level)"
+        )(decorated_func)
+        decorated_func = click.option(
+            "--quiet", is_flag=True, help="Quiet mode (no logs, only results)"
+        )(decorated_func)
+        decorated_func = click.option(
+            "--no-color", is_flag=True, help="Disable colored output"
+        )(decorated_func)
         decorated_func = click.option(
             "--output",
             "-o",
@@ -79,7 +83,9 @@ def common_cli_options(
             default="table",
             help="Output format",
         )(decorated_func)
-        decorated_func = click.option("--save", type=click.Path(), help="Save results to file")(decorated_func)
+        decorated_func = click.option(
+            "--save", type=click.Path(), help="Save results to file"
+        )(decorated_func)
 
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -188,7 +194,9 @@ def _filter_func_kwargs(
         (include_save, "save", cli_options.save),
     ]
 
-    filtered_options: dict[str, Any] = {name: value for include, name, value in option_mappings if include}
+    filtered_options: dict[str, Any] = {
+        name: value for include, name, value in option_mappings if include
+    }
 
     func_kwargs.update(filtered_options)
     return func_kwargs
@@ -265,7 +273,9 @@ def _handle_save(result: Any, save_path: str | None, output_format: str) -> None
         try:
             save_results(result, save_path, output_format)
         except Exception as e:
-            raise click.ClickException(f"Error saving results to {save_path}: {e}") from e
+            raise click.ClickException(
+                f"Error saving results to {save_path}: {e}"
+            ) from e
 
 
 def _show_completion_time(elapsed: float, *, verbose: bool) -> None:
