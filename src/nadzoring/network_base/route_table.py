@@ -1,5 +1,6 @@
 """System routing table retrieval and parsing."""
 
+import shlex
 from dataclasses import dataclass
 from logging import Logger
 from platform import system
@@ -120,8 +121,7 @@ def _get_linux_routes() -> list[RouteEntry]:
     """Retrieve routing table on Linux using 'ip route'."""
     try:
         raw: str = check_output(
-            "ip route",
-            shell=True,
+            shlex.split("ip route"),
             stderr=PIPE,
         ).decode(errors="replace")
     except (CalledProcessError, FileNotFoundError):
@@ -135,8 +135,7 @@ def _get_windows_routes() -> list[RouteEntry]:
     """Retrieve routing table on Windows using 'route PRINT'."""
     try:
         raw: str = check_output(
-            "route PRINT",
-            shell=True,
+            shlex.split("route PRINT"),
             stderr=PIPE,
         ).decode("cp866", errors="replace")
     except (CalledProcessError, FileNotFoundError):

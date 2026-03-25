@@ -1,5 +1,7 @@
 """DNS-related CLI commands."""
 
+from __future__ import annotations
+
 from logging import Logger
 from typing import Any, Never
 

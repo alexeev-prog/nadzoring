@@ -1,3 +1,4 @@
+import shlex
 from socket import gaierror
 from unittest.mock import MagicMock, patch
 
@@ -217,7 +218,7 @@ class TestRouterIp:
         result = router_ip(ipv6=False)
 
         assert result == "192.168.1.1"
-        mock_check_output.assert_called_once_with("route -n | grep UG", shell=True)
+        mock_check_output.assert_called_once_with(shlex.split("route -n"))
         mock_check_ipv4.assert_called_once_with("192.168.1.1")
 
     @patch("nadzoring.network_base.router_ip.system")
@@ -236,7 +237,7 @@ class TestRouterIp:
         result = router_ip(ipv6=True)
 
         assert result == "2001:db8::1"
-        mock_check_output.assert_called_once_with("route -n | grep UG", shell=True)
+        mock_check_output.assert_called_once_with(shlex.split("route -n"))
         mock_check_ipv6.assert_called_once_with("2001:db8::1")
 
     @patch("nadzoring.network_base.router_ip.system")
