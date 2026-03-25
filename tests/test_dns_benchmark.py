@@ -181,7 +181,7 @@ def test_benchmark_dns_servers_async_works_inside_running_loop(mock_single_async
     ]
 
     async def _run() -> list[dict]:
-        return await benchmark_dns_servers_async(
+        return await benchmark_dns_servers_async(  # type: ignore
             servers=["8.8.8.8", "1.1.1.1"],
             queries=2,
             parallel=True,

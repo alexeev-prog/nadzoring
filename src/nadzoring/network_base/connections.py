@@ -2,6 +2,7 @@
 
 import contextlib
 import re
+import shlex
 from dataclasses import dataclass
 from logging import Logger
 from platform import system
@@ -154,8 +155,7 @@ def _get_linux_connections(
     flags: str = "-tuna" + ("p" if include_process else "")
     try:
         raw: str = check_output(
-            f"ss {flags}",
-            shell=True,
+            shlex.split(f"ss {flags}"),
             stderr=PIPE,
         ).decode(errors="replace")
     except (CalledProcessError, FileNotFoundError):
@@ -174,8 +174,7 @@ def _get_windows_connections(
     """Get active connections on Windows using netstat."""
     try:
         raw: str = check_output(
-            "netstat -ano",
-            shell=True,
+            shlex.split("netstat -ano"),
             stderr=PIPE,
         ).decode("cp866", errors="replace")
     except (CalledProcessError, FileNotFoundError):

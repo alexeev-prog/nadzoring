@@ -16,15 +16,17 @@ In addition to the above package, no third-party libraries
 are required for the script to work.
 """
 
+import shlex
 from ipaddress import IPv4Address
 from logging import Logger
 from platform import system
 from socket import gethostbyname
-from subprocess import CalledProcessError, check_output
+from subprocess import CalledProcessError, check_output, run
 
 import requests
 
 from nadzoring.logger import get_logger
+from nadzoring.utils.additional import grep_in_line
 
 logger: Logger = get_logger(__name__)
 
@@ -63,8 +65,14 @@ def _get_linux_network_info() -> dict[str, str | None]:
 def _get_linux_interface_info() -> dict[str, str | None]:
     """Extract interface name and IP addresses on Linux."""
     try:
-        command_output: str = check_output("ip -h -br a | grep UP", shell=True).decode()
-        parts: list[str] = command_output.split()
+        result = run(shlex.split("ip -h -br a"), capture_output=True, text=True, check=True)
+
+        up_interfaces = grep_in_line(result.stdout, filter_key="UP")
+
+        if not up_interfaces:
+            return {"name": None, "ipv4": None, "ipv6": None}
+
+        parts = up_interfaces[0].split()
 
         return {
             "name": parts[0].strip() if len(parts) > 0 else None,
@@ -79,7 +87,14 @@ def _get_linux_interface_info() -> dict[str, str | None]:
 def _get_linux_gateway() -> str | None:
     """Get default gateway on Linux."""
     try:
-        gateway_candidate: str = check_output("route -n | grep UG", shell=True).decode().split()[1]
+        route_output: str = check_output(shlex.split("route -n")).decode()
+        ug_lines: list[str] = grep_in_line(route_output, filter_key="UG")
+
+        if not ug_lines:
+            logger.error("No gateway found in route table")
+            return None
+
+        gateway_candidate: str = ug_lines[0].split()[1]
 
         try:
             IPv4Address(gateway_candidate)
@@ -104,17 +119,21 @@ def _get_linux_mac_address(interface_name: str | None) -> str | None:
         return None
 
     try:
-        mac_output: str = check_output(f'ifconfig {interface_name} | grep -E "ether|HWaddr"', shell=True).decode()
+        ifconfig_output: str = check_output(shlex.split(f"ifconfig {interface_name}")).decode()
+        mac_lines: list[str] = grep_in_line(ifconfig_output, filter_key=["ether", "HWaddr"])
 
-        parts: list[str] = mac_output.split()
+        if not mac_lines:
+            return None
+
+        parts: list[str] = mac_lines[0].split()
         for i, part in enumerate(parts):
             if part in {"ether", "HWaddr"} and i + 1 < len(parts):
                 return parts[i + 1]
     except (CalledProcessError, IndexError, AttributeError):
         logger.exception("Failed to get Linux MAC address")
         return None
-    else:
-        return None
+
+    return None
 
 
 def _get_windows_network_info() -> dict[str, str | None]:
@@ -135,8 +154,7 @@ def _get_windows_network_info() -> dict[str, str | None]:
 def _parse_windows_network_configs() -> list[str]:
     """Parse Windows network configuration output."""
     raw_output: str = check_output(
-        "wmic nicconfig get IPAddress, MACAddress, IPEnabled, SettingID, DefaultIPGateway /value",
-        shell=True,
+        shlex.split("wmic nicconfig get IPAddress, MACAddress, IPEnabled, SettingID, DefaultIPGateway /value"),
     ).decode("cp866")
 
     config_blocks: list[str] = []

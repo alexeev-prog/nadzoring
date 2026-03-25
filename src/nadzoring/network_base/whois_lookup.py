@@ -1,5 +1,6 @@
 """WHOIS information lookup for domains and IP addresses."""
 
+import shlex
 from ipaddress import ip_address
 from logging import Logger
 from platform import system
@@ -57,8 +58,7 @@ def _run_whois_command(target: str) -> str | None:
 
     try:
         return check_output(
-            f"whois {target}",
-            shell=True,
+            shlex.split(f"whois {target}"),
             stderr=PIPE,
             timeout=15,
         ).decode(encoding, errors="replace")

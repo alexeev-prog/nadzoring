@@ -6,11 +6,13 @@ Supports Linux and Windows operating systems by parsing command outputs.
 No additional library installations required.
 """
 
+import shlex
 from logging import Logger
 from platform import system
 from subprocess import CalledProcessError, check_output
 
 from nadzoring.logger import get_logger
+from nadzoring.utils.additional import grep_in_line
 
 logger: Logger = get_logger(__name__)
 
@@ -24,8 +26,13 @@ def _get_linux_ip() -> str | None:
 
     """
     try:
-        output: str = check_output("ip -h -br a | grep UP", shell=True, text=True)
-        parts: list[str] = output.strip().split()
+        output: str = check_output(shlex.split("ip -h -br a"), text=True)
+        up_interfaces = grep_in_line(output, filter_key="UP")
+
+        if not up_interfaces:
+            return None
+
+        parts: list[str] = up_interfaces[0].strip().split()
 
         if len(parts) >= 3:
             ip_with_mask: str = parts[2]
@@ -89,8 +96,7 @@ def _get_windows_ip() -> str | None:
     """
     try:
         output: str = check_output(
-            "wmic nicconfig get IPAddress, IPEnabled /value",
-            shell=True,
+            shlex.split("wmic nicconfig get IPAddress, IPEnabled /value"),
             text=True,
             encoding="cp866",
         )
