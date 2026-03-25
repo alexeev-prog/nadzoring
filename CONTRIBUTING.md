@@ -92,8 +92,12 @@ ruff check src/nadzoring
 # Format with ruff
 ruff format src/nadzoring
 
-# Type check with mypy (must pass with no warnings for src/nadzoring)
+# Type check with mypy (must pass with no warnings for src/nadzoring) --cov-report=xml
 mypy src/nadzoring
+
+# Run tests
+pytest tests -s -v --tb=short --cov=src/nadzoring/ --strict-markers --cov-report=term-missing
+
 ```
 
 All three commands must pass with **no warnings or errors** for code in `src/nadzoring`.
