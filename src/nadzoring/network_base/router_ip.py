@@ -79,6 +79,7 @@ def check_ipv4(hostname: str) -> str:
         return hostname
     return get_ip_from_host(hostname)
 
+
 def check_ipv6(hostname: str) -> str:
     """
     Return a resolved IPv6 address for *hostname*, or the input unchanged.

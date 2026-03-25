@@ -8,7 +8,6 @@ from nadzoring.dns_lookup.benchmark import (
     benchmark_dns_servers,
     benchmark_dns_servers_async,
 )
-from nadzoring.dns_lookup.benchmark import _benchmark_single_server_async
 
 
 def _result(server: str, avg: float, *, total: int = 2, failed: int = 0) -> dict:
