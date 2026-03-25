@@ -15,7 +15,7 @@ Thank you for your interest in contributing! Please read this guide carefully be
     - [Prerequisites](#prerequisites)
     - [Installation](#installation)
     - [Running Tests](#running-tests)
-    - [Linting \& Formatting](#linting--formatting)
+    - [Linting, Formatting \& Type Checking](#linting-formatting--type-checking)
   - [Code Style](#code-style)
     - [Python Version \& Typing](#python-version--typing)
     - [Docstrings](#docstrings)
@@ -83,14 +83,21 @@ pytest --cov=nadzoring --cov-report=term-missing
 
 100% test coverage is required for all new code.
 
-### Linting & Formatting
+### Linting, Formatting & Type Checking
 
 ```bash
-# Lint with ruff
+# Lint with ruff (follows ruff.toml rules)
 ruff check src/nadzoring
+
+# Format with ruff
+ruff format src/nadzoring
+
+# Type check with mypy (must pass with no warnings for src/nadzoring)
+mypy src/nadzoring
 ```
 
-Both must pass with no errors before submitting a PR. Zero-warning policy.
+All three commands must pass with **no warnings or errors** for code in `src/nadzoring`.
+Tests are exempt from these strict requirements, but they must still pass when run.
 
 ---
 
@@ -255,6 +262,7 @@ Group imports in standard order (stdlib → third-party → local), separated by
 - Use `pytest`; no `unittest` classes
 - Mock external calls (DNS, subprocesses, network) — tests must not make real network requests
 - Name tests descriptively: `test_parse_linux_ip_route_timeout_hop`, not `test_parse`
+- Tests are not required to pass `ruff` or `mypy` with zero warnings, but they must still pass when executed
 
 ---
 
@@ -263,9 +271,10 @@ Group imports in standard order (stdlib → third-party → local), separated by
 1. Fork the repository and create a branch: `git checkout -b feature/your-feature`
 2. Implement your changes following the code style above
 3. Add tests — 100% coverage required
-4. Run `ruff check` and `black .` — both must be clean
-5. Commit with clear, atomic messages: `fix: handle tracepath fallback on missing traceroute`
-6. Open a PR and reference any related issues
+4. Run `ruff check src/nadzoring` and `mypy src/nadzoring` — both must pass with no warnings
+5. Format your code with `ruff format src/nadzoring`
+6. Commit with clear, atomic messages: `fix: handle tracepath fallback on missing traceroute`
+7. Open a PR and reference any related issues
 
 ---
 
