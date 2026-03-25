@@ -70,7 +70,7 @@ def check_ipv4(hostname: str) -> str:
         resolution fails.
     """
     parts = hostname.split(".")
-    if len(parts) == 4 and all(part.isdigit() for part in parts):
+    if len(parts) == 4 and all(part.isascii() and part.isdigit() for part in parts):
         octets = [int(part) for part in parts]
         if all(0 <= octet <= 255 for octet in octets):
             return ".".join(str(octet) for octet in octets)
