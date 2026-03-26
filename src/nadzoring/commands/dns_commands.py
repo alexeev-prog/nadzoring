@@ -4,7 +4,6 @@ from logging import Logger
 from typing import Any, Never
 
 import click
-import whois  # type: ignore
 from click import Choice
 from tqdm import tqdm
 
@@ -35,6 +34,7 @@ from nadzoring.dns_lookup.types import (
     RecordType,
 )
 from nadzoring.logger import get_logger
+from nadzoring.network_base.whois_lookup import whois_domain_lookup
 from nadzoring.utils.decorators import common_cli_options
 from nadzoring.utils.formatters import (
     format_dns_comparison,
@@ -107,33 +107,13 @@ def dns_group() -> None:
     """DNS lookup and analysis commands."""
 
 
-def _format_whois_value(value: Any) -> str:
-    """Convert WHOIS values into display-friendly strings."""
-    if value is None:
-        return ""
-    if isinstance(value, list):
-        return "\n".join(_format_whois_value(item) for item in value)
-    if hasattr(value, "isoformat"):
-        return value.isoformat()
-    return str(value)
-
-
 @dns_group.command(name="whois")
 @click.argument("domain", required=True)
 @common_cli_options(include_quiet=True)
 def whois_command(domain: str, *, quiet: bool) -> list[dict[str, str]]:
     """Perform a WHOIS lookup for a domain."""
     _ = quiet
-
-    try:
-        info = whois.whois(domain)
-    except Exception as e:
-        raise click.ClickException(f"Error fetching WHOIS for {domain}: {e}") from e
-
-    return [
-        {"Field": str(key), "Value": _format_whois_value(value)}
-        for key, value in info.items()
-    ]
+    return whois_domain_lookup(domain)
 
 
 @dns_group.command(name="monitor")

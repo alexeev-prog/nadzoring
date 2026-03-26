@@ -6,6 +6,9 @@ from platform import system
 from subprocess import PIPE, CalledProcessError, check_output
 from typing import Literal
 
+import click
+import whois  # type: ignore
+
 from nadzoring.logger import get_logger
 
 logger: Logger = get_logger(__name__)
@@ -108,6 +111,42 @@ def _parse_whois_output(raw: str) -> dict[str, str | None]:
                         break
 
     return result
+
+
+def _format_whois_value(value: object) -> str:
+    """Convert python-whois values into display-friendly strings."""
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        return "\n".join(_format_whois_value(item) for item in value)
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return str(value)
+
+
+def whois_domain_lookup(domain: str) -> list[dict[str, str]]:
+    """
+    Perform a structured WHOIS lookup for a domain using python-whois.
+
+    Args:
+        domain: Domain name to look up.
+
+    Returns:
+        List of field/value dictionaries formatted for CLI output handling.
+
+    Raises:
+        click.ClickException: If the WHOIS lookup fails.
+
+    """
+    try:
+        info = whois.whois(domain)
+    except Exception as e:
+        raise click.ClickException(f"Error fetching WHOIS for {domain}: {e}") from e
+
+    return [
+        {"Field": str(key), "Value": _format_whois_value(value)}
+        for key, value in info.items()
+    ]
 
 
 def whois_lookup(target: str) -> dict[str, str | None]:
