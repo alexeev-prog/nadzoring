@@ -3,7 +3,7 @@ import os
 import sys
 from typing import Literal
 
-from sphinx_polyversion.api import load
+from sphinx_polyversion.api import load  # type: ignore
 
 sys.path.insert(0, os.path.abspath("."))
 sys.path.insert(0, os.path.abspath(".."))
@@ -121,7 +121,7 @@ def linkcode_resolve(domain: str, info: dict) -> str | None:
             except AttributeError:
                 return None
 
-        obj = inspect.unwrap(obj)
+        obj = inspect.unwrap(obj)  # type: ignore
 
         source_file: str | None = inspect.getsourcefile(obj)
         if source_file is None:

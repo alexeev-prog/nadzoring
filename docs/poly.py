@@ -1,11 +1,11 @@
 from datetime import UTC, datetime
 from pathlib import Path
 
-from sphinx_polyversion.api import apply_overrides
-from sphinx_polyversion.driver import DefaultDriver
-from sphinx_polyversion.git import Git, GitRef, GitRefType, file_predicate
-from sphinx_polyversion.pyvenv import Pip, VenvWrapper
-from sphinx_polyversion.sphinx import SphinxBuilder
+from sphinx_polyversion.api import apply_overrides  # type: ignore
+from sphinx_polyversion.driver import DefaultDriver  # type: ignore
+from sphinx_polyversion.git import Git, GitRef, GitRefType, file_predicate  # type: ignore
+from sphinx_polyversion.pyvenv import Pip, VenvWrapper  # type: ignore
+from sphinx_polyversion.sphinx import SphinxBuilder  # type: ignore
 
 BRANCH_REGEX = r"^main$"
 TAG_REGEX = r"^v\d+\.\d+.*$"
