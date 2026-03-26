@@ -113,7 +113,10 @@ def dns_group() -> None:
 def whois_command(domain: str, *, quiet: bool) -> list[dict[str, str]]:
     """Perform a WHOIS lookup for a domain."""
     _ = quiet
-    return whois_domain_lookup(domain)
+    result = whois_domain_lookup(domain)
+    if result and "error" in result[0]:
+        raise click.ClickException(result[0]["error"])
+    return result
 
 
 @dns_group.command(name="monitor")

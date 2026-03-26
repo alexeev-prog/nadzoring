@@ -5,8 +5,6 @@ from logging import Logger
 from platform import system
 from subprocess import PIPE, CalledProcessError, check_output
 from typing import Literal
-
-import click
 import whois  # type: ignore
 
 from nadzoring.logger import get_logger
@@ -134,14 +132,11 @@ def whois_domain_lookup(domain: str) -> list[dict[str, str]]:
     Returns:
         List of field/value dictionaries formatted for CLI output handling.
 
-    Raises:
-        click.ClickException: If the WHOIS lookup fails.
-
     """
     try:
         info = whois.whois(domain)
     except Exception as e:
-        raise click.ClickException(f"Error fetching WHOIS for {domain}: {e}") from e
+        return [{"error": f"Error fetching WHOIS for {domain}: {e}"}]
 
     return [
         {"Field": str(key), "Value": _format_whois_value(value)}
