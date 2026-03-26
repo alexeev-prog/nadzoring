@@ -137,7 +137,12 @@ def _query_txt(name: str) -> list[str]:
         answers: Answer = dns.resolver.resolve(name, "TXT", lifetime=5)
         return [b"".join(r.strings).decode("utf-8", errors="replace") for r in answers]
     except Exception:
-        logger.debug("dnspython TXT lookup failed for %s", name)
+        logger.debug(
+            "dnspython TXT lookup failed for %s.\n"
+            "Falling back to system tools (dig/nslookup).\n"
+            "If this persists, install dnspython: pip install dnspython",
+            name,
+        )
 
     try:
         output: str = subprocess.check_output(

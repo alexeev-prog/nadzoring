@@ -36,6 +36,7 @@ from nadzoring.dns_lookup.types import (
     RecordType,
 )
 from nadzoring.logger import get_logger
+from nadzoring.network_base.whois_lookup import whois_domain_lookup
 from nadzoring.utils.decorators import common_cli_options
 from nadzoring.utils.formatters import (
     format_dns_comparison,
@@ -106,6 +107,18 @@ def _make_pbar(
 @click.group(name="dns")
 def dns_group() -> None:
     """DNS lookup and analysis commands."""
+
+
+@dns_group.command(name="whois")
+@click.argument("domain", required=True)
+@common_cli_options(include_quiet=True)
+def whois_command(domain: str, *, quiet: bool) -> list[dict[str, str]]:
+    """Perform a WHOIS lookup for a domain."""
+    _ = quiet
+    result = whois_domain_lookup(domain)
+    if result and "error" in result[0]:
+        raise click.ClickException(result[0]["error"])
+    return result
 
 
 @dns_group.command(name="monitor")

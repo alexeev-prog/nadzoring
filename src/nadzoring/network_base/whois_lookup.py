@@ -7,6 +7,8 @@ from platform import system
 from subprocess import PIPE, CalledProcessError, check_output
 from typing import Literal
 
+import whois  # type: ignore
+
 from nadzoring.logger import get_logger
 
 logger: Logger = get_logger(__name__)
@@ -63,7 +65,16 @@ def _run_whois_command(target: str) -> str | None:
             timeout=15,
         ).decode(encoding, errors="replace")
     except (CalledProcessError, FileNotFoundError, TimeoutError):
-        logger.exception("Failed to run whois for %s", target)
+        logger.exception(
+            "WHOIS lookup failed for %s.\n\n"
+            "Possible fixes:\n"
+            "  • Ensure 'whois' is installed:\n"
+            "    - Ubuntu/Debian: sudo apt install whois\n"
+            "    - macOS: brew install whois\n"
+            "    - RHEL/Fedora: sudo dnf install whois\n"
+            "  • Check internet connectivity",
+            target,
+        )
         return None
 
 
@@ -101,6 +112,36 @@ def _parse_whois_output(raw: str) -> dict[str, str | None]:
     return result
 
 
+def _format_whois_value(value: object) -> str:
+    """Convert python-whois values into display-friendly strings."""
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        return "\n".join(_format_whois_value(item) for item in value)
+    if hasattr(value, "isoformat"):
+        return str(value.isoformat())
+    return str(value)
+
+
+def whois_domain_lookup(domain: str) -> list[dict[str, str]]:
+    """
+    Perform a structured WHOIS lookup for a domain using python-whois.
+
+    Args:
+        domain: Domain name to look up.
+
+    Returns:
+        List of field/value dictionaries formatted for CLI output handling.
+
+    """
+    try:
+        info = whois.whois(domain)
+    except Exception as e:
+        return [{"error": f"Error fetching WHOIS for {domain}: {e}"}]
+
+    return [{"Field": str(key), "Value": _format_whois_value(value)} for key, value in info.items()]
+
+
 def whois_lookup(target: str) -> dict[str, str | None]:
     """
     Perform a WHOIS lookup for a domain or IP address.
@@ -126,7 +167,15 @@ def whois_lookup(target: str) -> dict[str, str | None]:
         return {
             "target": target,
             "type": "ip" if _is_ip(target) else "domain",
-            "error": "WHOIS lookup failed. Ensure 'whois' is installed.",
+            "error": (
+                "WHOIS lookup failed.\n\n"
+                "Possible fixes:\n"
+                "  • Install 'whois':\n"
+                "    - Ubuntu/Debian: sudo apt install whois\n"
+                "    - macOS: brew install whois\n"
+                "    - RHEL/Fedora: sudo dnf install whois\n"
+                "  • Check internet connection"
+            ),
         }
 
     parsed: dict[str, str | None] = _parse_whois_output(raw)

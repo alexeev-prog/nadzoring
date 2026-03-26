@@ -88,7 +88,13 @@ class ARPCache:
         """
         ip_path: str | None = which("ip")
         if not ip_path:
-            raise ARPCacheRetrievalError("'ip' command not found")
+            raise ARPCacheRetrievalError(
+                "'ip' command not found.\n\n"
+                "Possible fixes:\n"
+                "  • Install iproute2 package:\n"
+                "    - Ubuntu/Debian: sudo apt install iproute2\n"
+                "    - RHEL/Fedora: sudo dnf install iproute\n"
+            )
 
         try:
             result: CompletedProcess[str] = subprocess.run(
@@ -99,7 +105,12 @@ class ARPCache:
             )
             return self._parse_ip_neigh_output(result.stdout)
         except subprocess.CalledProcessError as exc:
-            raise ARPCacheRetrievalError(f"Failed to get ARP cache: {exc}") from exc
+            raise ARPCacheRetrievalError(
+                f"Failed to get ARP cache: {exc}\n\n"
+                "Possible fixes:\n"
+                "  • Try running with sudo/root privileges\n"
+                "  • Ensure network interfaces are up\n"
+            ) from exc
 
     def _get_windows_cache(self) -> list[ARPEntry]:
         """
@@ -114,7 +125,12 @@ class ARPCache:
         """
         arp_path = which("arp")
         if not arp_path:
-            raise ARPCacheRetrievalError("'arp' command not found")
+            raise ARPCacheRetrievalError(
+                "'arp' command not found.\n\n"
+                "Possible fixes:\n"
+                "  • Ensure system networking tools are installed\n"
+                "  • On minimal systems, install net-tools\n"
+            )
 
         try:
             result: CompletedProcess[str] = subprocess.run(

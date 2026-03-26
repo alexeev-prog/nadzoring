@@ -60,16 +60,23 @@ def check_ipv4(hostname: str) -> str:
     """
     Return a resolved IPv4 address for *hostname*, or the input unchanged.
 
-    If *hostname* is already a valid IPv4 address it is returned as-is.
-    Otherwise a DNS lookup is attempted via :func:`get_ip_from_host`.
+    If *hostname* is already a valid IPv4 address it is returned in normalized
+    dotted-decimal form. Otherwise a DNS lookup is attempted via
+    :func:`get_ip_from_host`.
 
     Args:
         hostname: Hostname or IPv4 address string.
 
     Returns:
-        IPv4 address string, or *hostname* unchanged when resolution fails.
-
+        Normalized IPv4 address string, or *hostname* unchanged when
+        resolution fails.
     """
+    parts = hostname.split(".")
+    if len(parts) == 4 and all(part.isascii() and part.isdigit() for part in parts):
+        octets = [int(part) for part in parts]
+        if all(0 <= octet <= 255 for octet in octets):
+            return ".".join(str(octet) for octet in octets)
+
     if _is_valid_ipv4(hostname):
         return hostname
     return get_ip_from_host(hostname)

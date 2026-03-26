@@ -1,4 +1,3 @@
-# src/nadzoring/cli.py
 """Main CLI entry point."""
 
 import click
