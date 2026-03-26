@@ -139,9 +139,7 @@ def get_ports_from_mode(config: ScanConfig) -> list[int]:
     return []
 
 
-def _grab_banner(
-    sock: socket.socket, target_ip: str, port: int, timeout: float = DEFAULT_TIMEOUT
-) -> str | None:
+def _grab_banner(sock: socket.socket, target_ip: str, port: int, timeout: float = DEFAULT_TIMEOUT) -> str | None:
     """Attempt to grab banner from open port."""
     try:
         sock.settimeout(timeout)
@@ -176,9 +174,7 @@ def _scan_tcp_port(
         sock.settimeout(timeout)
 
         connection_result: int = sock.connect_ex((target_ip, port))
-        response_time: float = (
-            datetime.now(tz=UTC) - start_time
-        ).total_seconds() * 1000
+        response_time: float = (datetime.now(tz=UTC) - start_time).total_seconds() * 1000
 
         if connection_result == 0:
             result.state = "open"
@@ -207,9 +203,7 @@ def _scan_tcp_port(
     return port, result
 
 
-def _scan_udp_port(
-    target_ip: str, port: int, timeout: float = DEFAULT_TIMEOUT
-) -> tuple[int, PortResult]:
+def _scan_udp_port(target_ip: str, port: int, timeout: float = DEFAULT_TIMEOUT) -> tuple[int, PortResult]:
     """Scan a single UDP port on a target."""
     result = PortResult(port=port, state="filtered", service="unknown")
     sock = None
@@ -223,9 +217,7 @@ def _scan_udp_port(
 
         try:
             sock.recvfrom(1024)
-            response_time: float = (
-                datetime.now(tz=UTC) - start_time
-            ).total_seconds() * 1000
+            response_time: float = (datetime.now(tz=UTC) - start_time).total_seconds() * 1000
             result.state = "open"
             result.response_time = round(response_time, 2)
             result.service = get_service_on_port(port)
@@ -244,9 +236,7 @@ def _scan_udp_port(
     return port, result
 
 
-def _scan_target_ports(
-    target_ip: str, ports: list[int], config: ScanConfig, target: str
-) -> ScanResult:
+def _scan_target_ports(target_ip: str, ports: list[int], config: ScanConfig, target: str) -> ScanResult:
     """Perform port scan on a single target."""
     total_ports: int = len(ports)
     batch_size: int = config.max_workers
@@ -301,9 +291,7 @@ def _scan_target_ports(
 
             completed += 1
 
-            if config.progress_callback and (
-                completed - last_update >= update_frequency or completed == total_ports
-            ):
+            if config.progress_callback and (completed - last_update >= update_frequency or completed == total_ports):
                 current_batch: int = (completed + batch_size - 1) // batch_size
                 config.progress_callback(
                     f"Batch {current_batch}/{num_batches}",

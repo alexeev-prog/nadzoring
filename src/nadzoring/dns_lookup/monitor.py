@@ -343,17 +343,13 @@ class DNSMonitor:
             "=" * 60,
             f"DNS Monitor Report — {self.config.domain}",
             f"Cycles : {self._cycle}",
-            (
-                f"Range  : {self._history[0].timestamp.isoformat()} → {self._history[-1].timestamp.isoformat()}"
-            ),
+            (f"Range  : {self._history[0].timestamp.isoformat()} → {self._history[-1].timestamp.isoformat()}"),
             "=" * 60,
         ]
         for server in self.config.nameservers:
             lines.extend(self._server_report_lines(server))
 
-        health_scores: list[int] = [
-            c.health_score for c in self._history if c.health_score is not None
-        ]
+        health_scores: list[int] = [c.health_score for c in self._history if c.health_score is not None]
         if health_scores:
             lines += [
                 "",
@@ -373,13 +369,9 @@ class DNSMonitor:
 
     def _build_cycle_result(self) -> CycleResult:
         ts: datetime = datetime.now(UTC)
-        samples: list[ServerSample] = [
-            self._sample_server(srv, ts) for srv in self.config.nameservers
-        ]
+        samples: list[ServerSample] = [self._sample_server(srv, ts) for srv in self.config.nameservers]
         health_score, health_status = self._run_health_check()
-        alerts: list[AlertEvent] = evaluate_thresholds(
-            samples, health_score, health_status, self.config
-        )
+        alerts: list[AlertEvent] = evaluate_thresholds(samples, health_score, health_status, self.config)
         self._dispatch_alerts(alerts)
         return CycleResult(
             cycle=self._cycle,
@@ -408,9 +400,7 @@ class DNSMonitor:
             return ServerSample(
                 server=server,
                 timestamp=ts,
-                avg_response_time_ms=(
-                    bench["avg_response_time"] if bench["success_rate"] > 0 else None
-                ),
+                avg_response_time_ms=(bench["avg_response_time"] if bench["success_rate"] > 0 else None),
                 min_response_time_ms=bench["min_response_time"] or None,
                 max_response_time_ms=bench["max_response_time"] or None,
                 success_rate=bench["success_rate"] / 100.0,
@@ -464,9 +454,7 @@ class DNSMonitor:
     def _print_summary(self, result: CycleResult) -> None:
         ts: str = result.timestamp.strftime("%H:%M:%S")
         for i, s in enumerate(result.samples):
-            rt: str = (
-                f"{s.avg_response_time_ms:.1f}ms" if s.avg_response_time_ms else "N/A"
-            )
+            rt: str = f"{s.avg_response_time_ms:.1f}ms" if s.avg_response_time_ms else "N/A"
             health: str = (
                 f"  health={result.health_score}/{result.health_status}"
                 if i == 0 and result.health_score is not None
@@ -489,19 +477,13 @@ class DNSMonitor:
         self._running = False
 
     def _server_report_lines(self, server: str) -> list[str]:
-        samples: list[ServerSample] = [
-            s for c in self._history for s in c.samples if s.server == server
-        ]
+        samples: list[ServerSample] = [s for c in self._history for s in c.samples if s.server == server]
         if not samples:
             return []
 
-        rts: list[float] = [
-            s.avg_response_time_ms for s in samples if s.avg_response_time_ms
-        ]
+        rts: list[float] = [s.avg_response_time_ms for s in samples if s.avg_response_time_ms]
         success_rates: list[float] = [s.success_rate for s in samples]
-        alert_count: int = sum(
-            1 for c in self._history for a in c.alerts if a.server == server
-        )
+        alert_count: int = sum(1 for c in self._history for a in c.alerts if a.server == server)
         lines: list[str] = [f"\nServer : {server}", f"  Samples : {len(samples)}"]
         if rts:
             sd: str = f" ± {stdev(rts):.2f}" if len(rts) > 1 else ""
@@ -546,9 +528,7 @@ def evaluate_thresholds(
                 AlertEvent(
                     server=s.server,
                     alert_type="resolution_failure",
-                    message=(
-                        f"[{s.server}] Complete failure for {config.domain}: {s.error}"
-                    ),
+                    message=(f"[{s.server}] Complete failure for {config.domain}: {s.error}"),
                     value=0.0,
                     threshold=config.min_success_rate,
                     timestamp=ts,
@@ -556,10 +536,7 @@ def evaluate_thresholds(
             )
             continue
 
-        if (
-            s.avg_response_time_ms is not None
-            and s.avg_response_time_ms > config.max_response_time_ms
-        ):
+        if s.avg_response_time_ms is not None and s.avg_response_time_ms > config.max_response_time_ms:
             alerts.append(
                 AlertEvent(
                     server=s.server,
@@ -592,9 +569,7 @@ def evaluate_thresholds(
             AlertEvent(
                 server=config.domain,
                 alert_type="health_degraded",
-                message=(
-                    f"Health for {config.domain} is {health_status} (score={health_score})"
-                ),
+                message=(f"Health for {config.domain} is {health_status} (score={health_score})"),
                 value=float(health_score) if health_score is not None else None,
                 threshold=_HEALTHY_SCORE_THRESHOLD,
                 timestamp=ts,

@@ -230,9 +230,7 @@ async def _benchmark_single_server_async(
             await asyncio.sleep(delay)
 
         try:
-            result: DNSResult = await resolve_with_timer_async(
-                domain, record_type, server
-            )
+            result: DNSResult = await resolve_with_timer_async(domain, record_type, server)
             if result["response_time"] is not None and not result["error"]:
                 responses.append(result["response_time"])
             else:
@@ -289,9 +287,7 @@ async def _benchmark_parallel_async(
             async with semaphore:
                 return (
                     server,
-                    await _benchmark_single_server_async(
-                        server, domain, record_type, queries
-                    ),
+                    await _benchmark_single_server_async(server, domain, record_type, queries),
                 )
         except Exception:
             logger.exception("Benchmark failed for %s", server)
@@ -335,9 +331,7 @@ async def _benchmark_sequential_async(
 
     for i, server in enumerate(servers):
         try:
-            result: BenchmarkResult = await _benchmark_single_server_async(
-                server, domain, record_type, queries
-            )
+            result: BenchmarkResult = await _benchmark_single_server_async(server, domain, record_type, queries)
         except Exception:
             logger.exception("Benchmark failed for %s", server)
             result = _make_failed_benchmark_result(server, queries)

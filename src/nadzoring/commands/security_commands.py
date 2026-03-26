@@ -59,18 +59,12 @@ def check_ssl_command(
     results: list[dict[str, Any]] = []
     total: int = len(domains)
 
-    pbar: tqdm[Never] | None = (
-        None
-        if quiet
-        else tqdm(total=total, desc="Checking SSL certificates", unit="domain")
-    )
+    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Checking SSL certificates", unit="domain")
 
     for domain in domains:
         try:
             if no_verify:
-                result: dict[str, Any] = check_ssl_expiry_with_fallback(
-                    domain, days_before
-                )
+                result: dict[str, Any] = check_ssl_expiry_with_fallback(domain, days_before)
             else:
                 result = check_ssl_certificate(domain, days_before, verify=True)
 
@@ -85,27 +79,18 @@ def check_ssl_command(
                     "subject_cn": result.get("subject", {}).get("CN", "Unknown"),
                     "key": (
                         "{algorithm}/{curve_or_size}".format(
-                            algorithm=result.get("public_key", {}).get(
-                                "algorithm", "?"
-                            ),
+                            algorithm=result.get("public_key", {}).get("algorithm", "?"),
                             curve_or_size=(
                                 result.get("public_key", {}).get("curve")
-                                or str(
-                                    result.get("public_key", {}).get("key_size", "?")
-                                )
+                                or str(result.get("public_key", {}).get("key_size", "?"))
                             ),
                         )
                         if result.get("public_key")
                         else None
                     ),
                     "domain_match": result.get("domain_match"),
-                    "protocols_supported": ", ".join(
-                        result.get("protocols", {}).get("supported", [])
-                    )
-                    or None,
-                    "has_outdated_protocols": result.get("protocols", {}).get(
-                        "has_outdated"
-                    ),
+                    "protocols_supported": ", ".join(result.get("protocols", {}).get("supported", [])) or None,
+                    "has_outdated_protocols": result.get("protocols", {}).get("has_outdated"),
                 }
                 if "warning" in result:
                     filtered["warning"] = result["warning"]
@@ -116,13 +101,11 @@ def check_ssl_command(
                 results.append(result)
 
         except Exception as exc:
-            results.append(
-                {
-                    "domain": domain,
-                    "status": "error",
-                    "error": str(exc),
-                }
-            )
+            results.append({
+                "domain": domain,
+                "status": "error",
+                "error": str(exc),
+            })
 
         if pbar:
             pbar.set_description(f"Checking {domain}")
@@ -160,11 +143,7 @@ def check_headers_command(
     results: list[dict[str, Any]] = []
     total: int = len(urls)
 
-    pbar: tqdm[Never] | None = (
-        None
-        if quiet
-        else tqdm(total=total, desc="Checking security headers", unit="url")
-    )
+    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Checking security headers", unit="url")
 
     for url in urls:
         result: dict[str, Any] = check_http_security_headers(
@@ -196,11 +175,7 @@ def check_email_command(
     results: list[dict[str, Any]] = []
     total: int = len(domains)
 
-    pbar: tqdm[Never] | None = (
-        None
-        if quiet
-        else tqdm(total=total, desc="Checking email security", unit="domain")
-    )
+    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Checking email security", unit="domain")
 
     for domain in domains:
         result: dict[str, Any] = check_email_security(domain)

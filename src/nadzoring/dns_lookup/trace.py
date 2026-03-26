@@ -99,12 +99,8 @@ def _get_delegation_info(
 
     """
     try:
-        ns_query: QueryMessage = dns.message.make_query(
-            current_domain, dns.rdatatype.NS
-        )
-        response: Message = dns.query.udp(
-            ns_query, current_ns, timeout=_DELEGATION_TIMEOUT
-        )
+        ns_query: QueryMessage = dns.message.make_query(current_domain, dns.rdatatype.NS)
+        response: Message = dns.query.udp(ns_query, current_ns, timeout=_DELEGATION_TIMEOUT)
 
         for rrset in response.authority:
             if rrset.rdtype != dns.rdatatype.NS:
@@ -113,9 +109,7 @@ def _get_delegation_info(
             for rr in rrset:
                 ns_name = str(rr.target)
                 try:
-                    ns_ip_answer: Answer = dns.resolver.resolve(
-                        ns_name, "A", lifetime=3
-                    )
+                    ns_ip_answer: Answer = dns.resolver.resolve(ns_name, "A", lifetime=3)
                     ns_ip = str(ns_ip_answer[0])
                     hop["records"].append(f"Delegation to {ns_name} ({ns_ip})")
                 except Exception:

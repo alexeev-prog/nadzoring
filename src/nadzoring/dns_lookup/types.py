@@ -22,9 +22,7 @@ Usage example::
 
 from typing import Any, Literal, TypedDict
 
-type RecordType = Literal[
-    "A", "AAAA", "CNAME", "MX", "NS", "TXT", "PTR", "SOA", "DNSKEY"
-]
+type RecordType = Literal["A", "AAAA", "CNAME", "MX", "NS", "TXT", "PTR", "SOA", "DNSKEY"]
 """Supported DNS record types for queries and validation."""
 
 RECORD_TYPES: list[str] = [

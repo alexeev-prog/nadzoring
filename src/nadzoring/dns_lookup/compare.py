@@ -90,9 +90,7 @@ def compare_dns_servers(
 
         for rtype_str in record_types:
             rtype: RecordType = rtype_str  # type: ignore
-            query_result: DNSResult = resolve_with_timer(
-                domain, rtype, server, include_ttl=True
-            )
+            query_result: DNSResult = resolve_with_timer(domain, rtype, server, include_ttl=True)
 
             if is_baseline:
                 query_result["differs"] = False  # type: ignore
@@ -102,17 +100,13 @@ def compare_dns_servers(
                 query_result["differs"] = differs  # type: ignore
 
                 if differs:
-                    result["differences"].append(
-                        {
-                            "server": server,
-                            "type": rtype_str,
-                            "expected": base.get("records", []),
-                            "got": query_result.get("records", []),
-                            "ttl_difference": _calculate_ttl_difference(
-                                base.get("ttl"), query_result.get("ttl")
-                            ),
-                        }
-                    )
+                    result["differences"].append({
+                        "server": server,
+                        "type": rtype_str,
+                        "expected": base.get("records", []),
+                        "got": query_result.get("records", []),
+                        "ttl_difference": _calculate_ttl_difference(base.get("ttl"), query_result.get("ttl")),
+                    })
 
             server_results[rtype_str] = query_result
 

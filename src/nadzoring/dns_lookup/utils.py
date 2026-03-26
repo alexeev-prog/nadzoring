@@ -120,19 +120,14 @@ def create_async_resolver(
 
 def _extract_mx_records(answers: Answer) -> list[str]:
     """Extract and format MX records from a resolver answer."""
-    return [
-        f"{answer.preference} {str(answer.exchange).rstrip('.')}" for answer in answers
-    ]
+    return [f"{answer.preference} {str(answer.exchange).rstrip('.')}" for answer in answers]
 
 
 def _extract_txt_records(answers: Answer) -> list[str]:
     """Extract and format TXT records, joining multi-part strings."""
     records: list[str] = []
     for answer in answers:
-        parts: list[str] = [
-            part.decode("utf-8") if isinstance(part, bytes) else str(part)
-            for part in answer.strings
-        ]
+        parts: list[str] = [part.decode("utf-8") if isinstance(part, bytes) else str(part) for part in answer.strings]
         records.append("".join(parts))
     return records
 
@@ -140,9 +135,7 @@ def _extract_txt_records(answers: Answer) -> list[str]:
 def _extract_soa_records(answers: Answer) -> list[str]:
     """Extract and format SOA records into a single space-joined string."""
     return [
-        (
-            f"{soa.mname} {soa.rname} {soa.serial} {soa.refresh} {soa.retry} {soa.expire} {soa.minimum}"
-        )
+        (f"{soa.mname} {soa.rname} {soa.serial} {soa.refresh} {soa.retry} {soa.expire} {soa.minimum}")
         for soa in answers
     ]
 
@@ -184,9 +177,7 @@ def extract_records(answers: Answer, record_type: str) -> list[str]:
         ['10 mail.example.com', '20 backup.example.com']
 
     """
-    extractor: Callable[[Answer], list[str]] = _EXTRACTORS.get(
-        record_type, _extract_default_records
-    )
+    extractor: Callable[[Answer], list[str]] = _EXTRACTORS.get(record_type, _extract_default_records)
     return extractor(answers)
 
 

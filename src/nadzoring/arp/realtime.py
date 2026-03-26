@@ -68,9 +68,7 @@ class ARPRealtimeDetector:
             known_ip: str = self.ip_mac_map[src_mac]
             if known_ip != src_ip:
                 self.stats["alerts_generated"] += 1
-                message = (
-                    f"ARP attack detected from machine with IP {known_ip} for {src_ip}"
-                )
+                message = f"ARP attack detected from machine with IP {known_ip} for {src_ip}"
                 logger.warning(message)
                 return message
         else:
@@ -111,15 +109,13 @@ class ARPRealtimeDetector:
 
         def _default_callback(packet: Ether, alert: str | None) -> None:
             if alert:
-                alerts.append(
-                    {
-                        "timestamp": datetime.now(UTC).isoformat(),
-                        "interface": interface or "all",
-                        "message": alert,
-                        "src_ip": getattr(packet[ARP], "psrc", "unknown"),
-                        "src_mac": getattr(packet[Ether], "src", "unknown"),
-                    }
-                )
+                alerts.append({
+                    "timestamp": datetime.now(UTC).isoformat(),
+                    "interface": interface or "all",
+                    "message": alert,
+                    "src_ip": getattr(packet[ARP], "psrc", "unknown"),
+                    "src_mac": getattr(packet[Ether], "src", "unknown"),
+                })
 
         callback: Callable[[Ether, str | None], None] = (
             packet_callback if packet_callback is not None else _default_callback

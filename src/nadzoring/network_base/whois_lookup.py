@@ -6,6 +6,7 @@ from logging import Logger
 from platform import system
 from subprocess import PIPE, CalledProcessError, check_output
 from typing import Literal
+
 import whois  # type: ignore
 
 from nadzoring.logger import get_logger
@@ -118,7 +119,7 @@ def _format_whois_value(value: object) -> str:
     if isinstance(value, list):
         return "\n".join(_format_whois_value(item) for item in value)
     if hasattr(value, "isoformat"):
-        return value.isoformat()
+        return str(value.isoformat())
     return str(value)
 
 
@@ -138,10 +139,7 @@ def whois_domain_lookup(domain: str) -> list[dict[str, str]]:
     except Exception as e:
         return [{"error": f"Error fetching WHOIS for {domain}: {e}"}]
 
-    return [
-        {"Field": str(key), "Value": _format_whois_value(value)}
-        for key, value in info.items()
-    ]
+    return [{"Field": str(key), "Value": _format_whois_value(value)} for key, value in info.items()]
 
 
 def whois_lookup(target: str) -> dict[str, str | None]:

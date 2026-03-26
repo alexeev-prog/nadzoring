@@ -80,9 +80,7 @@ def _parse_windows_network_config(config_lines: list[str]) -> str | None:
 
         ip_address: str = properties.get("IPAddress", "")
         if ip_address:
-            cleaned_ip: str = (
-                ip_address.replace('"', "").replace("{", "").replace("}", "")
-            )
+            cleaned_ip: str = ip_address.replace('"', "").replace("{", "").replace("}", "")
             return cleaned_ip.split(",", maxsplit=1)[0].strip()
 
     return None

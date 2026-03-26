@@ -172,11 +172,7 @@ def _load_wordlist(path: Path) -> list[str]:
 
     """
     try:
-        return [
-            line.strip()
-            for line in path.read_text(encoding="utf-8").splitlines()
-            if line.strip()
-        ]
+        return [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
     except OSError:
         logger.exception("Failed to read wordlist: %s", path)
         return []
@@ -246,8 +242,7 @@ def scan_subdomains(
 
     with ThreadPoolExecutor(max_workers=max_threads) as executor:
         future_to_sub: dict[Future[dict[str, Any] | None], str] = {
-            executor.submit(_probe_subdomain, sub, timeout): sub
-            for sub in all_candidates
+            executor.submit(_probe_subdomain, sub, timeout): sub for sub in all_candidates
         }
         for future in as_completed(future_to_sub):
             sub = future_to_sub[future]

@@ -206,9 +206,7 @@ def _extract_interface_details(interface_parts: list[str]) -> dict[str, str | No
         if key == "SettingID":
             details["Default Interface"] = value
         elif key == "DefaultIPGateway":
-            details["Router ip-address"] = (
-                value.replace("{", "").replace("}", "").replace('"', "")
-            )
+            details["Router ip-address"] = value.replace("{", "").replace("}", "").replace('"', "")
         elif key == "MACAddress":
             details["MAC-address"] = value
         elif key == "IPAddress":
