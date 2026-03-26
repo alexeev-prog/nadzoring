@@ -1,6 +1,7 @@
 """Traceroute implementation using system commands."""
 
 import re
+import shlex
 from dataclasses import dataclass, field
 from logging import Logger
 from platform import system
@@ -162,8 +163,7 @@ def _stream_process(cmd: str, *, wall_timeout: float) -> tuple[str, str]:
 
     """
     with Popen(
-        cmd,
-        shell=True,
+        shlex.split(cmd),
         stdout=PIPE,
         stderr=PIPE,
         text=True,

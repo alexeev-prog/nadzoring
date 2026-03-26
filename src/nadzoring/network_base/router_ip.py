@@ -7,6 +7,7 @@ because the ``route`` command is not available by default::
     sudo apt install net-tools
 """
 
+import shlex
 from ipaddress import AddressValueError, IPv4Address, IPv6Address
 from logging import Logger
 from platform import system
@@ -14,6 +15,7 @@ from socket import gaierror, gethostbyname
 from subprocess import CalledProcessError, check_output
 
 from nadzoring.logger import get_logger
+from nadzoring.utils.additional import grep_in_line
 
 logger: Logger = get_logger(__name__)
 
@@ -102,7 +104,14 @@ def check_ipv6(hostname: str) -> str:
 def _get_linux_router_ip(*, ipv6: bool) -> str | None:
     """Retrieve the default gateway address on Linux via ``route -n``."""
     try:
-        raw: str = check_output("route -n | grep UG", shell=True).decode().split()[1]
+        route_output: str = check_output(shlex.split("route -n")).decode()
+        ug_lines: list[str] = grep_in_line(route_output, filter_key="UG")
+
+        if not ug_lines:
+            logger.error("No gateway found in route table")
+            return None
+
+        raw: str = ug_lines[0].split()[1]
     except (CalledProcessError, IndexError, OSError):
         logger.exception("Failed to retrieve router IP on Linux")
         return None
@@ -113,14 +122,14 @@ def _get_linux_router_ip(*, ipv6: bool) -> str | None:
 def _get_windows_router_ip(*, ipv6: bool) -> str | None:
     """Retrieve the default gateway address on Windows via ``route PRINT``."""
     try:
-        raw: str = (
-            check_output(
-                "route PRINT 0* -4 | findstr 0.0.0.0",
-                shell=True,
-            )
-            .decode("cp866")
-            .split()[-3]
-        )
+        route_output: str = check_output("route PRINT 0* -4", shell=True).decode("cp866")
+        gateway_lines: list[str] = grep_in_line(route_output, filter_key="0.0.0.0")
+
+        if not gateway_lines:
+            logger.error("No gateway found in route table")
+            return None
+
+        raw: str = gateway_lines[0].split()[-3]
     except (CalledProcessError, IndexError, OSError, UnicodeDecodeError):
         logger.exception("Failed to retrieve router IP on Windows")
         return None
