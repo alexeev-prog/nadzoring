@@ -56,6 +56,7 @@ This utility has high-quality typing and a library API for use in your projects.
     <a href="https://deepwiki.com/alexeev-prog/nadzoring"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
     <img src="https://scrutinizer-ci.com/g/alexeev-prog/nadzoring/badges/quality-score.png?b=main">
     <a href="https://sloprank.io/repo/alexeev-prog/nadzoring"><img src="https://sloprank.io/badge/alexeev-prog/nadzoring.svg" alt="sloprank"></a>
+    <a href='https://coveralls.io/github/alexeev-prog/nadzoring?branch=main'><img src='https://coveralls.io/repos/github/alexeev-prog/nadzoring/badge.svg?branch=main' alt='Coverage' /></a>
 </p>
 
 ## Table of Contents
