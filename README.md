@@ -157,6 +157,10 @@ Optional system utilities:
 | `ss` | `network-base connections` (Linux) |
 | `dig` / `nslookup` | `security check-email` (DNS TXT lookups; `dnspython` used when available) |
 
+> **Note:** The Python package `netifaces` (used by `network-base params`) is distributed as source code and requires compilation on Linux. If you encounter errors during installation (e.g., `gcc: command not found`), install the required build tools first:
+> `sudo apt update && sudo apt install build-essential python3-dev` (Debian/Ubuntu)
+> or the equivalent for your distribution. On other platforms (Windows, macOS) pre‑compiled wheels are usually available.
+
 ### Installation
 
 ```bash
