@@ -1,105 +1,99 @@
-"""Tests for nadzoring.network_base.service_on_port."""
+"""Tests for nadzoring.network_base.service_on_port — 100% coverage."""
 
-from unittest.mock import patch
+import pytest
 
-from nadzoring.network_base.service_on_port import get_service_on_port
+from nadzoring.network_base.service_on_port import (
+    _FALLBACK_SERVICES,
+    get_service_on_port,
+)
+
+# ---------------------------------------------------------------------------
+# System getservbyport succeeds
+# ---------------------------------------------------------------------------
 
 
-class TestGetServiceOnPort:
-    """Tests for get_service_on_port function."""
+def test_http_port_80(mocker):
+    mocker.patch("nadzoring.network_base.service_on_port.getservbyport", return_value="http")
+    assert get_service_on_port(80) == "http"
 
-    # --- System lookup succeeds ---
 
-    def test_well_known_http(self):
-        assert get_service_on_port(80) == "http"
+def test_ssh_port_22(mocker):
+    mocker.patch("nadzoring.network_base.service_on_port.getservbyport", return_value="ssh")
+    assert get_service_on_port(22) == "ssh"
 
-    def test_well_known_ssh(self):
-        assert get_service_on_port(22) == "ssh"
 
-    def test_well_known_https(self):
-        assert get_service_on_port(443) == "https"
+def test_https_port_443(mocker):
+    mocker.patch("nadzoring.network_base.service_on_port.getservbyport", return_value="https")
+    assert get_service_on_port(443) == "https"
 
-    def test_well_known_ftp(self):
-        assert get_service_on_port(21) == "ftp"
 
-    def test_well_known_smtp(self):
-        assert get_service_on_port(25) == "smtp"
+def test_smtp_port_25(mocker):
+    mocker.patch("nadzoring.network_base.service_on_port.getservbyport", return_value="smtp")
+    assert get_service_on_port(25) == "smtp"
 
-    def test_well_known_dns(self):
-        assert get_service_on_port(53) == "domain"
 
-    # --- System lookup fails → fallback table ---
+def test_calls_getservbyport_with_given_port(mocker):
+    mock = mocker.patch("nadzoring.network_base.service_on_port.getservbyport", return_value="ftp")
+    get_service_on_port(21)
+    mock.assert_called_once_with(21)
 
-    @patch("nadzoring.network_base.service_on_port.getservbyport")
-    def test_fallback_mysql(self, mock_gsb):
-        mock_gsb.side_effect = OSError
-        assert get_service_on_port(3306) == "mysql"
 
-    @patch("nadzoring.network_base.service_on_port.getservbyport")
-    def test_fallback_postgresql(self, mock_gsb):
-        mock_gsb.side_effect = OSError
-        assert get_service_on_port(5432) == "postgresql"
+# ---------------------------------------------------------------------------
+# OSError → fallback table
+# ---------------------------------------------------------------------------
 
-    @patch("nadzoring.network_base.service_on_port.getservbyport")
-    def test_fallback_redis(self, mock_gsb):
-        mock_gsb.side_effect = OSError
-        assert get_service_on_port(6379) == "redis"
 
-    @patch("nadzoring.network_base.service_on_port.getservbyport")
-    def test_fallback_mongodb(self, mock_gsb):
-        mock_gsb.side_effect = OSError
-        assert get_service_on_port(27017) == "mongodb"
+@pytest.mark.parametrize("port,expected", list(_FALLBACK_SERVICES.items()))
+def test_fallback_known_ports(mocker, port, expected):
+    mocker.patch(
+        "nadzoring.network_base.service_on_port.getservbyport",
+        side_effect=OSError("not found"),
+    )
+    assert get_service_on_port(port) == expected
 
-    @patch("nadzoring.network_base.service_on_port.getservbyport")
-    def test_fallback_http_alt(self, mock_gsb):
-        mock_gsb.side_effect = OSError
-        assert get_service_on_port(8080) == "http-alt"
 
-    # --- System lookup fails, port not in fallback → "Unknown" ---
+def test_oserror_unknown_port_returns_Unknown(mocker):
+    mocker.patch(
+        "nadzoring.network_base.service_on_port.getservbyport",
+        side_effect=OSError("not found"),
+    )
+    assert get_service_on_port(9999) == "Unknown"
 
-    @patch("nadzoring.network_base.service_on_port.getservbyport")
-    def test_unknown_port_returns_Unknown(self, mock_gsb):
-        mock_gsb.side_effect = OSError
-        assert get_service_on_port(9999) == "Unknown"
 
-    @patch("nadzoring.network_base.service_on_port.getservbyport")
-    def test_zero_port_returns_Unknown(self, mock_gsb):
-        mock_gsb.side_effect = OSError
-        assert get_service_on_port(0) == "Unknown"
+# ---------------------------------------------------------------------------
+# OverflowError / TypeError → fallback table
+# ---------------------------------------------------------------------------
 
-    @patch("nadzoring.network_base.service_on_port.getservbyport")
-    def test_max_port_returns_Unknown(self, mock_gsb):
-        mock_gsb.side_effect = OSError
-        assert get_service_on_port(65535) == "Unknown"
 
-    # --- OverflowError / TypeError from bad input ---
+def test_overflow_error_known_port_returns_fallback(mocker):
+    mocker.patch(
+        "nadzoring.network_base.service_on_port.getservbyport",
+        side_effect=OverflowError,
+    )
+    assert get_service_on_port(80) == "http"
 
-    @patch("nadzoring.network_base.service_on_port.getservbyport")
-    def test_overflow_error_falls_back(self, mock_gsb):
-        mock_gsb.side_effect = OverflowError
-        result = get_service_on_port(99999)
-        assert isinstance(result, str)
 
-    @patch("nadzoring.network_base.service_on_port.getservbyport")
-    def test_type_error_falls_back(self, mock_gsb):
-        mock_gsb.side_effect = TypeError
-        result = get_service_on_port(-1)
-        assert isinstance(result, str)
+def test_type_error_unknown_port_returns_Unknown(mocker):
+    mocker.patch(
+        "nadzoring.network_base.service_on_port.getservbyport",
+        side_effect=TypeError,
+    )
+    assert get_service_on_port(0) == "Unknown"
 
-    # --- Return type ---
 
-    def test_return_is_str(self):
-        assert isinstance(get_service_on_port(80), str)
+# ---------------------------------------------------------------------------
+# Return type
+# ---------------------------------------------------------------------------
 
-    @patch("nadzoring.network_base.service_on_port.getservbyport")
-    def test_unknown_return_is_str(self, mock_gsb):
-        mock_gsb.side_effect = OSError
-        assert isinstance(get_service_on_port(12345), str)
 
-    # --- getservbyport is called with the correct argument ---
+def test_return_type_is_str(mocker):
+    mocker.patch("nadzoring.network_base.service_on_port.getservbyport", return_value="http")
+    assert isinstance(get_service_on_port(80), str)
 
-    @patch("nadzoring.network_base.service_on_port.getservbyport")
-    def test_calls_getservbyport_with_port(self, mock_gsb):
-        mock_gsb.return_value = "smtp"
-        get_service_on_port(25)
-        mock_gsb.assert_called_once_with(25)
+
+def test_return_type_is_str_on_fallback(mocker):
+    mocker.patch(
+        "nadzoring.network_base.service_on_port.getservbyport",
+        side_effect=OSError,
+    )
+    assert isinstance(get_service_on_port(12345), str)

@@ -1,9 +1,11 @@
-"""Tests for nadzoring.network_base.route_table."""
+"""Tests for nadzoring.network_base.route_table — 100% coverage."""
 
-from unittest.mock import patch
+from subprocess import CalledProcessError
 
 from nadzoring.network_base.route_table import (
     RouteEntry,
+    _get_linux_routes,
+    _get_windows_routes,
     _parse_linux_ip_route,
     _parse_windows_route_print,
     get_route_table,
@@ -14,119 +16,208 @@ from nadzoring.network_base.route_table import (
 # ---------------------------------------------------------------------------
 
 
-class TestParseLinuxIpRoute:
-    def test_default_route_parsed(self):
-        raw = "default via 192.168.1.1 dev eth0 proto dhcp metric 100\n"
-        entries = _parse_linux_ip_route(raw)
-        assert len(entries) == 1
-        assert entries[0].destination == "default"
-        assert entries[0].gateway == "192.168.1.1"
-        assert entries[0].interface == "eth0"
-        assert entries[0].metric == "100"
+def test_linux_empty_input():
+    assert _parse_linux_ip_route("") == []
 
-    def test_subnet_route(self):
-        raw = "192.168.1.0/24 dev eth0 proto kernel scope link src 192.168.1.100\n"
-        entries = _parse_linux_ip_route(raw)
-        assert entries[0].destination == "192.168.1.0/24"
-        assert entries[0].gateway == "0.0.0.0"  # default when no "via"
 
-    def test_multiple_routes(self):
-        raw = "default via 10.0.0.1 dev eth0\n10.0.0.0/8 dev eth0\n"
-        entries = _parse_linux_ip_route(raw)
-        assert len(entries) == 2
+def test_linux_default_route():
+    raw = "default via 192.168.1.1 dev eth0 proto dhcp metric 100\n"
+    entries = _parse_linux_ip_route(raw)
+    assert len(entries) == 1
+    assert entries[0].destination == "default"
+    assert entries[0].gateway == "192.168.1.1"
+    assert entries[0].interface == "eth0"
+    assert entries[0].metric == "100"
 
-    def test_empty_input(self):
-        assert _parse_linux_ip_route("") == []
 
-    def test_route_without_metric(self):
-        raw = "default via 10.0.0.1 dev eth0\n"
-        entries = _parse_linux_ip_route(raw)
-        assert entries[0].metric is None
+def test_linux_subnet_no_via():
+    raw = "192.168.1.0/24 dev eth0 proto kernel scope link src 192.168.1.100\n"
+    entries = _parse_linux_ip_route(raw)
+    assert entries[0].destination == "192.168.1.0/24"
+    assert entries[0].gateway == "0.0.0.0"  # default when no "via"
 
-    def test_route_without_interface(self):
-        raw = "169.254.0.0/16 dev eth0 scope link\n"
-        # Has dev — interface should be captured
-        entries = _parse_linux_ip_route(raw)
-        assert entries[0].interface == "eth0"
 
-    def test_netmask_is_none_for_linux(self):
-        # Linux ip route doesn't have a separate netmask field
-        raw = "default via 10.0.0.1 dev eth0\n"
-        entries = _parse_linux_ip_route(raw)
-        assert entries[0].netmask is None
+def test_linux_multiple_routes():
+    raw = "default via 10.0.0.1 dev eth0\n10.0.0.0/8 dev eth0\n"
+    assert len(_parse_linux_ip_route(raw)) == 2
 
-    def test_flags_is_none_for_linux(self):
-        raw = "default via 10.0.0.1 dev eth0\n"
-        entries = _parse_linux_ip_route(raw)
-        assert entries[0].flags is None
 
-    def test_blank_lines_skipped(self):
-        raw = "\ndefault via 10.0.0.1 dev eth0\n\n"
-        entries = _parse_linux_ip_route(raw)
-        assert len(entries) == 1
+def test_linux_route_without_metric():
+    raw = "default via 10.0.0.1 dev eth0\n"
+    assert _parse_linux_ip_route(raw)[0].metric is None
 
-    def test_return_type_is_list_of_route_entry(self):
-        raw = "default via 10.0.0.1 dev eth0\n"
-        entries = _parse_linux_ip_route(raw)
-        assert all(isinstance(e, RouteEntry) for e in entries)
+
+def test_linux_netmask_is_none():
+    raw = "default via 10.0.0.1 dev eth0\n"
+    assert _parse_linux_ip_route(raw)[0].netmask is None
+
+
+def test_linux_flags_is_none():
+    raw = "default via 10.0.0.1 dev eth0\n"
+    assert _parse_linux_ip_route(raw)[0].flags is None
+
+
+def test_linux_blank_lines_skipped():
+    raw = "\ndefault via 10.0.0.1 dev eth0\n\n"
+    assert len(_parse_linux_ip_route(raw)) == 1
+
+
+def test_linux_returns_route_entry_objects():
+    raw = "default via 10.0.0.1 dev eth0\n"
+    assert all(isinstance(e, RouteEntry) for e in _parse_linux_ip_route(raw))
+
+
+def test_linux_no_via_no_dev_defaults():
+    raw = "169.254.0.0/16\n"
+    entries = _parse_linux_ip_route(raw)
+    assert entries[0].gateway == "0.0.0.0"
+    assert entries[0].interface is None
+    assert entries[0].metric is None
 
 
 # ---------------------------------------------------------------------------
 # _parse_windows_route_print
 # ---------------------------------------------------------------------------
 
-WINDOWS_ROUTE_SAMPLE = """\
-IPv4 Route Table
-===========================================================================
-Active Routes:
-Network Destination        Netmask          Gateway       Interface  Metric
-          0.0.0.0          0.0.0.0      192.168.1.1   192.168.1.100      25
-        127.0.0.0        255.0.0.0        127.0.0.1       127.0.0.1     331
-      192.168.1.0    255.255.255.0      192.168.1.100   192.168.1.100    281
-Persistent Routes:
-  None
-"""
+WINDOWS_SAMPLE = (
+    "IPv4 Route Table\n"
+    "===========================================================================\n"
+    "Active Routes:\n"
+    "Network Destination        Netmask          Gateway       Interface  Metric\n"
+    "          0.0.0.0          0.0.0.0      192.168.1.1   192.168.1.100      25\n"
+    "        127.0.0.0        255.0.0.0        127.0.0.1       127.0.0.1     331\n"
+    "      192.168.1.0    255.255.255.0      192.168.1.100   192.168.1.100    281\n"
+    "Persistent Routes:\n"
+    "  None\n"
+)
 
 
-class TestParseWindowsRoutePrint:
-    def test_default_route_parsed(self):
-        entries = _parse_windows_route_print(WINDOWS_ROUTE_SAMPLE)
-        default = next((e for e in entries if e.destination == "0.0.0.0"), None)
-        assert default is not None
-        assert default.gateway == "192.168.1.1"
+def test_windows_empty_input():
+    assert _parse_windows_route_print("") == []
 
-    def test_loopback_route_parsed(self):
-        entries = _parse_windows_route_print(WINDOWS_ROUTE_SAMPLE)
-        lo = next((e for e in entries if e.destination == "127.0.0.0"), None)
-        assert lo is not None
 
-    def test_three_active_routes_parsed(self):
-        entries = _parse_windows_route_print(WINDOWS_ROUTE_SAMPLE)
-        assert len(entries) == 3
+def test_windows_default_route_parsed():
+    entries = _parse_windows_route_print(WINDOWS_SAMPLE)
+    default = next(e for e in entries if e.destination == "0.0.0.0")
+    assert default.gateway == "192.168.1.1"
 
-    def test_persistent_routes_section_excluded(self):
-        raw = WINDOWS_ROUTE_SAMPLE + "  0.0.0.0   0.0.0.0   1.2.3.4   5.6.7.8   10\n"
-        entries = _parse_windows_route_print(raw)
-        # The line after "Persistent Routes:" should not be included
-        assert len(entries) == 3
 
-    def test_empty_input(self):
-        assert _parse_windows_route_print("") == []
+def test_windows_loopback_parsed():
+    entries = _parse_windows_route_print(WINDOWS_SAMPLE)
+    assert any(e.destination == "127.0.0.0" for e in entries)
 
-    def test_netmask_captured(self):
-        entries = _parse_windows_route_print(WINDOWS_ROUTE_SAMPLE)
-        default = next(e for e in entries if e.destination == "0.0.0.0")
-        assert default.netmask == "0.0.0.0"
 
-    def test_metric_captured(self):
-        entries = _parse_windows_route_print(WINDOWS_ROUTE_SAMPLE)
-        default = next(e for e in entries if e.destination == "0.0.0.0")
-        assert default.metric == "25"
+def test_windows_three_routes():
+    assert len(_parse_windows_route_print(WINDOWS_SAMPLE)) == 3
 
-    def test_header_line_skipped(self):
-        entries = _parse_windows_route_print(WINDOWS_ROUTE_SAMPLE)
-        destinations = [e.destination for e in entries]
-        assert "Network" not in destinations
+
+def test_windows_netmask_captured():
+    entries = _parse_windows_route_print(WINDOWS_SAMPLE)
+    default = next(e for e in entries if e.destination == "0.0.0.0")
+    assert default.netmask == "0.0.0.0"
+
+
+def test_windows_metric_captured():
+    entries = _parse_windows_route_print(WINDOWS_SAMPLE)
+    default = next(e for e in entries if e.destination == "0.0.0.0")
+    assert default.metric == "25"
+
+
+def test_windows_persistent_routes_excluded():
+    # Add a line after Persistent Routes — should not be parsed
+    raw = WINDOWS_SAMPLE + "  0.0.0.0   0.0.0.0   5.6.7.8   1.2.3.4   1\n"
+    assert len(_parse_windows_route_print(raw)) == 3
+
+
+def test_windows_ipv6_section_excluded():
+    raw = WINDOWS_SAMPLE.replace("Persistent Routes:", "IPv6 Route Table\nActive Routes:\n")
+    # IPv6 section encountered → in_active_section goes False
+    # Only the original 3 routes from before IPv6 section should be counted
+    entries = _parse_windows_route_print(raw)
+    assert len(entries) == 3
+
+
+def test_windows_header_line_skipped():
+    entries = _parse_windows_route_print(WINDOWS_SAMPLE)
+    destinations = [e.destination for e in entries]
+    assert "Network" not in destinations
+
+
+def test_windows_equals_line_skipped():
+    entries = _parse_windows_route_print(WINDOWS_SAMPLE)
+    assert all("=" not in e.destination for e in entries)
+
+
+def test_windows_returns_route_entry_objects():
+    entries = _parse_windows_route_print(WINDOWS_SAMPLE)
+    assert all(isinstance(e, RouteEntry) for e in entries)
+
+
+def test_windows_line_too_short_skipped():
+    raw = "Active Routes:\n  0.0.0.0  0.0.0.0\n"  # only 2 cols
+    assert _parse_windows_route_print(raw) == []
+
+
+# ---------------------------------------------------------------------------
+# _get_linux_routes
+# ---------------------------------------------------------------------------
+
+
+def test_get_linux_routes_success(mocker):
+    mocker.patch(
+        "nadzoring.network_base.route_table.check_output",
+        return_value=b"default via 10.0.0.1 dev eth0\n",
+    )
+    result = _get_linux_routes()
+    assert isinstance(result, list)
+    assert len(result) == 1
+
+
+def test_get_linux_routes_called_process_error(mocker):
+    mocker.patch(
+        "nadzoring.network_base.route_table.check_output",
+        side_effect=CalledProcessError(1, "ip route"),
+    )
+    assert _get_linux_routes() == []
+
+
+def test_get_linux_routes_file_not_found(mocker):
+    mocker.patch(
+        "nadzoring.network_base.route_table.check_output",
+        side_effect=FileNotFoundError,
+    )
+    assert _get_linux_routes() == []
+
+
+# ---------------------------------------------------------------------------
+# _get_windows_routes
+# ---------------------------------------------------------------------------
+
+
+def test_get_windows_routes_success(mocker):
+    mocker.patch(
+        "nadzoring.network_base.route_table.check_output",
+        return_value=WINDOWS_SAMPLE.encode("cp866"),
+    )
+    result = _get_windows_routes()
+    assert isinstance(result, list)
+    assert len(result) == 3
+
+
+def test_get_windows_routes_called_process_error(mocker):
+    mocker.patch(
+        "nadzoring.network_base.route_table.check_output",
+        side_effect=CalledProcessError(1, "route"),
+    )
+    assert _get_windows_routes() == []
+
+
+def test_get_windows_routes_file_not_found(mocker):
+    mocker.patch(
+        "nadzoring.network_base.route_table.check_output",
+        side_effect=FileNotFoundError,
+    )
+    assert _get_windows_routes() == []
 
 
 # ---------------------------------------------------------------------------
@@ -134,42 +225,31 @@ class TestParseWindowsRoutePrint:
 # ---------------------------------------------------------------------------
 
 
-class TestGetRouteTable:
-    @patch("nadzoring.network_base.route_table.system", return_value="Linux")
-    @patch("nadzoring.network_base.route_table._get_linux_routes", return_value=[])
-    def test_linux_calls_linux_impl(self, mock_linux, mock_sys):
-        get_route_table()
-        mock_linux.assert_called_once()
+def test_get_route_table_linux(mocker):
+    mocker.patch("nadzoring.network_base.route_table.system", return_value="Linux")
+    mock = mocker.patch("nadzoring.network_base.route_table._get_linux_routes", return_value=[])
+    get_route_table()
+    mock.assert_called_once()
 
-    @patch("nadzoring.network_base.route_table.system", return_value="Windows")
-    @patch("nadzoring.network_base.route_table._get_windows_routes", return_value=[])
-    def test_windows_calls_windows_impl(self, mock_win, mock_sys):
-        get_route_table()
-        mock_win.assert_called_once()
 
-    @patch("nadzoring.network_base.route_table.system", return_value="Darwin")
-    def test_unsupported_os_returns_empty_list(self, mock_sys):
-        assert get_route_table() == []
+def test_get_route_table_windows(mocker):
+    mocker.patch("nadzoring.network_base.route_table.system", return_value="Windows")
+    mock = mocker.patch("nadzoring.network_base.route_table._get_windows_routes", return_value=[])
+    get_route_table()
+    mock.assert_called_once()
 
-    @patch("nadzoring.network_base.route_table.system", return_value="Linux")
-    @patch("nadzoring.network_base.route_table.check_output", side_effect=FileNotFoundError)
-    def test_linux_command_not_found_returns_empty(self, mock_co, mock_sys):
-        result = get_route_table()
-        assert result == []
 
-    @patch("nadzoring.network_base.route_table.system", return_value="Linux")
-    @patch("nadzoring.network_base.route_table._get_linux_routes")
-    def test_returns_list_of_route_entries(self, mock_linux, mock_sys):
-        mock_linux.return_value = [
-            RouteEntry(
-                destination="default",
-                gateway="10.0.0.1",
-                netmask=None,
-                interface="eth0",
-                metric="100",
-                flags=None,
-            )
-        ]
-        result = get_route_table()
-        assert isinstance(result, list)
-        assert isinstance(result[0], RouteEntry)
+def test_get_route_table_unsupported_os(mocker):
+    mocker.patch("nadzoring.network_base.route_table.system", return_value="Darwin")
+    assert get_route_table() == []
+
+
+def test_get_route_table_returns_list(mocker):
+    mocker.patch("nadzoring.network_base.route_table.system", return_value="Linux")
+    mocker.patch(
+        "nadzoring.network_base.route_table._get_linux_routes",
+        return_value=[RouteEntry("default", "10.0.0.1", None, "eth0", "100", None)],
+    )
+    result = get_route_table()
+    assert isinstance(result, list)
+    assert isinstance(result[0], RouteEntry)
