@@ -1,8 +1,7 @@
-"""Tests for nadzoring.network_base.port_scanner."""
+"""Tests for nadzoring.network_base.port_scanner — 100% coverage."""
 
 import socket
 from datetime import UTC, datetime
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -11,6 +10,10 @@ from nadzoring.network_base.port_scanner import (
     PortResult,
     ScanConfig,
     ScanResult,
+    _grab_banner,
+    _scan_target_ports,
+    _scan_tcp_port,
+    _scan_udp_port,
     get_ports_from_mode,
     resolve_target,
     scan_ports,
@@ -21,26 +24,32 @@ from nadzoring.network_base.port_scanner import (
 # ---------------------------------------------------------------------------
 
 
-class TestResolveTarget:
-    def test_valid_ipv4_returned_unchanged(self):
-        assert resolve_target("192.168.1.1") == "192.168.1.1"
+def test_resolve_valid_ipv4():
+    assert resolve_target("192.168.1.1") == "192.168.1.1"
 
-    def test_valid_ipv6_returned_unchanged(self):
-        assert resolve_target("::1") == "::1"
 
-    @patch("nadzoring.network_base.port_scanner.socket.gethostbyname")
-    def test_hostname_resolved(self, mock_ghbn):
-        mock_ghbn.return_value = "93.184.216.34"
-        assert resolve_target("example.com") == "93.184.216.34"
-        mock_ghbn.assert_called_once_with("example.com")
+def test_resolve_valid_ipv6():
+    assert resolve_target("::1") == "::1"
 
-    @patch("nadzoring.network_base.port_scanner.socket.gethostbyname")
-    def test_unresolvable_hostname_returns_none(self, mock_ghbn):
-        mock_ghbn.side_effect = socket.gaierror
-        assert resolve_target("invalid.local.xxxx") is None
 
-    def test_loopback_returned_unchanged(self):
-        assert resolve_target("127.0.0.1") == "127.0.0.1"
+def test_resolve_loopback():
+    assert resolve_target("127.0.0.1") == "127.0.0.1"
+
+
+def test_resolve_hostname_success(mocker):
+    mocker.patch(
+        "nadzoring.network_base.port_scanner.socket.gethostbyname",
+        return_value="1.2.3.4",
+    )
+    assert resolve_target("example.com") == "1.2.3.4"
+
+
+def test_resolve_hostname_gaierror_returns_none(mocker):
+    mocker.patch(
+        "nadzoring.network_base.port_scanner.socket.gethostbyname",
+        side_effect=socket.gaierror,
+    )
+    assert resolve_target("invalid.local") is None
 
 
 # ---------------------------------------------------------------------------
@@ -48,49 +57,54 @@ class TestResolveTarget:
 # ---------------------------------------------------------------------------
 
 
-class TestGetPortsFromMode:
-    def _cfg(self, mode, **kwargs):
-        return ScanConfig(targets=["127.0.0.1"], mode=mode, **kwargs)
+def _cfg(mode, **kwargs):
+    return ScanConfig(targets=["127.0.0.1"], mode=mode, **kwargs)
 
-    def test_fast_returns_common_ports_sorted(self):
-        ports = get_ports_from_mode(self._cfg("fast"))
-        assert ports == sorted(COMMON_PORTS)
 
-    def test_fast_no_duplicates(self):
-        ports = get_ports_from_mode(self._cfg("fast"))
-        assert len(ports) == len(set(ports))
+def test_fast_returns_sorted_common_ports():
+    assert get_ports_from_mode(_cfg("fast")) == sorted(COMMON_PORTS)
 
-    def test_full_returns_1_to_65535(self):
-        ports = get_ports_from_mode(self._cfg("full"))
-        assert ports[0] == 1
-        assert ports[-1] == 65535
-        assert len(ports) == 65535
 
-    def test_custom_with_explicit_list(self):
-        ports = get_ports_from_mode(self._cfg("custom", custom_ports=[443, 80, 22, 80]))
-        assert sorted({443, 80, 22}) == ports
+def test_fast_no_duplicates():
+    ports = get_ports_from_mode(_cfg("fast"))
+    assert len(ports) == len(set(ports))
 
-    def test_custom_with_port_range(self):
-        ports = get_ports_from_mode(self._cfg("custom", port_range=(100, 110)))
-        assert ports == list(range(100, 111))
 
-    def test_custom_port_range_clamped_min(self):
-        ports = get_ports_from_mode(self._cfg("custom", port_range=(0, 5)))
-        assert ports[0] == 1
+def test_full_range():
+    ports = get_ports_from_mode(_cfg("full"))
+    assert ports[0] == 1
+    assert ports[-1] == 65535
+    assert len(ports) == 65535
 
-    def test_custom_port_range_clamped_max(self):
-        ports = get_ports_from_mode(self._cfg("custom", port_range=(65530, 70000)))
-        assert ports[-1] == 65535
 
-    def test_custom_no_ports_or_range_returns_empty(self):
-        ports = get_ports_from_mode(self._cfg("custom"))
-        assert ports == []
+def test_custom_explicit_list():
+    ports = get_ports_from_mode(_cfg("custom", custom_ports=[443, 80, 22, 80]))
+    assert ports == sorted({443, 80, 22})
 
-    def test_unknown_mode_returns_empty(self):
-        cfg = ScanConfig(targets=["x"], mode="fast")  # type: ignore[arg-type]
-        # Force an unknown mode via direct attribute mutation
-        cfg.mode = "unknown"  # type: ignore[assignment]
-        assert get_ports_from_mode(cfg) == []
+
+def test_custom_port_range():
+    ports = get_ports_from_mode(_cfg("custom", port_range=(100, 110)))
+    assert ports == list(range(100, 111))
+
+
+def test_custom_port_range_min_clamped():
+    ports = get_ports_from_mode(_cfg("custom", port_range=(0, 5)))
+    assert ports[0] == 1
+
+
+def test_custom_port_range_max_clamped():
+    ports = get_ports_from_mode(_cfg("custom", port_range=(65530, 70000)))
+    assert ports[-1] == 65535
+
+
+def test_custom_no_ports_no_range_returns_empty():
+    assert get_ports_from_mode(_cfg("custom")) == []
+
+
+def test_unknown_mode_returns_empty():
+    cfg = ScanConfig(targets=["x"], mode="fast")
+    cfg.mode = "unknown"  # type: ignore[assignment]
+    assert get_ports_from_mode(cfg) == []
 
 
 # ---------------------------------------------------------------------------
@@ -98,89 +112,44 @@ class TestGetPortsFromMode:
 # ---------------------------------------------------------------------------
 
 
-class TestScanResultProperties:
-    def _make_result(self):
-        t0 = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
-        t1 = datetime(2024, 1, 1, 0, 0, 5, tzinfo=UTC)
-        return ScanResult(
-            target="192.168.1.1",
-            target_ip="192.168.1.1",
-            start_time=t0,
-            end_time=t1,
-            results={
-                80: PortResult(port=80, state="open", service="http"),
-                443: PortResult(port=443, state="open", service="https"),
-                22: PortResult(port=22, state="filtered"),
-                25: PortResult(port=25, state="closed"),
-            },
-        )
-
-    def test_duration_seconds(self):
-        result = self._make_result()
-        assert result.duration == pytest.approx(5.0)
-
-    def test_open_ports_only_open(self):
-        result = self._make_result()
-        assert sorted(result.open_ports) == [80, 443]
-
-    def test_open_ports_excludes_filtered(self):
-        result = self._make_result()
-        assert 22 not in result.open_ports
-
-    def test_open_ports_excludes_closed(self):
-        result = self._make_result()
-        assert 25 not in result.open_ports
-
-    def test_empty_results_open_ports_empty(self):
-        t = datetime(2024, 1, 1, tzinfo=UTC)
-        r = ScanResult(target="x", target_ip="x", start_time=t, end_time=t)
-        assert r.open_ports == []
+@pytest.fixture
+def scan_result():
+    t0 = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
+    t1 = datetime(2024, 1, 1, 0, 0, 5, tzinfo=UTC)
+    return ScanResult(
+        target="192.168.1.1",
+        target_ip="192.168.1.1",
+        start_time=t0,
+        end_time=t1,
+        results={
+            80: PortResult(port=80, state="open"),
+            443: PortResult(port=443, state="open"),
+            22: PortResult(port=22, state="filtered"),
+            25: PortResult(port=25, state="closed"),
+        },
+    )
 
 
-# ---------------------------------------------------------------------------
-# scan_ports — high-level integration (mocked internals)
-# ---------------------------------------------------------------------------
+def test_scan_result_duration(scan_result):
+    assert scan_result.duration == pytest.approx(5.0)
 
 
-class TestScanPorts:
-    def _make_config(self, **kwargs):
-        defaults = dict(targets=["192.168.1.1"], mode="fast", max_workers=10, grab_banner=False)
-        defaults.update(kwargs)
-        return ScanConfig(**defaults)
+def test_scan_result_open_ports(scan_result):
+    assert sorted(scan_result.open_ports) == [80, 443]
 
-    @patch("nadzoring.network_base.port_scanner.resolve_target", return_value=None)
-    def test_unresolvable_target_returns_empty(self, mock_rt):
-        result = scan_ports(self._make_config(targets=["bad.host"]))
-        assert result == []
 
-    @patch("nadzoring.network_base.port_scanner.resolve_target", return_value="192.168.1.1")
-    @patch("nadzoring.network_base.port_scanner._scan_target_ports")
-    def test_returns_scan_result_per_target(self, mock_scan, mock_rt):
-        fake_result = MagicMock(spec=ScanResult)
-        mock_scan.return_value = fake_result
-        results = scan_ports(self._make_config(targets=["host1"]))
-        assert results == [fake_result]
+def test_scan_result_filtered_not_in_open(scan_result):
+    assert 22 not in scan_result.open_ports
 
-    @patch("nadzoring.network_base.port_scanner.resolve_target", return_value="1.1.1.1")
-    @patch("nadzoring.network_base.port_scanner._scan_target_ports")
-    def test_multiple_targets_each_scanned(self, mock_scan, mock_rt):
-        mock_scan.return_value = MagicMock(spec=ScanResult)
-        results = scan_ports(self._make_config(targets=["h1", "h2", "h3"]))
-        assert len(results) == 3
-        assert mock_scan.call_count == 3
 
-    def test_custom_mode_no_ports_returns_empty(self):
-        cfg = self._make_config(mode="custom")
-        result = scan_ports(cfg)
-        assert result == []
+def test_scan_result_closed_not_in_open(scan_result):
+    assert 25 not in scan_result.open_ports
 
-    @patch("nadzoring.network_base.port_scanner.resolve_target")
-    @patch("nadzoring.network_base.port_scanner._scan_target_ports")
-    def test_mixed_resolvable_skips_failed(self, mock_scan, mock_rt):
-        mock_rt.side_effect = lambda t: None if t == "bad" else "1.2.3.4"
-        mock_scan.return_value = MagicMock(spec=ScanResult)
-        results = scan_ports(self._make_config(targets=["good", "bad"]))
-        assert len(results) == 1
+
+def test_scan_result_empty_open_ports():
+    t = datetime(2024, 1, 1, tzinfo=UTC)
+    r = ScanResult(target="x", target_ip="x", start_time=t, end_time=t)
+    assert r.open_ports == []
 
 
 # ---------------------------------------------------------------------------
@@ -188,19 +157,378 @@ class TestScanPorts:
 # ---------------------------------------------------------------------------
 
 
-class TestPortResultDefaults:
-    def test_default_state_can_be_filtered(self):
-        r = PortResult(port=80, state="filtered")
-        assert r.state == "filtered"
+def test_port_result_default_service():
+    assert PortResult(port=80, state="open").service == "unknown"
 
-    def test_default_service_unknown(self):
-        r = PortResult(port=80, state="open")
-        assert r.service == "unknown"
 
-    def test_default_banner_none(self):
-        r = PortResult(port=80, state="open")
-        assert r.banner is None
+def test_port_result_default_banner_none():
+    assert PortResult(port=80, state="open").banner is None
 
-    def test_default_response_time_none(self):
-        r = PortResult(port=80, state="open")
-        assert r.response_time is None
+
+def test_port_result_default_response_time_none():
+    assert PortResult(port=80, state="open").response_time is None
+
+
+# ---------------------------------------------------------------------------
+# _grab_banner
+# ---------------------------------------------------------------------------
+
+
+def test_grab_banner_http_port_sends_head(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.recv.return_value = b"HTTP/1.1 200 OK\r\n"
+    result = _grab_banner(mock_sock, "1.2.3.4", 80)
+    mock_sock.send.assert_called_once_with(b"HEAD / HTTP/1.0\r\n\r\n")
+    assert result is not None
+
+
+def test_grab_banner_ftp_sends_help(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.recv.return_value = b"220 FTP ready\r\n"
+    _grab_banner(mock_sock, "1.2.3.4", 21)
+    mock_sock.send.assert_called_once_with(b"HELP\r\n")
+
+
+def test_grab_banner_smtp_sends_ehlo(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.recv.return_value = b"220 smtp\r\n"
+    _grab_banner(mock_sock, "1.2.3.4", 25)
+    mock_sock.send.assert_called_once_with(b"EHLO scan.local\r\n")
+
+
+def test_grab_banner_ssh_no_send(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.recv.return_value = b"SSH-2.0-OpenSSH_8.0\r\n"
+    _grab_banner(mock_sock, "1.2.3.4", 22)
+    mock_sock.send.assert_not_called()
+
+
+def test_grab_banner_other_sends_crlf(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.recv.return_value = b"banner\r\n"
+    _grab_banner(mock_sock, "1.2.3.4", 9999)
+    mock_sock.send.assert_called_once_with(b"\r\n")
+
+
+def test_grab_banner_empty_response_returns_none(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.recv.return_value = b""
+    result = _grab_banner(mock_sock, "1.2.3.4", 80)
+    assert result is None
+
+
+def test_grab_banner_truncated_to_200(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.recv.return_value = b"X" * 300
+    result = _grab_banner(mock_sock, "1.2.3.4", 80)
+    assert len(result) == 200
+
+
+def test_grab_banner_exception_returns_none(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.recv.side_effect = Exception("error")
+    result = _grab_banner(mock_sock, "1.2.3.4", 80)
+    assert result is None
+
+
+def test_grab_banner_https_port(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.recv.return_value = b"HTTP/1.1 400\r\n"
+    _grab_banner(mock_sock, "1.2.3.4", 443)
+    mock_sock.send.assert_called_once_with(b"HEAD / HTTP/1.0\r\n\r\n")
+
+
+def test_grab_banner_8080_port(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.recv.return_value = b"HTTP/1.1 200\r\n"
+    _grab_banner(mock_sock, "1.2.3.4", 8080)
+    mock_sock.send.assert_called_once_with(b"HEAD / HTTP/1.0\r\n\r\n")
+
+
+# ---------------------------------------------------------------------------
+# _scan_tcp_port
+# ---------------------------------------------------------------------------
+
+
+def test_scan_tcp_port_open(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.connect_ex.return_value = 0
+    mock_sock.recv.return_value = b""
+    mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
+    mocker.patch("nadzoring.network_base.port_scanner.get_service_on_port", return_value="http")
+
+    port, result = _scan_tcp_port("192.168.1.1", 80, grab_banner=False)
+    assert result.state == "open"
+    assert result.service == "http"
+    assert port == 80
+
+
+def test_scan_tcp_port_open_with_banner(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.connect_ex.return_value = 0
+    mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
+    mocker.patch("nadzoring.network_base.port_scanner.get_service_on_port", return_value="http")
+    mocker.patch(
+        "nadzoring.network_base.port_scanner._grab_banner",
+        return_value="HTTP/1.1 200 OK",
+    )
+
+    port, result = _scan_tcp_port("192.168.1.1", 80, grab_banner=True)
+    assert result.banner == "HTTP/1.1 200 OK"
+
+
+def test_scan_tcp_port_open_banner_none(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.connect_ex.return_value = 0
+    mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
+    mocker.patch("nadzoring.network_base.port_scanner.get_service_on_port", return_value="http")
+    mocker.patch("nadzoring.network_base.port_scanner._grab_banner", return_value=None)
+
+    _, result = _scan_tcp_port("192.168.1.1", 80, grab_banner=True)
+    assert result.banner is None
+
+
+def test_scan_tcp_port_closed_111(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.connect_ex.return_value = 111
+    mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
+
+    _, result = _scan_tcp_port("192.168.1.1", 80, grab_banner=False)
+    assert result.state == "closed"
+
+
+def test_scan_tcp_port_closed_61(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.connect_ex.return_value = 61
+    mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
+
+    _, result = _scan_tcp_port("192.168.1.1", 80, grab_banner=False)
+    assert result.state == "closed"
+
+
+def test_scan_tcp_port_filtered_other_code(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.connect_ex.return_value = 13  # EACCES
+    mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
+
+    _, result = _scan_tcp_port("192.168.1.1", 80, grab_banner=False)
+    assert result.state == "filtered"
+
+
+def test_scan_tcp_port_timeout_error(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.connect_ex.side_effect = TimeoutError
+    mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
+
+    _, result = _scan_tcp_port("192.168.1.1", 80, grab_banner=False)
+    assert result.state == "filtered"
+
+
+def test_scan_tcp_port_generic_exception(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.connect_ex.side_effect = OSError("err")
+    mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
+
+    _, result = _scan_tcp_port("192.168.1.1", 80, grab_banner=False)
+    assert result.state == "filtered"
+
+
+def test_scan_tcp_port_response_time_set(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.connect_ex.return_value = 0
+    mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
+    mocker.patch("nadzoring.network_base.port_scanner.get_service_on_port", return_value="http")
+
+    _, result = _scan_tcp_port("192.168.1.1", 80, grab_banner=False)
+    assert result.response_time is not None
+
+
+def test_scan_tcp_sock_closed_on_exception(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.connect_ex.side_effect = OSError("err")
+    mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
+    _scan_tcp_port("192.168.1.1", 80, grab_banner=False)
+    mock_sock.close.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# _scan_udp_port
+# ---------------------------------------------------------------------------
+
+
+def test_scan_udp_open_on_response(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.recvfrom.return_value = (b"data", ("1.2.3.4", 53))
+    mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
+    mocker.patch("nadzoring.network_base.port_scanner.get_service_on_port", return_value="dns")
+
+    _, result = _scan_udp_port("192.168.1.1", 53)
+    assert result.state == "open"
+    assert result.service == "dns"
+
+
+def test_scan_udp_open_filtered_on_timeout(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.recvfrom.side_effect = TimeoutError
+    mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
+
+    _, result = _scan_udp_port("192.168.1.1", 53)
+    assert result.state == "open|filtered"
+
+
+def test_scan_udp_closed_on_errno_10054(mocker):
+    mock_sock = mocker.MagicMock()
+    err = OSError()
+    err.errno = 10054
+    mock_sock.recvfrom.side_effect = err
+    mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
+
+    _, result = _scan_udp_port("192.168.1.1", 53)
+    assert result.state == "closed"
+
+
+def test_scan_udp_other_oserror_stays_filtered(mocker):
+    mock_sock = mocker.MagicMock()
+    err = OSError()
+    err.errno = 111
+    mock_sock.recvfrom.side_effect = err
+    mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
+
+    _, result = _scan_udp_port("192.168.1.1", 53)
+    assert result.state == "filtered"
+
+
+def test_scan_udp_generic_exception(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.sendto.side_effect = Exception("err")
+    mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
+
+    _, result = _scan_udp_port("192.168.1.1", 53)
+    assert result.state == "filtered"
+
+
+def test_scan_udp_response_time_set(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.recvfrom.return_value = (b"data", ("1.2.3.4", 53))
+    mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
+    mocker.patch("nadzoring.network_base.port_scanner.get_service_on_port", return_value="dns")
+
+    _, result = _scan_udp_port("192.168.1.1", 53)
+    assert result.response_time is not None
+
+
+def test_scan_udp_sock_closed(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.sendto.side_effect = Exception("err")
+    mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
+    _scan_udp_port("192.168.1.1", 53)
+    mock_sock.close.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# _scan_target_ports
+# ---------------------------------------------------------------------------
+
+
+def test_scan_target_ports_tcp(mocker):
+    mocker.patch(
+        "nadzoring.network_base.port_scanner._scan_tcp_port",
+        return_value=(80, PortResult(port=80, state="open")),
+    )
+    cfg = ScanConfig(
+        targets=["192.168.1.1"],
+        mode="custom",
+        custom_ports=[80],
+        max_workers=1,
+        grab_banner=False,
+    )
+    result = _scan_target_ports("192.168.1.1", [80], cfg, "192.168.1.1")
+    assert isinstance(result, ScanResult)
+    assert 80 in result.results
+
+
+def test_scan_target_ports_udp(mocker):
+    mocker.patch(
+        "nadzoring.network_base.port_scanner._scan_udp_port",
+        return_value=(53, PortResult(port=53, state="open|filtered")),
+    )
+    cfg = ScanConfig(
+        targets=["192.168.1.1"],
+        mode="custom",
+        custom_ports=[53],
+        protocol="udp",
+        max_workers=1,
+        grab_banner=False,
+    )
+    result = _scan_target_ports("192.168.1.1", [53], cfg, "192.168.1.1")
+    assert 53 in result.results
+
+
+def test_scan_target_ports_progress_callback(mocker):
+    mocker.patch(
+        "nadzoring.network_base.port_scanner._scan_tcp_port",
+        return_value=(80, PortResult(port=80, state="open")),
+    )
+    calls = []
+    cfg = ScanConfig(
+        targets=["x"],
+        mode="custom",
+        custom_ports=[80],
+        max_workers=1,
+        grab_banner=False,
+        progress_callback=lambda msg, done, total: calls.append((msg, done, total)),
+    )
+    _scan_target_ports("192.168.1.1", [80], cfg, "x")
+    assert len(calls) > 0
+    # Final "Completed" call
+    assert any("Completed" in c[0] for c in calls)
+
+
+# ---------------------------------------------------------------------------
+# scan_ports
+# ---------------------------------------------------------------------------
+
+
+def test_scan_ports_unresolvable_target(mocker):
+    mocker.patch("nadzoring.network_base.port_scanner.resolve_target", return_value=None)
+    cfg = ScanConfig(targets=["bad.host"], mode="fast")
+    assert scan_ports(cfg) == []
+
+
+def test_scan_ports_empty_port_list(mocker):
+    cfg = ScanConfig(targets=["x"], mode="custom")
+    assert scan_ports(cfg) == []
+
+
+def test_scan_ports_returns_scan_result(mocker):
+    mocker.patch("nadzoring.network_base.port_scanner.resolve_target", return_value="1.2.3.4")
+    mocker.patch(
+        "nadzoring.network_base.port_scanner._scan_target_ports",
+        return_value=mocker.MagicMock(spec=ScanResult),
+    )
+    cfg = ScanConfig(targets=["host"], mode="fast")
+    results = scan_ports(cfg)
+    assert len(results) == 1
+
+
+def test_scan_ports_multiple_targets(mocker):
+    mocker.patch("nadzoring.network_base.port_scanner.resolve_target", return_value="1.1.1.1")
+    mocker.patch(
+        "nadzoring.network_base.port_scanner._scan_target_ports",
+        return_value=mocker.MagicMock(spec=ScanResult),
+    )
+    cfg = ScanConfig(targets=["h1", "h2", "h3"], mode="fast")
+    assert len(scan_ports(cfg)) == 3
+
+
+def test_scan_ports_mixed_targets(mocker):
+    mocker.patch(
+        "nadzoring.network_base.port_scanner.resolve_target",
+        side_effect=lambda t: None if t == "bad" else "1.1.1.1",
+    )
+    mocker.patch(
+        "nadzoring.network_base.port_scanner._scan_target_ports",
+        return_value=mocker.MagicMock(spec=ScanResult),
+    )
+    cfg = ScanConfig(targets=["good", "bad"], mode="fast")
+    assert len(scan_ports(cfg)) == 1

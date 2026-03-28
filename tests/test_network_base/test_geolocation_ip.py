@@ -1,6 +1,4 @@
-"""Tests for nadzoring.network_base.geolocation_ip."""
-
-from unittest.mock import MagicMock, patch
+"""Tests for nadzoring.network_base.geolocation_ip — 100% coverage."""
 
 from requests import RequestException
 
@@ -15,40 +13,48 @@ from nadzoring.network_base.geolocation_ip import (
 # ---------------------------------------------------------------------------
 
 
-class TestFetchGeoData:
-    @patch("nadzoring.network_base.geolocation_ip.requests.get")
-    def test_successful_fetch_returns_dict(self, mock_get):
-        mock_resp = MagicMock()
-        mock_resp.json.return_value = {
-            "status": "success",
-            "lat": 37.4,
-            "lon": -122.0,
-            "country": "US",
-            "city": "Mountain View",
-        }
-        mock_get.return_value = mock_resp
-        result = _fetch_geo_data("8.8.8.8")
-        assert isinstance(result, dict)
+def test_fetch_returns_dict_on_success(mocker):
+    mock_resp = mocker.MagicMock()
+    mock_resp.json.return_value = {
+        "status": "success",
+        "lat": 37.4,
+        "lon": -122.0,
+        "country": "US",
+        "city": "MV",
+    }
+    mocker.patch("nadzoring.network_base.geolocation_ip.requests.get", return_value=mock_resp)
+    result = _fetch_geo_data("8.8.8.8")
+    assert isinstance(result, dict)
 
-    @patch("nadzoring.network_base.geolocation_ip.requests.get")
-    def test_request_exception_returns_none(self, mock_get):
-        mock_get.side_effect = RequestException("timeout")
-        assert _fetch_geo_data("8.8.8.8") is None
 
-    @patch("nadzoring.network_base.geolocation_ip.requests.get")
-    def test_json_parse_error_returns_none(self, mock_get):
-        mock_resp = MagicMock()
-        mock_resp.json.side_effect = ValueError("not json")
-        mock_get.return_value = mock_resp
-        assert _fetch_geo_data("8.8.8.8") is None
+def test_fetch_calls_raise_for_status(mocker):
+    mock_resp = mocker.MagicMock()
+    mock_resp.json.return_value = {}
+    mocker.patch("nadzoring.network_base.geolocation_ip.requests.get", return_value=mock_resp)
+    _fetch_geo_data("1.1.1.1")
+    mock_resp.raise_for_status.assert_called_once()
 
-    @patch("nadzoring.network_base.geolocation_ip.requests.get")
-    def test_raise_for_status_called(self, mock_get):
-        mock_resp = MagicMock()
-        mock_resp.json.return_value = {}
-        mock_get.return_value = mock_resp
-        _fetch_geo_data("1.1.1.1")
-        mock_resp.raise_for_status.assert_called_once()
+
+def test_fetch_request_exception_returns_none(mocker):
+    mocker.patch(
+        "nadzoring.network_base.geolocation_ip.requests.get",
+        side_effect=RequestException("timeout"),
+    )
+    assert _fetch_geo_data("8.8.8.8") is None
+
+
+def test_fetch_value_error_on_json_returns_none(mocker):
+    mock_resp = mocker.MagicMock()
+    mock_resp.json.side_effect = ValueError("not json")
+    mocker.patch("nadzoring.network_base.geolocation_ip.requests.get", return_value=mock_resp)
+    assert _fetch_geo_data("8.8.8.8") is None
+
+
+def test_fetch_raise_for_status_exception_returns_none(mocker):
+    mock_resp = mocker.MagicMock()
+    mock_resp.raise_for_status.side_effect = RequestException("403")
+    mocker.patch("nadzoring.network_base.geolocation_ip.requests.get", return_value=mock_resp)
+    assert _fetch_geo_data("8.8.8.8") is None
 
 
 # ---------------------------------------------------------------------------
@@ -56,99 +62,109 @@ class TestFetchGeoData:
 # ---------------------------------------------------------------------------
 
 
-class TestParseGeoResponse:
-    def test_success_status_returns_geo_result(self):
-        data = {
-            "status": "success",
-            "lat": 37.4,
-            "lon": -122.0,
-            "country": "United States",
-            "city": "Mountain View",
-        }
-        result = _parse_geo_response(data, "8.8.8.8")
-        assert result is not None
-        assert result["country"] == "United States"
-        assert result["city"] == "Mountain View"
-        assert result["lat"] == "37.4"
-        assert result["lon"] == "-122.0"
+def test_parse_success_returns_geo_result():
+    data = {
+        "status": "success",
+        "lat": 37.4,
+        "lon": -122.0,
+        "country": "United States",
+        "city": "Mountain View",
+    }
+    result = _parse_geo_response(data, "8.8.8.8")
+    assert result is not None
+    assert result["country"] == "United States"
+    assert result["city"] == "Mountain View"
+    assert result["lat"] == "37.4"
+    assert result["lon"] == "-122.0"
 
-    def test_fail_status_returns_none(self):
-        data = {"status": "fail", "message": "reserved range"}
-        assert _parse_geo_response(data, "192.168.1.1") is None
 
-    def test_missing_fields_default_to_empty_string(self):
-        data = {"status": "success"}
-        result = _parse_geo_response(data, "1.2.3.4")
-        assert result is not None
-        assert result["lat"] == ""
-        assert result["country"] == ""
+def test_parse_fail_status_returns_none():
+    data = {"status": "fail", "message": "reserved range"}
+    assert _parse_geo_response(data, "192.168.1.1") is None
 
-    def test_all_required_keys_present(self):
-        data = {"status": "success", "lat": 0, "lon": 0, "country": "X", "city": "Y"}
-        result = _parse_geo_response(data, "1.2.3.4")
-        assert {"lat", "lon", "country", "city"} == set(result.keys())
 
-    def test_values_are_strings(self):
-        data = {
-            "status": "success",
-            "lat": 51.5,
-            "lon": -0.1,
-            "country": "UK",
-            "city": "London",
-        }
-        result = _parse_geo_response(data, "1.2.3.4")
-        for v in result.values():
-            assert isinstance(v, str)
+def test_parse_missing_fields_default_empty_string():
+    data = {"status": "success"}
+    result = _parse_geo_response(data, "1.2.3.4")
+    assert result is not None
+    assert result["lat"] == ""
+    assert result["country"] == ""
+    assert result["city"] == ""
+    assert result["lon"] == ""
+
+
+def test_parse_all_required_keys_present():
+    data = {"status": "success", "lat": 0.0, "lon": 0.0, "country": "X", "city": "Y"}
+    result = _parse_geo_response(data, "1.2.3.4")
+    assert {"lat", "lon", "country", "city"} == set(result.keys())
+
+
+def test_parse_values_are_strings():
+    data = {
+        "status": "success",
+        "lat": 51.5,
+        "lon": -0.1,
+        "country": "UK",
+        "city": "London",
+    }
+    result = _parse_geo_response(data, "1.2.3.4")
+    for v in result.values():
+        assert isinstance(v, str)
 
 
 # ---------------------------------------------------------------------------
-# geo_ip (public API)
+# geo_ip — public API
 # ---------------------------------------------------------------------------
 
 
-class TestGeoIp:
-    @patch("nadzoring.network_base.geolocation_ip._fetch_geo_data", return_value=None)
-    def test_fetch_failure_returns_empty_dict(self, mock_fetch):
-        assert geo_ip("8.8.8.8") == {}
+def test_geo_ip_fetch_failure_returns_empty_dict(mocker):
+    mocker.patch("nadzoring.network_base.geolocation_ip._fetch_geo_data", return_value=None)
+    assert geo_ip("8.8.8.8") == {}
 
-    @patch("nadzoring.network_base.geolocation_ip._fetch_geo_data")
-    def test_api_fail_status_returns_empty_dict(self, mock_fetch):
-        mock_fetch.return_value = {"status": "fail", "message": "reserved range"}
-        assert geo_ip("192.168.1.1") == {}
 
-    @patch("nadzoring.network_base.geolocation_ip._fetch_geo_data")
-    def test_successful_lookup_returns_geo_result(self, mock_fetch):
-        mock_fetch.return_value = {
+def test_geo_ip_fail_status_returns_empty_dict(mocker):
+    mocker.patch(
+        "nadzoring.network_base.geolocation_ip._fetch_geo_data",
+        return_value={"status": "fail", "message": "private range"},
+    )
+    assert geo_ip("192.168.1.1") == {}
+
+
+def test_geo_ip_success_returns_geo_result(mocker):
+    mocker.patch(
+        "nadzoring.network_base.geolocation_ip._fetch_geo_data",
+        return_value={
             "status": "success",
             "lat": 37.4,
             "lon": -122.1,
-            "country": "United States",
-            "city": "Mountain View",
-        }
-        result = geo_ip("8.8.8.8")
-        assert result["country"] == "United States"
-        assert "lat" in result
+            "country": "US",
+            "city": "MV",
+        },
+    )
+    result = geo_ip("8.8.8.8")
+    assert result["country"] == "US"
+    assert "lat" in result
 
-    @patch("nadzoring.network_base.geolocation_ip._fetch_geo_data")
-    def test_return_is_dict(self, mock_fetch):
-        mock_fetch.return_value = {"status": "fail", "message": "x"}
-        result = geo_ip("1.2.3.4")
-        assert isinstance(result, dict)
 
-    @patch("nadzoring.network_base.geolocation_ip._fetch_geo_data")
-    def test_truthiness_check_false_on_failure(self, mock_fetch):
-        mock_fetch.return_value = None
-        result = geo_ip("bad")
-        assert not result
+def test_geo_ip_returns_dict(mocker):
+    mocker.patch("nadzoring.network_base.geolocation_ip._fetch_geo_data", return_value=None)
+    assert isinstance(geo_ip("1.2.3.4"), dict)
 
-    @patch("nadzoring.network_base.geolocation_ip._fetch_geo_data")
-    def test_truthiness_check_true_on_success(self, mock_fetch):
-        mock_fetch.return_value = {
+
+def test_geo_ip_falsy_on_failure(mocker):
+    mocker.patch("nadzoring.network_base.geolocation_ip._fetch_geo_data", return_value=None)
+    assert not geo_ip("bad")
+
+
+def test_geo_ip_truthy_on_success(mocker):
+    mocker.patch(
+        "nadzoring.network_base.geolocation_ip._fetch_geo_data",
+        return_value={
             "status": "success",
             "lat": 1.0,
             "lon": 2.0,
             "country": "X",
             "city": "Y",
-        }
-        result = geo_ip("1.2.3.4")
-        assert result
+        },
+    )
+    assert geo_ip("1.2.3.4")

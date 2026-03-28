@@ -1,6 +1,4 @@
-"""Tests for nadzoring.network_base.ping_address."""
-
-from unittest.mock import patch
+"""Tests for nadzoring.network_base.ping_address — 100% coverage."""
 
 from nadzoring.network_base.ping_address import _normalize_address, ping_addr
 
@@ -9,47 +7,53 @@ from nadzoring.network_base.ping_address import _normalize_address, ping_addr
 # ---------------------------------------------------------------------------
 
 
-class TestNormalizeAddress:
-    def test_plain_hostname_unchanged(self):
-        assert _normalize_address("example.com") == "example.com"
+def test_plain_hostname_unchanged():
+    assert _normalize_address("example.com") == "example.com"
 
-    def test_strips_http_scheme(self):
-        assert _normalize_address("http://example.com") == "example.com"
 
-    def test_strips_https_scheme(self):
-        assert _normalize_address("https://example.com") == "example.com"
+def test_http_scheme_stripped():
+    assert _normalize_address("http://example.com") == "example.com"
 
-    def test_strips_http_with_path(self):
-        result = _normalize_address("http://example.com/some/path")
-        assert result == "example.com"
 
-    def test_strips_https_with_path_and_query(self):
-        result = _normalize_address("https://example.com/path?q=1")
-        assert result == "example.com"
+def test_https_scheme_stripped():
+    assert _normalize_address("https://example.com") == "example.com"
 
-    def test_ip_address_unchanged(self):
-        assert _normalize_address("192.168.1.1") == "192.168.1.1"
 
-    def test_http_ip_strips_scheme(self):
-        assert _normalize_address("http://192.168.1.1") == "192.168.1.1"
+def test_http_with_path_stripped():
+    assert _normalize_address("http://example.com/some/path") == "example.com"
 
-    def test_www_prefix_not_stripped_when_only_two_parts(self):
-        # "www.example.com" → 3 parts, but condition is len(parts) > 2
-        # parts = ["www", "example.com"] when split with maxsplit=1 → len == 2
-        # so www is NOT stripped
-        result = _normalize_address("www.example.com")
-        assert result == "www.example.com"
 
-    def test_subdomain_other_than_www_unchanged(self):
-        assert _normalize_address("sub.example.com") == "sub.example.com"
+def test_https_with_path_and_query():
+    assert _normalize_address("https://example.com/path?q=1") == "example.com"
 
-    def test_empty_string(self):
-        result = _normalize_address("")
-        assert isinstance(result, str)
 
-    def test_https_with_port(self):
-        result = _normalize_address("https://example.com:8443/path")
-        assert result == "example.com:8443"
+def test_ip_unchanged():
+    assert _normalize_address("192.168.1.1") == "192.168.1.1"
+
+
+def test_http_ip_scheme_stripped():
+    assert _normalize_address("http://192.168.1.1") == "192.168.1.1"
+
+
+def test_https_with_port():
+    # port is part of the host segment before first "/"
+    result = _normalize_address("https://example.com:8443/path")
+    assert result == "example.com:8443"
+
+
+def test_subdomain_unchanged():
+    assert _normalize_address("sub.example.com") == "sub.example.com"
+
+
+def test_www_two_parts_not_stripped():
+    # "www.example.com".split(".", maxsplit=1) = ["www", "example.com"] → len == 2
+    # condition is len(parts) > 2, so www is NOT stripped
+    assert _normalize_address("www.example.com") == "www.example.com"
+
+
+def test_empty_string():
+    result = _normalize_address("")
+    assert isinstance(result, str)
 
 
 # ---------------------------------------------------------------------------
@@ -57,53 +61,56 @@ class TestNormalizeAddress:
 # ---------------------------------------------------------------------------
 
 
-class TestPingAddr:
-    @patch("nadzoring.network_base.ping_address.ping3.ping")
-    def test_reachable_host_returns_true(self, mock_ping):
-        mock_ping.return_value = 0.042
-        assert ping_addr("8.8.8.8") is True
+def test_reachable_returns_true(mocker):
+    mocker.patch("nadzoring.network_base.ping_address.ping3.ping", return_value=0.042)
+    assert ping_addr("8.8.8.8") is True
 
-    @patch("nadzoring.network_base.ping_address.ping3.ping")
-    def test_unreachable_host_returns_false(self, mock_ping):
-        mock_ping.return_value = None
-        assert ping_addr("192.0.2.1") is False
 
-    @patch("nadzoring.network_base.ping_address.ping3.ping")
-    def test_url_is_normalized_before_ping(self, mock_ping):
-        mock_ping.return_value = 0.01
-        ping_addr("https://example.com")
-        mock_ping.assert_called_once_with("example.com")
+def test_none_response_returns_false(mocker):
+    mocker.patch("nadzoring.network_base.ping_address.ping3.ping", return_value=None)
+    assert ping_addr("192.0.2.1") is False
 
-    @patch("nadzoring.network_base.ping_address.ping3.ping")
-    def test_http_url_is_normalized_before_ping(self, mock_ping):
-        mock_ping.return_value = 0.01
-        ping_addr("http://example.com/path")
-        mock_ping.assert_called_once_with("example.com")
 
-    @patch("nadzoring.network_base.ping_address.ping3.ping")
-    def test_exception_returns_false(self, mock_ping):
-        mock_ping.side_effect = Exception("socket error")
-        assert ping_addr("example.com") is False
+def test_zero_rtt_returns_true(mocker):
+    # ping3 can return 0 for localhost — falsy but not None
+    mocker.patch("nadzoring.network_base.ping_address.ping3.ping", return_value=0)
+    assert ping_addr("127.0.0.1") is True
 
-    @patch("nadzoring.network_base.ping_address.ping3.ping")
-    def test_os_error_returns_false(self, mock_ping):
-        mock_ping.side_effect = OSError("network unreachable")
-        assert ping_addr("10.0.0.1") is False
 
-    @patch("nadzoring.network_base.ping_address.ping3.ping")
-    def test_returns_bool(self, mock_ping):
-        mock_ping.return_value = 0.1
-        result = ping_addr("1.1.1.1")
-        assert isinstance(result, bool)
+def test_url_normalized_before_ping(mocker):
+    mock = mocker.patch("nadzoring.network_base.ping_address.ping3.ping", return_value=0.01)
+    ping_addr("https://example.com")
+    mock.assert_called_once_with("example.com")
 
-    @patch("nadzoring.network_base.ping_address.ping3.ping")
-    def test_rtt_zero_is_truthy_returns_true(self, mock_ping):
-        # ping3 returns 0 for localhost on some systems — not None
-        mock_ping.return_value = 0
-        assert ping_addr("127.0.0.1") is True
 
-    @patch("nadzoring.network_base.ping_address.ping3.ping")
-    def test_plain_ip_passed_directly(self, mock_ping):
-        mock_ping.return_value = 0.05
-        ping_addr("1.2.3.4")
-        mock_ping.assert_called_once_with("1.2.3.4")
+def test_http_url_normalized_before_ping(mocker):
+    mock = mocker.patch("nadzoring.network_base.ping_address.ping3.ping", return_value=0.01)
+    ping_addr("http://example.com/path")
+    mock.assert_called_once_with("example.com")
+
+
+def test_plain_ip_passed_directly(mocker):
+    mock = mocker.patch("nadzoring.network_base.ping_address.ping3.ping", return_value=0.05)
+    ping_addr("1.2.3.4")
+    mock.assert_called_once_with("1.2.3.4")
+
+
+def test_exception_returns_false(mocker):
+    mocker.patch(
+        "nadzoring.network_base.ping_address.ping3.ping",
+        side_effect=Exception("socket error"),
+    )
+    assert ping_addr("example.com") is False
+
+
+def test_oserror_returns_false(mocker):
+    mocker.patch(
+        "nadzoring.network_base.ping_address.ping3.ping",
+        side_effect=OSError("unreachable"),
+    )
+    assert ping_addr("10.0.0.1") is False
+
+
+def test_return_type_is_bool(mocker):
+    mocker.patch("nadzoring.network_base.ping_address.ping3.ping", return_value=0.1)
+    assert isinstance(ping_addr("1.1.1.1"), bool)
