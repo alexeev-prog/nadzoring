@@ -39,7 +39,7 @@ class TimeoutConfig:
 
     connect: float = 5.0
     read: float = 10.0
-    lifetime: float | None = None
+    lifetime: float = 120.0
 
     def apply_to_socket(self, sock: socket.socket) -> None:
         """Apply the read timeout to a socket.

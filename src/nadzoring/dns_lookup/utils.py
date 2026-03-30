@@ -57,7 +57,7 @@ def create_resolver(nameserver: str | None = None, timeout_config: TimeoutConfig
     Args:
         nameserver: Optional nameserver IP address.  When ``None`` the
             system default resolvers are used.
-        timeout_context: unified timeout configuration. When ``None`` the timeout config is default.
+        timeout_config: unified timeout configuration. When ``None`` the timeout config is default.
 
     Returns:
         Configured :class:`dns.resolver.Resolver` ready for queries.
@@ -71,7 +71,7 @@ def create_resolver(nameserver: str | None = None, timeout_config: TimeoutConfig
         timeout_config = TimeoutConfig()
 
     resolver = dns.resolver.Resolver()
-    resolver.timeout = timeout_config.read_timeout
+    resolver.timeout = timeout_config.read
     resolver.lifetime = timeout_config.lifetime
 
     if nameserver:
@@ -213,6 +213,7 @@ def resolve_with_timer(
     Args:
         domain: Domain name to resolve (e.g. ``"example.com"``).
         record_type: DNS record type to query.  Defaults to ``"A"``.
+        timeout_config: unified timeout configuration.
         nameserver: Optional nameserver IP; ``None`` uses the system
             default.
         include_ttl: Include TTL value in result.  Defaults to
@@ -257,28 +258,31 @@ def resolve_with_timer(
     if timeout_config is None:
         timeout_config = TimeoutConfig()
 
-    with timeout_context(timeout_config):
-        try:
-            resolver: Resolver = create_resolver(nameserver, timeout_config.timeout, timeout_config.lifetime)
-            start_time: float = time()
-            answers: Answer = resolver.resolve(domain, record_type)
-            result["response_time"] = round((time() - start_time) * 1000, 2)
+    try:
+        with timeout_context(timeout_config):
+            try:
+                resolver: Resolver = create_resolver(nameserver, timeout_config)
+                start_time: float = time()
+                answers: Answer = resolver.resolve(domain, record_type)
+                result["response_time"] = round((time() - start_time) * 1000, 2)
 
-            if answers.rrset and include_ttl:
-                result["ttl"] = answers.rrset.ttl
+                if answers.rrset and include_ttl:
+                    result["ttl"] = answers.rrset.ttl
 
-            result["records"] = extract_records(answers, record_type)
+                result["records"] = extract_records(answers, record_type)
 
-        except dns.resolver.NoAnswer:
-            result["error"] = f"No {record_type} records"
-        except dns.resolver.NXDOMAIN:
-            result["error"] = "Domain does not exist"
-        except dns.exception.Timeout:
-            result["error"] = "Query timeout"
-            logger.debug("DNS query timeout for %s %s", domain, record_type)
-        except Exception as exc:
-            result["error"] = str(exc)
-            logger.debug("DNS resolution failed for %s %s: %s", domain, record_type, exc)
+            except dns.resolver.NoAnswer:
+                result["error"] = f"No {record_type} records"
+            except dns.resolver.NXDOMAIN:
+                result["error"] = "Domain does not exist"
+            except dns.exception.Timeout:
+                result["error"] = "Query timeout"
+                logger.debug("DNS query timeout for %s %s", domain, record_type)
+            except Exception as exc:
+                result["error"] = str(exc)
+                logger.debug("DNS resolution failed for %s %s: %s", domain, record_type, exc)
+    except TimeoutError:
+        result["error"] = "Operation exceeded lifetime timeout"
 
     return result
 

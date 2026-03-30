@@ -11,7 +11,7 @@ from nadzoring.logger import get_logger
 from nadzoring.network_base.connections import ConnectionEntry, get_connections
 from nadzoring.network_base.domain_info import get_domain_info
 from nadzoring.network_base.geolocation_ip import geo_ip
-from nadzoring.network_base.http_ping import HttpPingResult, http_ping
+from nadzoring.network_base.http_ping import http_ping
 from nadzoring.network_base.ipv4_local_cli import get_local_ipv4
 from nadzoring.network_base.network_params import network_param
 from nadzoring.network_base.parse_url import parse_url
@@ -35,10 +35,11 @@ from nadzoring.network_base.service_detector import (
     detect_service_on_host,
 )
 from nadzoring.network_base.service_on_port import get_service_on_port
-from nadzoring.network_base.traceroute import TraceHop, traceroute
+from nadzoring.network_base.traceroute import traceroute
 from nadzoring.network_base.whois_lookup import whois_lookup
 from nadzoring.utils.decorators import common_cli_options
 from nadzoring.utils.formatters import format_scan_results
+from nadzoring.utils.timeout import TimeoutConfig
 
 logger: Logger = get_logger(__name__)
 
@@ -49,16 +50,9 @@ def network_group() -> None:
 
 
 @network_group.command(name="detect-service")
-@common_cli_options(include_quiet=True)
+@common_cli_options(include_quiet=True, include_timeout=True)
 @click.argument("target", required=True)
 @click.argument("ports", type=int, nargs=-1, required=True)
-@click.option(
-    "--timeout",
-    type=float,
-    default=3.0,
-    show_default=True,
-    help="Connection timeout in seconds",
-)
 @click.option(
     "--no-probe",
     is_flag=True,
@@ -67,8 +61,8 @@ def network_group() -> None:
 def detect_service_command(
     target: str,
     ports: tuple[int, ...],
-    timeout: float,
     *,
+    timeout_config: TimeoutConfig,
     no_probe: bool,
     quiet: bool,
 ) -> list[dict[str, Any]]:
@@ -92,7 +86,7 @@ def detect_service_command(
         result: ServiceDetectionResult = detect_service_on_host(
             host=target,
             port=port,
-            timeout=timeout,
+            timeout_config=timeout_config,
             send_probe=not no_probe,
         )
 
@@ -121,7 +115,7 @@ def detect_service_command(
 
 
 @network_group.command(name="port-scan")
-@common_cli_options(include_quiet=True)
+@common_cli_options(include_quiet=True, include_timeout=True)
 @click.argument("targets", nargs=-1, required=True)
 @click.option(
     "--mode",
@@ -140,13 +134,6 @@ def detect_service_command(
     default="tcp",
     show_default=True,
     help="Protocol to scan",
-)
-@click.option(
-    "--timeout",
-    type=float,
-    default=2.0,
-    show_default=True,
-    help="Socket timeout in seconds",
 )
 @click.option(
     "--workers",
@@ -170,7 +157,7 @@ def port_scan_command(
     mode: str,
     ports: str | None,
     protocol: str,
-    timeout: float,
+    timeout_config: TimeoutConfig,
     workers: int,
     *,
     show_closed: bool,
@@ -189,7 +176,7 @@ def port_scan_command(
         protocol=protocol_literal,
         custom_ports=parsed_ports[0],
         port_range=parsed_ports[1],
-        timeout=timeout,
+        timeout_config=timeout_config,
         max_workers=workers,
         grab_banner=not no_banner,
     )
@@ -220,7 +207,7 @@ def port_scan_command(
             protocol=protocol_literal,
             custom_ports=parsed_ports[0],
             port_range=parsed_ports[1],
-            timeout=timeout,
+            timeout_config=timeout_config,
             max_workers=workers,
             grab_banner=not no_banner,
         )
@@ -466,15 +453,8 @@ def port_service_command(
 
 
 @network_group.command(name="http-ping")
-@common_cli_options(include_quiet=True)
+@common_cli_options(include_quiet=True, include_timeout=True)
 @click.argument("urls", nargs=-1, required=True)
-@click.option(
-    "--timeout",
-    type=float,
-    default=10.0,
-    show_default=True,
-    help="Request timeout in seconds",
-)
 @click.option(
     "--no-ssl-verify",
     is_flag=True,
@@ -492,7 +472,7 @@ def port_service_command(
 )
 def http_ping_command(
     urls: tuple[str, ...],
-    timeout: float,
+    timeout_config: TimeoutConfig,
     *,
     no_ssl_verify: bool,
     no_redirects: bool,
@@ -506,9 +486,9 @@ def http_ping_command(
     pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Probing URLs", unit="url")
 
     for url in urls:
-        result: HttpPingResult = http_ping(
+        result = http_ping(
             url,
-            timeout=timeout,
+            timeout_config=timeout_config,
             verify_ssl=not no_ssl_verify,
             follow_redirects=not no_redirects,
             include_headers=show_headers,
@@ -661,7 +641,7 @@ def connections_command(
 
 
 @network_group.command(name="traceroute")
-@common_cli_options(include_quiet=True)
+@common_cli_options(include_quiet=True, include_timeout=True)
 @click.argument("targets", nargs=-1, required=True)
 @click.option(
     "--max-hops",
@@ -669,13 +649,6 @@ def connections_command(
     default=30,
     show_default=True,
     help="Maximum number of hops",
-)
-@click.option(
-    "--timeout",
-    type=float,
-    default=2.0,
-    show_default=True,
-    help="Per-hop timeout in seconds",
 )
 @click.option(
     "--sudo",
@@ -686,7 +659,7 @@ def connections_command(
 def traceroute_command(
     targets: tuple[str, ...],
     max_hops: int,
-    timeout: float,
+    timeout_config: TimeoutConfig,
     *,
     use_sudo: bool,
     quiet: bool,
@@ -701,10 +674,10 @@ def traceroute_command(
         if not quiet:
             click.echo(f"\nTraceroute to {target}:", err=True)
 
-        hops: list[TraceHop] = traceroute(
+        hops = traceroute(
             target,
             max_hops=max_hops,
-            per_hop_timeout=timeout,
+            per_hop_timeout=timeout_config.connect,
             use_sudo=use_sudo,
         )
 

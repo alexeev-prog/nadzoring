@@ -89,19 +89,31 @@ def http_ping(
     session = Session()
     try:
         start: float = time.perf_counter()
-        with (
-            timeout_context(timeout_config),
-            session.get(
-                url,
-                stream=True,
-                timeout=(timeout_config.connect, timeout_config.read),
-                verify=verify_ssl,
-                allow_redirects=follow_redirects,
-            ) as response,
-        ):
-            ttfb_ms: float = round((time.perf_counter() - start) * 1000, 2)
-            content: bytes = response.content
-            total_ms: float = round((time.perf_counter() - start) * 1000, 2)
+        try:
+            with (
+                timeout_context(timeout_config),
+                session.get(
+                    url,
+                    stream=True,
+                    timeout=(timeout_config.connect, timeout_config.read),
+                    verify=verify_ssl,
+                    allow_redirects=follow_redirects,
+                ) as response,
+            ):
+                ttfb_ms: float = round((time.perf_counter() - start) * 1000, 2)
+                content: bytes = response.content
+                total_ms: float = round((time.perf_counter() - start) * 1000, 2)
+        except TimeoutError as exc:
+            return HttpPingResult(
+                url=url,
+                final_url=None,
+                status_code=None,
+                dns_ms=dns_ms,
+                ttfb_ms=None,
+                total_ms=None,
+                content_length=None,
+                error=str(exc),
+            )
 
         headers: dict[str, str] = dict(response.headers) if include_headers else {}
         final = str(response.url)

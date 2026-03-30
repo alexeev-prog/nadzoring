@@ -70,7 +70,7 @@ class ScanConfig:
     protocol: Literal["tcp", "udp"] = "tcp"
     custom_ports: list[int] | None = None
     port_range: tuple[int, int] | None = None
-    timeout_config: TimeoutConfig = TimeoutConfig()  # noqa: RUF009, because creating a separate function would be redundant.
+    timeout_config: TimeoutConfig = field(default_factory=TimeoutConfig)
     max_workers: int = 50
     grab_banner: bool = True
     progress_callback: Callable[[str, int, int], None] | None = None

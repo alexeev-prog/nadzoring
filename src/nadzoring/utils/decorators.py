@@ -24,6 +24,7 @@ F = TypeVar("F", bound=Callable[..., Any])
 
 _DEFAULT_CONNECT_TIMEOUT: float = 5.0
 _DEFAULT_READ_TIMEOUT: float = 10.0
+_DEFAULT_LIFETIME_TIMEOUT: float = 30.0
 
 
 @dataclass(frozen=True)
@@ -73,9 +74,9 @@ def _make_timeout_config(kwargs: dict[str, Any]) -> TimeoutConfig:
     read: float | None = kwargs.pop("read_timeout", None)
 
     return TimeoutConfig(
-        connect=connect if connect is not None else (lifetime or _DEFAULT_CONNECT_TIMEOUT),
-        read=read if read is not None else (lifetime or _DEFAULT_READ_TIMEOUT),
-        lifetime=lifetime,
+        connect=connect if connect is not None else (lifetime if lifetime is not None else _DEFAULT_CONNECT_TIMEOUT),
+        read=read if read is not None else (lifetime if lifetime is not None else _DEFAULT_READ_TIMEOUT),
+        lifetime=lifetime if lifetime is not None else _DEFAULT_LIFETIME_TIMEOUT,
     )
 
 
@@ -193,14 +194,17 @@ def common_cli_options(**enabled_flags: bool) -> Callable[[F], F]:
         decorated_func: F = func
 
         for spec in _OPTION_REGISTRY:
-            for click_opt in reversed(spec.click_options):
-                decorated_func = click_opt(decorated_func)
+            if enabled_flags.get(spec.flag):
+                for click_opt in reversed(spec.click_options):
+                    decorated_func = click_opt(decorated_func)
 
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            # Extract every registered option so no unexpected kwargs leak into
-            # the real function.
-            extracted: dict[str, Any] = {spec.kwarg: spec.extractor(kwargs) for spec in _OPTION_REGISTRY}
+            extracted: dict[str, Any] = {
+                spec.kwarg: spec.extractor(kwargs)
+                for spec in _OPTION_REGISTRY
+                if enabled_flags.get(spec.flag) or spec.kwarg in _ALWAYS_EXTRACTED
+            }
 
             cli_opts = SimpleNamespace(
                 verbose=extracted["verbose"],
@@ -210,7 +214,6 @@ def common_cli_options(**enabled_flags: bool) -> Callable[[F], F]:
                 save=extracted["save"],
             )
 
-            # Forward only explicitly requested options to the wrapped function.
             func_kwargs: dict[str, Any] = {**kwargs, **{spec.kwarg: extracted[spec.kwarg] for spec in active_specs}}
 
             _setup_logging(cli_opts)
