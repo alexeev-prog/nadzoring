@@ -12,6 +12,7 @@ from typing import Literal
 from nadzoring.logger import get_logger
 from nadzoring.network_base.base import DEFAULT_TIMEOUT, HTTP_PORTS
 from nadzoring.network_base.service_on_port import get_service_on_port
+from nadzoring.utils.timeout import TimeoutConfig
 
 logger: Logger = get_logger(__name__)
 
@@ -69,7 +70,7 @@ class ScanConfig:
     protocol: Literal["tcp", "udp"] = "tcp"
     custom_ports: list[int] | None = None
     port_range: tuple[int, int] | None = None
-    timeout: float = 2.0
+    timeout_config: TimeoutConfig = TimeoutConfig()  # noqa: RUF009, because creating a separate function would be redundant.
     max_workers: int = 50
     grab_banner: bool = True
     progress_callback: Callable[[str, int, int], None] | None = None
@@ -162,7 +163,7 @@ def _grab_banner(sock: socket.socket, target_ip: str, port: int, timeout: float 
 
 
 def _scan_tcp_port(
-    target_ip: str, port: int, timeout: float = DEFAULT_TIMEOUT, *, grab_banner: bool
+    target_ip: str, port: int, timeout_config: TimeoutConfig, *, grab_banner: bool
 ) -> tuple[int, PortResult]:
     """Scan a single TCP port on a target."""
     result = PortResult(port=port, state="filtered", service="unknown")
@@ -171,7 +172,7 @@ def _scan_tcp_port(
     try:
         start_time: datetime = datetime.now(tz=UTC)
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(timeout)
+        sock.settimeout(timeout_config.connect)
 
         connection_result: int = sock.connect_ex((target_ip, port))
         response_time: float = (datetime.now(tz=UTC) - start_time).total_seconds() * 1000
@@ -182,7 +183,7 @@ def _scan_tcp_port(
             result.service = get_service_on_port(port)
 
             if grab_banner:
-                banner: str | None = _grab_banner(sock, target_ip, port)
+                banner: str | None = _grab_banner(sock, target_ip, port, timeout=timeout_config.read)
                 if banner:
                     result.banner = banner
 
@@ -203,7 +204,7 @@ def _scan_tcp_port(
     return port, result
 
 
-def _scan_udp_port(target_ip: str, port: int, timeout: float = DEFAULT_TIMEOUT) -> tuple[int, PortResult]:
+def _scan_udp_port(target_ip: str, port: int, timeout_config: TimeoutConfig) -> tuple[int, PortResult]:
     """Scan a single UDP port on a target."""
     result = PortResult(port=port, state="filtered", service="unknown")
     sock = None
@@ -211,7 +212,7 @@ def _scan_udp_port(target_ip: str, port: int, timeout: float = DEFAULT_TIMEOUT) 
     try:
         start_time: datetime = datetime.now(tz=UTC)
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.settimeout(timeout)
+        sock.settimeout(timeout_config.connect)
 
         sock.sendto(b"", (target_ip, port))
 
@@ -269,7 +270,7 @@ def _scan_target_ports(target_ip: str, ports: list[int], config: ScanConfig, tar
                     _scan_tcp_port,
                     target_ip,
                     port,
-                    config.timeout,
+                    config.timeout_config,
                     grab_banner=config.grab_banner,
                 ): port
                 for port in ports
@@ -280,7 +281,7 @@ def _scan_target_ports(target_ip: str, ports: list[int], config: ScanConfig, tar
                     _scan_udp_port,
                     target_ip,
                     port,
-                    config.timeout,
+                    config.timeout_config,
                 ): port
                 for port in ports
             }

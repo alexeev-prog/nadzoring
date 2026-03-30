@@ -7,6 +7,7 @@ from typing import Any
 from scapy.all import ARP, Ether, sniff  # type: ignore
 
 from nadzoring.logger import get_logger
+from nadzoring.utils.timeout import TimeoutConfig
 
 logger = get_logger(__name__)
 
@@ -81,7 +82,7 @@ class ARPRealtimeDetector:
         self,
         interface: str | None = None,
         count: int = 10,
-        timeout: int = 30,
+        timeout_config: TimeoutConfig | None = None,
         packet_callback: Callable[[Ether, str | None], None] | None = None,
     ) -> list[dict[str, Any]]:
         """
@@ -91,7 +92,7 @@ class ARPRealtimeDetector:
             interface: Network interface to monitor. ``None`` monitors all
                 interfaces.
             count: Number of packets to capture. ``0`` captures indefinitely.
-            timeout: Capture timeout in seconds. ``0`` disables the timeout.
+            timeout_config: unified configuration for timeout, if is ``None`` set default timeouts.
             packet_callback: Optional callback receiving ``(packet, alert)``
                 for each processed packet. When ``None``, detected alerts are
                 collected internally and returned.
@@ -105,6 +106,9 @@ class ARPRealtimeDetector:
             RuntimeError: If packet sniffing fails.
 
         """
+        if timeout_config is None:
+            timeout_config = TimeoutConfig()
+
         alerts: list[dict[str, Any]] = []
 
         def _default_callback(packet: Ether, alert: str | None) -> None:
@@ -137,7 +141,7 @@ class ARPRealtimeDetector:
                 prn=_packet_handler,
                 store=False,
                 count=count if count > 0 else None,
-                timeout=timeout if timeout > 0 else None,
+                timeout=timeout_config.lifetime if timeout_config.lifetime > 0 else None,
             )
         except Exception as exc:
             raise RuntimeError(f"Failed to sniff packets: {exc}") from exc

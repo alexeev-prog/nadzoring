@@ -8,6 +8,8 @@ from urllib.parse import ParseResult, urlparse
 from requests import Session
 from requests.exceptions import RequestException
 
+from nadzoring.utils.timeout import TimeoutConfig, timeout_context
+
 
 @dataclass
 class HttpPingResult:
@@ -45,8 +47,8 @@ def _measure_dns(hostname: str) -> float | None:
 
 def http_ping(
     url: str,
+    timeout_config: TimeoutConfig | None = None,
     *,
-    timeout: float = 10.0,
     verify_ssl: bool = True,
     follow_redirects: bool = True,
     include_headers: bool = True,
@@ -59,7 +61,7 @@ def http_ping(
 
     Args:
         url: Target URL to probe. HTTP scheme is added if missing.
-        timeout: Request timeout in seconds. Defaults to 10.0.
+        timeout_config: Unified timeout config. If is ``None``, set default timeouts.
         verify_ssl: Whether to verify SSL certificates. Defaults to True.
         follow_redirects: Whether to follow HTTP redirects. Defaults to True.
         include_headers: Whether to include response headers. Defaults to True.
@@ -73,6 +75,9 @@ def http_ping(
         200
 
     """
+    if timeout_config is None:
+        timeout_config = TimeoutConfig()
+
     if not url.startswith(("http://", "https://")):
         url = f"http://{url}"
 
@@ -84,13 +89,16 @@ def http_ping(
     session = Session()
     try:
         start: float = time.perf_counter()
-        with session.get(
-            url,
-            stream=True,
-            timeout=timeout,
-            verify=verify_ssl,
-            allow_redirects=follow_redirects,
-        ) as response:
+        with (
+            timeout_context(timeout_config),
+            session.get(
+                url,
+                stream=True,
+                timeout=(timeout_config.connect, timeout_config.read),
+                verify=verify_ssl,
+                allow_redirects=follow_redirects,
+            ) as response,
+        ):
             ttfb_ms: float = round((time.perf_counter() - start) * 1000, 2)
             content: bytes = response.content
             total_ms: float = round((time.perf_counter() - start) * 1000, 2)

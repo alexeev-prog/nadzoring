@@ -29,6 +29,7 @@ from dns.resolver import Answer, Resolver
 
 from nadzoring.dns_lookup.types import DNSResult, RecordType
 from nadzoring.logger import get_logger
+from nadzoring.utils.timeout import TimeoutConfig, timeout_context
 
 logger: Logger = get_logger(__name__)
 
@@ -49,21 +50,14 @@ _PUBLIC_DNS_SERVERS: list[str] = [
 ]
 
 
-def create_resolver(
-    nameserver: str | None = None,
-    timeout: float = _DEFAULT_TIMEOUT,
-    lifetime: float = _DEFAULT_LIFETIME,
-) -> Resolver:
+def create_resolver(nameserver: str | None = None, timeout_config: TimeoutConfig | None = None) -> Resolver:
     """
     Create and configure a ``dnspython`` resolver instance.
 
     Args:
         nameserver: Optional nameserver IP address.  When ``None`` the
             system default resolvers are used.
-        timeout: Per-nameserver query timeout in seconds.
-            Defaults to ``5.0``.
-        lifetime: Total query lifetime in seconds, including retries
-            across nameservers.  Defaults to ``10.0``.
+        timeout_context: unified timeout configuration. When ``None`` the timeout config is default.
 
     Returns:
         Configured :class:`dns.resolver.Resolver` ready for queries.
@@ -73,9 +67,13 @@ def create_resolver(
         >>> answers = resolver.resolve("example.com", "A")
 
     """
+    if timeout_config is None:
+        timeout_config = TimeoutConfig()
+
     resolver = dns.resolver.Resolver()
-    resolver.timeout = timeout
-    resolver.lifetime = lifetime
+    resolver.timeout = timeout_config.read_timeout
+    resolver.lifetime = timeout_config.lifetime
+
     if nameserver:
         resolver.nameservers = [nameserver]
     return resolver
@@ -200,10 +198,9 @@ def resolve_with_timer(
     domain: str,
     record_type: RecordType = "A",
     nameserver: str | None = None,
+    timeout_config: TimeoutConfig | None = None,
     *,
     include_ttl: bool = False,
-    timeout: float = _DEFAULT_TIMEOUT,
-    lifetime: float = _DEFAULT_LIFETIME,
 ) -> DNSResult:
     """
     Perform DNS resolution with timing and structured error handling.
@@ -220,10 +217,6 @@ def resolve_with_timer(
             default.
         include_ttl: Include TTL value in result.  Defaults to
             ``False``.
-        timeout: Per-nameserver query timeout in seconds.
-            Defaults to ``5.0``.
-        lifetime: Total query lifetime in seconds.  Defaults to
-            ``10.0``.
 
     Returns:
         :class:`~.types.DNSResult` dict.  Always check
@@ -261,27 +254,31 @@ def resolve_with_timer(
     """
     result: DNSResult = _make_empty_result(domain, record_type)
 
-    try:
-        resolver: Resolver = create_resolver(nameserver, timeout, lifetime)
-        start_time: float = time()
-        answers: Answer = resolver.resolve(domain, record_type)
-        result["response_time"] = round((time() - start_time) * 1000, 2)
+    if timeout_config is None:
+        timeout_config = TimeoutConfig()
 
-        if answers.rrset and include_ttl:
-            result["ttl"] = answers.rrset.ttl
+    with timeout_context(timeout_config):
+        try:
+            resolver: Resolver = create_resolver(nameserver, timeout_config.timeout, timeout_config.lifetime)
+            start_time: float = time()
+            answers: Answer = resolver.resolve(domain, record_type)
+            result["response_time"] = round((time() - start_time) * 1000, 2)
 
-        result["records"] = extract_records(answers, record_type)
+            if answers.rrset and include_ttl:
+                result["ttl"] = answers.rrset.ttl
 
-    except dns.resolver.NoAnswer:
-        result["error"] = f"No {record_type} records"
-    except dns.resolver.NXDOMAIN:
-        result["error"] = "Domain does not exist"
-    except dns.exception.Timeout:
-        result["error"] = "Query timeout"
-        logger.debug("DNS query timeout for %s %s", domain, record_type)
-    except Exception as exc:
-        result["error"] = str(exc)
-        logger.debug("DNS resolution failed for %s %s: %s", domain, record_type, exc)
+            result["records"] = extract_records(answers, record_type)
+
+        except dns.resolver.NoAnswer:
+            result["error"] = f"No {record_type} records"
+        except dns.resolver.NXDOMAIN:
+            result["error"] = "Domain does not exist"
+        except dns.exception.Timeout:
+            result["error"] = "Query timeout"
+            logger.debug("DNS query timeout for %s %s", domain, record_type)
+        except Exception as exc:
+            result["error"] = str(exc)
+            logger.debug("DNS resolution failed for %s %s: %s", domain, record_type, exc)
 
     return result
 
