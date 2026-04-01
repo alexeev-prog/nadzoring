@@ -5,6 +5,7 @@ from typing import Any, TypedDict
 
 from nadzoring.dns_lookup.types import DNSResult, RecordType
 from nadzoring.dns_lookup.utils import resolve_with_timer
+from nadzoring.utils.timeout import TimeoutConfig
 
 
 class ServerComparisonResult(TypedDict):
@@ -49,6 +50,7 @@ def compare_dns_servers(
     servers: list[str],
     record_types: list[str],
     progress_callback: Callable[[], None] | None = None,
+    timeout_config: TimeoutConfig | None = None,
 ) -> ServerComparisonResult:
     """
     Compare DNS responses from multiple servers for the same domain.
@@ -63,6 +65,7 @@ def compare_dns_servers(
         record_types: Record types to query on every server.
         progress_callback: Called after each successful query. Useful for
             progress bars.
+        timeout_config: Unified timeout configuration. If None, uses default.
 
     Returns:
         :class:`ServerComparisonResult` with ``domain``, ``servers``, and
@@ -78,6 +81,9 @@ def compare_dns_servers(
         []
 
     """
+    if timeout_config is None:
+        timeout_config = TimeoutConfig()
+
     result: ServerComparisonResult = {
         "domain": domain,
         "servers": {},
@@ -90,7 +96,13 @@ def compare_dns_servers(
 
         for rtype_str in record_types:
             rtype: RecordType = rtype_str  # type: ignore
-            query_result: DNSResult = resolve_with_timer(domain, rtype, server, include_ttl=True)
+            query_result: DNSResult = resolve_with_timer(
+                domain,
+                rtype,
+                server,
+                include_ttl=True,
+                timeout_config=timeout_config,
+            )
 
             if is_baseline:
                 query_result["differs"] = False  # type: ignore

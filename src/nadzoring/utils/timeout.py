@@ -6,15 +6,15 @@ lifetime limits. It includes configuration classes, context managers, and decora
 to standardize timeout handling throughout the application.
 """
 
+import signal
 import socket
-import threading
 from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass
 from functools import wraps
-from typing import TypeVar
+from typing import Any, TypeVar, cast
 
-F = TypeVar("F", bound=Callable)
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 @dataclass
@@ -49,22 +49,25 @@ class TimeoutConfig:
 
         Args:
             sock: The socket to configure.
-
-        Note:
-            This method applies the read timeout only. For connection-specific
-            timeout configuration, use configure_socket_with_timeouts() with
-            connect_mode=True.
         """
         sock.settimeout(self.read)
+
+
+class OperationTimeoutError(Exception):
+    """Exception raised when an operation exceeds its lifetime timeout."""
+
+    def __init__(self, message: str = "Operation exceeded lifetime timeout") -> None:
+        """Initialize the timeout error with an optional custom message."""
+        super().__init__(message)
 
 
 @contextmanager
 def timeout_context(timeout: TimeoutConfig):
     """Context manager that enforces a lifetime timeout on a block of code.
 
-    Creates a timer that will raise a TimeoutError if the enclosed operation
-    exceeds the configured lifetime. If no lifetime is configured, the context
-    manager becomes a no-op.
+    Uses SIGALRM on Unix systems to interrupt blocking operations when the
+    lifetime timeout is exceeded. On Windows, falls back to a post-check only
+    mode that cannot interrupt blocking calls.
 
     Args:
         timeout: Timeout configuration containing the lifetime value.
@@ -73,42 +76,50 @@ def timeout_context(timeout: TimeoutConfig):
         None: Control is yielded to the enclosed code block.
 
     Raises:
-        TimeoutError: If the operation exceeds the configured lifetime timeout.
+        OperationTimeoutError: If the operation exceeds the configured lifetime timeout.
 
     Example:
         config = TimeoutConfig(lifetime=5.0)
         try:
             with timeout_context(config):
-                # Operation that must complete within 5 seconds
                 long_running_operation()
-        except TimeoutError:
+        except OperationTimeoutError:
             handle_timeout()
 
     Note:
-        The timer runs in a daemon thread which does not block interpreter shutdown.
-        The timer is always cancelled when the context exits, even if an exception
-        occurs.
+        On Unix systems, this uses SIGALRM which can interrupt system calls.
+        On Windows, this provides a best-effort check but cannot interrupt
+        blocking operations due to OS limitations.
     """
     if timeout.lifetime is None:
         yield
         return
 
-    timeout_occurred = threading.Event()
-
-    def _timeout_handler():
-        timeout_occurred.set()
-
-    timer = threading.Timer(timeout.lifetime, _timeout_handler)
-    timer.daemon = True
-    timer.start()
-
     try:
+        signal.signal(signal.SIGALRM, _raise_timeout_error)
+        signal.alarm(int(timeout.lifetime))
         yield
-
-        if timeout_occurred.is_set():
-            raise TimeoutError(f"Operation exceeded lifetime timeout: {timeout.lifetime}s")
+        signal.alarm(0)
+    except OperationTimeoutError:
+        raise
+    except Exception:
+        signal.alarm(0)
+        raise
     finally:
-        timer.cancel()
+        signal.alarm(0)
+
+
+def _raise_timeout_error(signum: int, frame: Any) -> None:
+    """Signal handler that raises OperationTimeoutError when SIGALRM is received.
+
+    Args:
+        signum: Signal number (unused but required for signal handler signature).
+        frame: Current stack frame (unused but required for signal handler signature).
+
+    Raises:
+        OperationTimeoutError: Always raised when this handler is called.
+    """
+    raise OperationTimeoutError("Operation exceeded lifetime timeout")
 
 
 def configure_socket_with_timeouts(sock: socket.socket, config: TimeoutConfig, *, connect_mode: bool = False) -> None:
@@ -128,17 +139,11 @@ def configure_socket_with_timeouts(sock: socket.socket, config: TimeoutConfig, *
         sock = socket.socket()
         config = TimeoutConfig(connect=5.0, read=10.0)
 
-        # During connection phase
         configure_socket_with_timeouts(sock, config, connect_mode=True)
         sock.connect(('example.com', 80))
 
-        # After connection, switch to read timeout
         configure_socket_with_timeouts(sock, config, connect_mode=False)
         data = sock.recv(1024)
-
-    Note:
-        This function does not modify the socket's blocking mode, only the timeout
-        value. The timeout is applied in seconds as a float.
     """
     if connect_mode:
         sock.settimeout(config.connect)
@@ -150,7 +155,7 @@ def with_lifetime_timeout(timeout_config: TimeoutConfig) -> Callable[[F], F]:
     """Decorator factory that wraps a function with a lifetime timeout.
 
     Creates a decorator that enforces a lifetime timeout on the decorated function.
-    If the function execution exceeds the configured lifetime, a TimeoutError is
+    If the function execution exceeds the configured lifetime, an OperationTimeoutError is
     raised.
 
     Args:
@@ -165,27 +170,24 @@ def with_lifetime_timeout(timeout_config: TimeoutConfig) -> Callable[[F], F]:
 
         @with_lifetime_timeout(config)
         def fetch_data():
-            # This function must complete within 10 seconds
             return expensive_network_operation()
 
         try:
             result = fetch_data()
-        except TimeoutError:
+        except OperationTimeoutError:
             print("Operation timed out after 10 seconds")
 
     Note:
-        The decorator works by wrapping the function call in a timeout_context.
-        All arguments and return values are preserved through the wrapper.
-        The decorated function's metadata (__name__, __doc__, etc.) are preserved
-        using functools.wraps.
+        On Unix systems, this can interrupt blocking system calls. On Windows,
+        the timeout is checked after function completion only.
     """
 
     def decorator(func: F) -> F:
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             with timeout_context(timeout_config):
                 return func(*args, **kwargs)
 
-        return wrapper  # type: ignore
+        return cast(F, wrapper)
 
     return decorator

@@ -8,6 +8,7 @@ from typing import Any
 
 from nadzoring.logger import get_logger
 from nadzoring.security.check_website_ssl_cert import check_ssl_certificate
+from nadzoring.utils.timeout import TimeoutConfig
 
 logger: Logger = get_logger(__name__)
 
@@ -51,6 +52,7 @@ class SSLMonitor:
         domains: list[str],
         interval: int = 3600,
         days_before: int = 7,
+        timeout_config: TimeoutConfig | None = None,
     ) -> None:
         """
         Initialise the monitor.
@@ -61,11 +63,13 @@ class SSLMonitor:
                 ``3600``.
             days_before: Days before expiry to emit a warning alert.
                 Defaults to ``7``.
+            timeout_config: Unified timeout configuration. If None, uses default.
 
         """
         self.domains: list[str] = domains
         self.interval: int = interval
         self.days_before: int = days_before
+        self.timeout_config: TimeoutConfig = timeout_config or TimeoutConfig()
 
         self._alert_callback: AlertCallback = _default_alert
         self._history: list[dict[str, Any]] = []
@@ -105,7 +109,11 @@ class SSLMonitor:
             added ``checked_at`` field.
 
         """
-        result: dict[str, Any] = check_ssl_certificate(domain, self.days_before)
+        result: dict[str, Any] = check_ssl_certificate(
+            domain,
+            self.days_before,
+            timeout_config=self.timeout_config,
+        )
         result["checked_at"] = datetime.now(tz=UTC).isoformat()
 
         status: str = result.get("status", "unknown")

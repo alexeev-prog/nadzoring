@@ -15,6 +15,7 @@ from typing import Literal, TypedDict
 from nadzoring.dns_lookup.types import DNSResult, PoisoningCheckResult, RecordType
 from nadzoring.dns_lookup.utils import get_public_dns_servers, resolve_with_timer
 from nadzoring.logger import get_logger
+from nadzoring.utils.timeout import TimeoutConfig
 
 logger: Logger = get_logger(__name__)
 
@@ -610,6 +611,7 @@ def check_dns_poisoning(
     test_servers: list[str] | None = None,
     record_type: str = "A",
     additional_types: list[str] | None = None,
+    timeout_config: TimeoutConfig | None = None,
 ) -> PoisoningCheckResult:
     """
     Check for DNS poisoning, censorship, or manipulation.
@@ -627,6 +629,7 @@ def check_dns_poisoning(
         record_type: Record type to query. Defaults to ``"A"``.
         additional_types: Extra record types to query on the control server
             for additional context.
+        timeout_config: Unified timeout configuration. If None, uses default.
 
     Returns:
         :class:`PoisoningCheckResult` with comprehensive analysis fields.
@@ -639,17 +642,36 @@ def check_dns_poisoning(
         >>> result = check_dns_poisoning("example.com", test_servers=["1.1.1.1", "9.9.9.9"])
 
     """
+    if timeout_config is None:
+        timeout_config = TimeoutConfig()
+
     if test_servers is None:
         test_servers = get_public_dns_servers()
 
     record_type_literal: RecordType = "A" if record_type == "A" else record_type  # type: ignore
 
-    control_result: DNSResult = resolve_with_timer(domain, record_type_literal, control_server, include_ttl=True)
+    control_result: DNSResult = resolve_with_timer(
+        domain,
+        record_type_literal,
+        control_server,
+        include_ttl=True,
+        timeout_config=timeout_config,
+    )
 
-    additional_results: dict[str, DNSResult] | None = _get_additional_records(domain, additional_types, control_server)
+    additional_results: dict[str, DNSResult] | None = _get_additional_records(
+        domain,
+        additional_types,
+        control_server,
+        timeout_config,
+    )
 
     test_results, inconsistencies, mismatches, cdn_variations = _test_dns_servers(
-        domain, record_type_literal, test_servers, control_result, control_server
+        domain,
+        record_type_literal,
+        test_servers,
+        control_result,
+        control_server,
+        timeout_config,
     )
 
     metrics: MetricsResult = _calculate_metrics(test_results, control_result, mismatches, cdn_variations)
@@ -679,6 +701,7 @@ def _get_additional_records(
     domain: str,
     additional_types: list[str] | None,
     control_server: str,
+    timeout_config: TimeoutConfig,
 ) -> dict[str, DNSResult] | None:
     """
     Retrieve supplementary DNS record types from the control server.
@@ -687,6 +710,7 @@ def _get_additional_records(
         domain: Domain name to query.
         additional_types: Record types to query, or ``None`` to skip.
         control_server: Control server IP address.
+        timeout_config: Unified timeout configuration.
 
     Returns:
         Dict mapping record types to results, or ``None`` when
@@ -698,7 +722,13 @@ def _get_additional_records(
     result: dict[str, DNSResult] = {}
     for rtype in additional_types:
         rtype_literal: RecordType = rtype  # type: ignore
-        result[rtype] = resolve_with_timer(domain, rtype_literal, control_server, include_ttl=True)
+        result[rtype] = resolve_with_timer(
+            domain,
+            rtype_literal,
+            control_server,
+            include_ttl=True,
+            timeout_config=timeout_config,
+        )
     return result
 
 
@@ -708,6 +738,7 @@ def _test_dns_servers(
     test_servers: list[str],
     control_result: DNSResult,
     control_server: str,
+    timeout_config: TimeoutConfig,
 ) -> tuple[dict[str, DNSResult], list[InconsistencyDetail], int, int]:
     """
     Query all test servers and collect comparison results.
@@ -720,6 +751,7 @@ def _test_dns_servers(
         test_servers: Test server IP addresses.
         control_result: Result from the control server for comparison.
         control_server: Control server IP (skipped when encountered in list).
+        timeout_config: Unified timeout configuration.
 
     Returns:
         Four-tuple of ``(test_results, inconsistencies, mismatches,
@@ -735,7 +767,13 @@ def _test_dns_servers(
         if server == control_server:
             continue
 
-        test_result: DNSResult = resolve_with_timer(domain, record_type, server, include_ttl=True)
+        test_result: DNSResult = resolve_with_timer(
+            domain,
+            record_type,
+            server,
+            include_ttl=True,
+            timeout_config=timeout_config,
+        )
         test_results[server] = test_result
 
         inconsistency: InconsistencyDetail | None = _compare_results(control_result, test_result, server)

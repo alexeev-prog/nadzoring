@@ -8,6 +8,7 @@ import requests
 from requests import RequestException, Response
 
 from nadzoring.logger import get_logger
+from nadzoring.utils.timeout import TimeoutConfig
 
 logger: Logger = get_logger(__name__)
 
@@ -132,7 +133,7 @@ def _analyse_response(url: str, response: Response) -> HeaderAnalysis:
 def check_http_security_headers(
     url: str,
     *,
-    timeout: float = 10.0,
+    timeout_config: TimeoutConfig | None = None,
     verify_ssl: bool = True,
 ) -> dict[str, Any]:
     """
@@ -145,7 +146,7 @@ def check_http_security_headers(
     Args:
         url: The target URL, with or without scheme. ``http://`` is
             prepended when no scheme is present.
-        timeout: Request timeout in seconds. Defaults to ``10.0``.
+        timeout_config: Unified timeout configuration. If None, uses default.
         verify_ssl: Whether to verify the SSL certificate. Defaults to
             ``True``.
 
@@ -170,13 +171,16 @@ def check_http_security_headers(
         True
 
     """
+    if timeout_config is None:
+        timeout_config = TimeoutConfig()
+
     if not url.startswith(("http://", "https://")):
         url = f"https://{url}"
 
     try:
         response: Response = requests.get(
             url,
-            timeout=timeout,
+            timeout=(timeout_config.connect, timeout_config.read),
             verify=verify_ssl,
             allow_redirects=True,
         )

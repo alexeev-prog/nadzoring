@@ -17,6 +17,7 @@ from dns.resolver import Answer, Resolver
 
 from nadzoring.dns_lookup.utils import create_resolver
 from nadzoring.logger import get_logger
+from nadzoring.utils.timeout import TimeoutConfig
 
 logger: Logger = get_logger(__name__)
 
@@ -49,6 +50,7 @@ def _create_hop(nameserver: str) -> dict[str, Any]:
 def _query_nameserver(
     domain: str,
     nameserver: str,
+    timeout_config: TimeoutConfig,
 ) -> tuple[Answer | None, float | None, str | None]:
     """
     Query a specific nameserver for A records of *domain*.
@@ -56,6 +58,7 @@ def _query_nameserver(
     Args:
         domain: Domain name to query.
         nameserver: IP address of the nameserver to query.
+        timeout_config: Unified timeout configuration.
 
     Returns:
         Three-tuple of ``(answers, response_time_ms, error_message)``.
@@ -63,7 +66,7 @@ def _query_nameserver(
         is ``None`` on success.
 
     """
-    resolver: Resolver = create_resolver(nameserver, timeout=3, lifetime=5)
+    resolver: Resolver = create_resolver(nameserver, timeout_config)
     start_time: float = time()
 
     try:
@@ -83,6 +86,7 @@ def _get_delegation_info(
     current_domain: Name,
     current_ns: str,
     hop: dict[str, Any],
+    timeout_config: TimeoutConfig,
 ) -> str | None:
     """
     Resolve the next-hop nameserver IP via NS delegation records.
@@ -92,6 +96,7 @@ def _get_delegation_info(
         current_ns: IP address of the nameserver to ask.
         hop: Hop dict updated in-place with delegation record strings or
             an ``"error"`` key on failure.
+        timeout_config: Unified timeout configuration.
 
     Returns:
         IP address of the next nameserver, or ``None`` when delegation
@@ -100,7 +105,7 @@ def _get_delegation_info(
     """
     try:
         ns_query: QueryMessage = dns.message.make_query(current_domain, dns.rdatatype.NS)
-        response: Message = dns.query.udp(ns_query, current_ns, timeout=_DELEGATION_TIMEOUT)
+        response: Message = dns.query.udp(ns_query, current_ns, timeout=timeout_config.connect)
 
         for rrset in response.authority:
             if rrset.rdtype != dns.rdatatype.NS:
@@ -109,7 +114,7 @@ def _get_delegation_info(
             for rr in rrset:
                 ns_name = str(rr.target)
                 try:
-                    ns_ip_answer: Answer = dns.resolver.resolve(ns_name, "A", lifetime=3)
+                    ns_ip_answer: Answer = dns.resolver.resolve(ns_name, "A", lifetime=timeout_config.read)
                     ns_ip = str(ns_ip_answer[0])
                     hop["records"].append(f"Delegation to {ns_name} ({ns_ip})")
                 except Exception:
@@ -127,7 +132,11 @@ def _get_delegation_info(
     return None
 
 
-def trace_dns(domain: str, nameserver: str | None = None) -> dict[str, Any]:
+def trace_dns(
+    domain: str,
+    nameserver: str | None = None,
+    timeout_config: TimeoutConfig | None = None,
+) -> dict[str, Any]:
     """
     Trace the complete DNS resolution path for *domain*.
 
@@ -139,6 +148,7 @@ def trace_dns(domain: str, nameserver: str | None = None) -> dict[str, Any]:
         domain: Domain name to trace (e.g. ``"example.com"``).
         nameserver: Starting nameserver IP. Defaults to ``a.root-servers.net``
             (``198.41.0.4``) when ``None``.
+        timeout_config: Unified timeout configuration. If None, uses default.
 
     Returns:
         Dict with ``domain``, ``hops`` (list of hop dicts), and
@@ -150,6 +160,9 @@ def trace_dns(domain: str, nameserver: str | None = None) -> dict[str, Any]:
         ...     print(hop["nameserver"], hop["response_time"])
 
     """
+    if timeout_config is None:
+        timeout_config = TimeoutConfig()
+
     result: dict[str, Any] = {
         "domain": domain,
         "hops": [],
@@ -171,7 +184,7 @@ def trace_dns(domain: str, nameserver: str | None = None) -> dict[str, Any]:
         visited.add(current_ns)
         hop: dict[str, Any] = _create_hop(current_ns)
 
-        answers, response_time, error = _query_nameserver(domain, current_ns)
+        answers, response_time, error = _query_nameserver(domain, current_ns, timeout_config)
         hop["response_time"] = response_time
 
         if answers:
@@ -181,7 +194,7 @@ def trace_dns(domain: str, nameserver: str | None = None) -> dict[str, Any]:
             result["hops"].append(hop)
             break
 
-        next_ns: str | None = _get_delegation_info(current_domain, current_ns, hop)
+        next_ns: str | None = _get_delegation_info(current_domain, current_ns, hop, timeout_config)
 
         if error:
             hop["error"] = error

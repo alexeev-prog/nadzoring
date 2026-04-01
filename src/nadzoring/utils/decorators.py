@@ -194,7 +194,7 @@ def common_cli_options(**enabled_flags: bool) -> Callable[[F], F]:
         decorated_func: F = func
 
         for spec in _OPTION_REGISTRY:
-            if enabled_flags.get(spec.flag):
+            if enabled_flags.get(spec.flag) or spec.kwarg in _ALWAYS_EXTRACTED:
                 for click_opt in reversed(spec.click_options):
                     decorated_func = click_opt(decorated_func)
 

@@ -11,6 +11,7 @@ from nadzoring.dns_lookup.validation import (
     validate_mx_records,
     validate_txt_records,
 )
+from nadzoring.utils.timeout import TimeoutConfig
 
 _HEALTH_RECORD_TYPES: list[RecordType] = ["A", "AAAA", "MX", "NS", "TXT", "CNAME"]
 _DEFAULT_CHECK_TYPES: list[RecordType] = ["A", "AAAA", "MX", "NS", "TXT", "CNAME"]
@@ -65,7 +66,11 @@ class DetailedCheckResult(UserDict[str, Any]):
     validations: dict[str, dict[str, bool | list[str]]]
 
 
-def health_check_dns(domain: str, nameserver: str | None = None) -> HealthCheckResult:
+def health_check_dns(
+    domain: str,
+    nameserver: str | None = None,
+    timeout_config: TimeoutConfig | None = None,
+) -> HealthCheckResult:
     """
     Perform a comprehensive DNS health check with scoring.
 
@@ -78,6 +83,7 @@ def health_check_dns(domain: str, nameserver: str | None = None) -> HealthCheckR
     Args:
         domain: Domain name to check (e.g. ``"example.com"``).
         nameserver: Optional nameserver IP. ``None`` uses the system default.
+        timeout_config: Unified timeout configuration. If None, uses default.
 
     Returns:
         :class:`HealthCheckResult` dict with ``domain``, ``score``, ``status``,
@@ -90,6 +96,9 @@ def health_check_dns(domain: str, nameserver: str | None = None) -> HealthCheckR
         ...     print(f"  {rtype}: {score}")
 
     """
+    if timeout_config is None:
+        timeout_config = TimeoutConfig()
+
     result_dict: dict[str, Any] = {
         "domain": domain,
         "score": 0,
@@ -108,7 +117,12 @@ def health_check_dns(domain: str, nameserver: str | None = None) -> HealthCheckR
             result_dict["record_scores"][rtype] = 100
             continue
 
-        record_result: DNSResult = resolve_with_timer(domain, rtype, nameserver)
+        record_result: DNSResult = resolve_with_timer(
+            domain,
+            rtype,
+            nameserver,
+            timeout_config=timeout_config,
+        )
         record_score: int = max(0, calculate_record_score(rtype, dict(record_result), result_dict))
 
         result_dict["record_scores"][rtype] = record_score
@@ -128,6 +142,7 @@ def check_dns(
     *,
     validate_mx: bool = False,
     validate_txt: bool = False,
+    timeout_config: TimeoutConfig | None = None,
 ) -> DetailedCheckResult:
     """
     Perform a comprehensive DNS check with detailed per-record information.
@@ -142,6 +157,7 @@ def check_dns(
             ``["A", "AAAA", "MX", "NS", "TXT", "CNAME"]``.
         validate_mx: Validate MX record priorities when ``True``.
         validate_txt: Validate SPF and DKIM in TXT records when ``True``.
+        timeout_config: Unified timeout configuration. If None, uses default.
 
     Returns:
         :class:`DetailedCheckResult` dict with ``domain``, ``records``,
@@ -158,6 +174,9 @@ def check_dns(
         True
 
     """
+    if timeout_config is None:
+        timeout_config = TimeoutConfig()
+
     if record_types is None:
         record_types = list(_DEFAULT_CHECK_TYPES)
 
@@ -170,7 +189,12 @@ def check_dns(
     }
 
     for record_type in record_types:
-        record_result: DNSResult = resolve_with_timer(domain, record_type, nameserver)
+        record_result: DNSResult = resolve_with_timer(
+            domain,
+            record_type,
+            nameserver,
+            timeout_config=timeout_config,
+        )
 
         if record_result.get("records"):
             results_dict["records"][record_type] = record_result["records"]
