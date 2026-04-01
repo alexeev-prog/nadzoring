@@ -5,10 +5,7 @@ import socket
 from requests.exceptions import RequestException
 
 from nadzoring.network_base.http_ping import HttpPingResult, _measure_dns, http_ping
-
-# ---------------------------------------------------------------------------
-# _measure_dns
-# ---------------------------------------------------------------------------
+from nadzoring.utils.timeout import OperationTimeoutError, TimeoutConfig
 
 
 def test_measure_dns_success_returns_float(mocker):
@@ -29,17 +26,10 @@ def test_measure_dns_gaierror_returns_none(mocker):
 def test_measure_dns_result_rounded_to_2dp(mocker):
     mocker.patch("nadzoring.network_base.http_ping.socket.gethostbyname", return_value="1.2.3.4")
     result = _measure_dns("x")
-    # Result is rounded to 2 decimal places
     assert result == round(result, 2)
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
 def _session_mock(mocker, status=200, url="http://example.com", content=b"OK", headers=None):
-    """Create a mock Session that returns a fake response."""
     mock_resp = mocker.MagicMock()
     mock_resp.status_code = status
     mock_resp.url = url
@@ -56,11 +46,6 @@ def _session_mock(mocker, status=200, url="http://example.com", content=b"OK", h
     mocker.patch("nadzoring.network_base.http_ping.Session", return_value=mock_session)
     mocker.patch("nadzoring.network_base.http_ping._measure_dns", return_value=5.0)
     return mock_session
-
-
-# ---------------------------------------------------------------------------
-# http_ping — happy paths
-# ---------------------------------------------------------------------------
 
 
 def test_http_ping_returns_result_object(mocker):
@@ -135,13 +120,8 @@ def test_http_ping_error_is_none_on_success(mocker):
     assert result.error is None
 
 
-# ---------------------------------------------------------------------------
-# Scheme injection
-# ---------------------------------------------------------------------------
-
-
 def test_http_ping_adds_http_scheme_when_missing(mocker):
-    mock_session = _session_mock(mocker)
+    _session_mock(mocker)
     result = http_ping("example.com")
     assert result.url.startswith("http://")
 
@@ -152,9 +132,17 @@ def test_http_ping_does_not_double_add_scheme(mocker):
     assert result.url == "https://example.com"
 
 
-# ---------------------------------------------------------------------------
-# DNS failure
-# ---------------------------------------------------------------------------
+def test_http_ping_default_timeout_config_used(mocker):
+    _session_mock(mocker)
+    result = http_ping("http://example.com", timeout_config=None)
+    assert isinstance(result, HttpPingResult)
+
+
+def test_http_ping_custom_timeout_config_passed(mocker):
+    _session_mock(mocker)
+    cfg = TimeoutConfig(connect=2.0, read=5.0, lifetime=30.0)
+    result = http_ping("http://example.com", timeout_config=cfg)
+    assert isinstance(result, HttpPingResult)
 
 
 def test_http_ping_dns_failure_dns_ms_none(mocker):
@@ -175,9 +163,44 @@ def test_http_ping_dns_failure_dns_ms_none(mocker):
     assert result.dns_ms is None
 
 
-# ---------------------------------------------------------------------------
-# RequestException
-# ---------------------------------------------------------------------------
+def test_http_ping_empty_hostname_skips_dns(mocker):
+    mocker.patch("nadzoring.network_base.http_ping._measure_dns", return_value=5.0)
+    mock_resp = mocker.MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.url = "http://example.com"
+    mock_resp.headers = {}
+    mock_resp.content = b""
+    mock_ctx = mocker.MagicMock()
+    mock_ctx.__enter__ = mocker.MagicMock(return_value=mock_resp)
+    mock_ctx.__exit__ = mocker.MagicMock(return_value=False)
+    mock_session = mocker.MagicMock()
+    mock_session.get.return_value = mock_ctx
+    mocker.patch("nadzoring.network_base.http_ping.Session", return_value=mock_session)
+
+    result = http_ping("http://example.com")
+    assert isinstance(result, HttpPingResult)
+
+
+def test_http_ping_operation_timeout_error_returns_error_result(mocker):
+    mocker.patch("nadzoring.network_base.http_ping._measure_dns", return_value=2.0)
+    mock_session = mocker.MagicMock()
+    mock_ctx = mocker.MagicMock()
+    mock_ctx.__enter__ = mocker.MagicMock(side_effect=OperationTimeoutError("lifetime exceeded"))
+    mock_ctx.__exit__ = mocker.MagicMock(return_value=False)
+    mock_session.get.return_value = mock_ctx
+    mocker.patch("nadzoring.network_base.http_ping.Session", return_value=mock_session)
+    mocker.patch(
+        "nadzoring.network_base.http_ping.timeout_context",
+        return_value=mock_ctx,
+    )
+
+    result = http_ping("http://example.com")
+    assert result.error is not None
+    assert result.status_code is None
+    assert result.ttfb_ms is None
+    assert result.total_ms is None
+    assert result.content_length is None
+    assert result.final_url is None
 
 
 def test_http_ping_request_exception_error_set(mocker):
@@ -221,9 +244,18 @@ def test_http_ping_session_closed_on_exception(mocker):
     mock_session.close.assert_called_once()
 
 
-# ---------------------------------------------------------------------------
-# HttpPingResult dataclass defaults
-# ---------------------------------------------------------------------------
+def test_http_ping_verify_ssl_false(mocker):
+    mock_session = _session_mock(mocker)
+    http_ping("http://example.com", verify_ssl=False)
+    call_kwargs = mock_session.get.call_args[1]
+    assert call_kwargs.get("verify") is False
+
+
+def test_http_ping_follow_redirects_false(mocker):
+    mock_session = _session_mock(mocker)
+    http_ping("http://example.com", follow_redirects=False)
+    call_kwargs = mock_session.get.call_args[1]
+    assert call_kwargs.get("allow_redirects") is False
 
 
 def test_result_headers_default_empty():

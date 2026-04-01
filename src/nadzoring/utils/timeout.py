@@ -53,7 +53,7 @@ class TimeoutConfig:
         sock.settimeout(self.read)
 
 
-class OperationTimeoutError(Exception):
+class OperationTimeoutError(TimeoutError):
     """Exception raised when an operation exceeds its lifetime timeout."""
 
     def __init__(self, message: str = "Operation exceeded lifetime timeout") -> None:
@@ -92,6 +92,10 @@ def timeout_context(timeout: TimeoutConfig):
         blocking operations due to OS limitations.
     """
     if timeout.lifetime is None:
+        yield
+        return
+
+    if not hasattr(signal, "SIGALRM"):
         yield
         return
 

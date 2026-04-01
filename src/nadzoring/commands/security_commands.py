@@ -223,7 +223,12 @@ def subdomains_command(
 
     wordlist_arg: str | None = "" if no_bruteforce else wordlist
 
-    return scan_subdomains(domain, wordlist_path=wordlist_arg, max_threads=threads, timeout_config=timeout_config)
+    return scan_subdomains(
+        domain,
+        wordlist_path=wordlist_arg,
+        max_threads=threads,
+        timeout_config=timeout_config,
+    )
 
 
 @security_group.command(name="watch-ssl")

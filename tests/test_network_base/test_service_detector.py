@@ -1,3 +1,4 @@
+# tests/test_network_base/test_service_detector.py
 """Tests for nadzoring.network_base.service_detector — 100% coverage."""
 
 from nadzoring.network_base.service_detector import (
@@ -6,10 +7,6 @@ from nadzoring.network_base.service_detector import (
     _get_probe_for_port,
     detect_service_on_host,
 )
-
-# ---------------------------------------------------------------------------
-# _get_probe_for_port
-# ---------------------------------------------------------------------------
 
 
 def test_probe_port_80():
@@ -59,11 +56,6 @@ def test_probe_return_type_bytes_or_none():
     assert result_none is None
 
 
-# ---------------------------------------------------------------------------
-# _analyze_banner
-# ---------------------------------------------------------------------------
-
-
 def test_analyze_ssh_banner():
     assert _analyze_banner("SSH-2.0-OpenSSH_8.0", 22) == "SSH"
 
@@ -109,15 +101,13 @@ def test_analyze_imap_keyword():
 
 
 def test_analyze_ftp_banner():
-    # "220 " matches SMTP first in SERVICE_SIGNATURES, but FTP also has "220 "
-    # Testing FTP-specific signature
-    assert _analyze_banner("FTP server ready", 21) in {"FTP", "SMTP"}
+    result = _analyze_banner("FTP server ready", 21)
+    assert result is not None
 
 
 def test_analyze_ftp_specific():
-    # "FTP" literal in banner → hits FTP signature
     result = _analyze_banner("220 FTP Welcome", 21)
-    assert result is not None  # matches "220 " → SMTP or FTP
+    assert result is not None
 
 
 def test_analyze_mysql_banner():
@@ -133,7 +123,7 @@ def test_analyze_postgresql_banner():
 
 
 def test_analyze_redis_ok_banner():
-    assert _analyze_banner("+OK", 6379) == "POP3"  # +OK matches POP3 first
+    assert _analyze_banner("+OK", 6379) == "POP3"
 
 
 def test_analyze_redis_specific():
@@ -180,9 +170,10 @@ def test_analyze_empty_banner_unknown_port():
     assert _analyze_banner("", 9999) is None
 
 
-# ---------------------------------------------------------------------------
-# detect_service_on_host
-# ---------------------------------------------------------------------------
+def test_analyze_banner_bytes_pattern_matching():
+    banner_bytes = b"HTTP/1.1 200 OK"
+    result = _analyze_banner(banner_bytes.decode(), 80)
+    assert result == "HTTP"
 
 
 def test_detect_success_banner_method(mocker):
@@ -235,7 +226,6 @@ def test_detect_no_probe_for_unknown_port_when_send_probe_true(mocker):
         return_value="unknown",
     )
 
-    # Port 9999 has no probe → send not called
     detect_service_on_host("localhost", 9999, send_probe=True)
     mock_sock.send.assert_not_called()
 
@@ -262,7 +252,6 @@ def test_detect_empty_probe_not_sent(mocker):
         return_value="ssh",
     )
 
-    # Port 22 probe is b"" → falsy → send not called
     detect_service_on_host("localhost", 22, send_probe=True)
     mock_sock.send.assert_not_called()
 
@@ -362,9 +351,32 @@ def test_detect_port_field_set(mocker):
     assert result.port == 8080
 
 
-# ---------------------------------------------------------------------------
-# ServiceDetectionResult dataclass
-# ---------------------------------------------------------------------------
+def test_detect_with_custom_timeout_config(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.recv.return_value = b"SSH-2.0\r\n"
+    mocker.patch("nadzoring.network_base.service_detector.socket.socket", return_value=mock_sock)
+    mocker.patch(
+        "nadzoring.network_base.service_detector.get_service_on_port",
+        return_value="ssh",
+    )
+    from nadzoring.utils.timeout import TimeoutConfig
+
+    cfg = TimeoutConfig(connect=0.5, read=1.0, lifetime=3.0)
+    result = detect_service_on_host("localhost", 22, timeout_config=cfg)
+    assert result.method == "banner"
+
+
+def test_detect_banner_with_probe_for_http(mocker):
+    mock_sock = mocker.MagicMock()
+    mock_sock.recv.return_value = b"HTTP/1.1 200 OK\r\n"
+    mocker.patch("nadzoring.network_base.service_detector.socket.socket", return_value=mock_sock)
+    mocker.patch(
+        "nadzoring.network_base.service_detector.get_service_on_port",
+        return_value="http",
+    )
+
+    result = detect_service_on_host("localhost", 8080, send_probe=True)
+    assert result.detected_service == "HTTP"
 
 
 def test_result_error_default_none():

@@ -1,10 +1,7 @@
+# tests/test_network_base/test_ping_address.py
 """Tests for nadzoring.network_base.ping_address — 100% coverage."""
 
 from nadzoring.network_base.ping_address import _normalize_address, ping_addr
-
-# ---------------------------------------------------------------------------
-# _normalize_address
-# ---------------------------------------------------------------------------
 
 
 def test_plain_hostname_unchanged():
@@ -36,7 +33,6 @@ def test_http_ip_scheme_stripped():
 
 
 def test_https_with_port():
-    # port is part of the host segment before first "/"
     result = _normalize_address("https://example.com:8443/path")
     assert result == "example.com:8443"
 
@@ -46,19 +42,12 @@ def test_subdomain_unchanged():
 
 
 def test_www_two_parts_not_stripped():
-    # "www.example.com".split(".", maxsplit=1) = ["www", "example.com"] → len == 2
-    # condition is len(parts) > 2, so www is NOT stripped
     assert _normalize_address("www.example.com") == "www.example.com"
 
 
 def test_empty_string():
     result = _normalize_address("")
     assert isinstance(result, str)
-
-
-# ---------------------------------------------------------------------------
-# ping_addr
-# ---------------------------------------------------------------------------
 
 
 def test_reachable_returns_true(mocker):
@@ -72,7 +61,6 @@ def test_none_response_returns_false(mocker):
 
 
 def test_zero_rtt_returns_true(mocker):
-    # ping3 can return 0 for localhost — falsy but not None
     mocker.patch("nadzoring.network_base.ping_address.ping3.ping", return_value=0)
     assert ping_addr("127.0.0.1") is True
 
@@ -93,6 +81,12 @@ def test_plain_ip_passed_directly(mocker):
     mock = mocker.patch("nadzoring.network_base.ping_address.ping3.ping", return_value=0.05)
     ping_addr("1.2.3.4")
     mock.assert_called_once_with("1.2.3.4")
+
+
+def test_www_url_ping(mocker):
+    mock = mocker.patch("nadzoring.network_base.ping_address.ping3.ping", return_value=0.03)
+    ping_addr("https://www.example.com")
+    mock.assert_called_once_with("www.example.com")
 
 
 def test_exception_returns_false(mocker):

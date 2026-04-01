@@ -796,7 +796,12 @@ def poisoning_command(
     additional: list[str] | None = list(additional_types) if additional_types else None
 
     result: PoisoningCheckResult = check_dns_poisoning(
-        domain, control_server, test_servers_list, record_type, additional, timeout_config=timeout_config
+        domain,
+        control_server,
+        test_servers_list,
+        record_type,
+        additional,
+        timeout_config=timeout_config,
     )
 
     return format_dns_poisoning(dict(result))

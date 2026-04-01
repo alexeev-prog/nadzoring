@@ -8,7 +8,11 @@ from urllib.parse import ParseResult, urlparse
 from requests import Session
 from requests.exceptions import RequestException
 
-from nadzoring.utils.timeout import TimeoutConfig, timeout_context
+from nadzoring.utils.timeout import (
+    OperationTimeoutError,
+    TimeoutConfig,
+    timeout_context,
+)
 
 
 @dataclass
@@ -103,7 +107,7 @@ def http_ping(
                 ttfb_ms: float = round((time.perf_counter() - start) * 1000, 2)
                 content: bytes = response.content
                 total_ms: float = round((time.perf_counter() - start) * 1000, 2)
-        except TimeoutError as exc:
+        except OperationTimeoutError as exc:
             return HttpPingResult(
                 url=url,
                 final_url=None,

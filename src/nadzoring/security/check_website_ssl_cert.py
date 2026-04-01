@@ -74,7 +74,12 @@ class CertificateInfo:
 
     """
 
-    def __init__(self, hostname: str, port: int = 443, timeout_config: TimeoutConfig | None = None) -> None:
+    def __init__(
+        self,
+        hostname: str,
+        port: int = 443,
+        timeout_config: TimeoutConfig | None = None,
+    ) -> None:
         """
         Initialize CertificateInfo instance.
 

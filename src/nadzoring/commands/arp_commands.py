@@ -123,13 +123,6 @@ def detect_spoofing(interfaces: tuple[str, ...], *, quiet: bool) -> list[dict[st
     help="Number of packets to capture (default: 10).",
     show_default=True,
 )
-@click.option(
-    "--timeout",
-    "-t",
-    default=30,
-    help="Timeout in seconds (default: 30).",
-    show_default=True,
-)
 def monitor_spoofing(
     interface: str | None,
     count: int,
@@ -173,7 +166,7 @@ def monitor_spoofing(
             prn=packet_callback,
             store=False,
             count=count if count > 0 else None,
-            timeout_config=timeout_config,
+            timeout=timeout_config.lifetime if timeout_config.lifetime > 0 else None,
         )
 
         if not quiet:

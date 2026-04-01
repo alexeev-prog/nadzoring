@@ -74,8 +74,8 @@ def _make_timeout_config(kwargs: dict[str, Any]) -> TimeoutConfig:
     read: float | None = kwargs.pop("read_timeout", None)
 
     return TimeoutConfig(
-        connect=connect if connect is not None else (lifetime if lifetime is not None else _DEFAULT_CONNECT_TIMEOUT),
-        read=read if read is not None else (lifetime if lifetime is not None else _DEFAULT_READ_TIMEOUT),
+        connect=(connect if connect is not None else (lifetime if lifetime is not None else _DEFAULT_CONNECT_TIMEOUT)),
+        read=(read if read is not None else (lifetime if lifetime is not None else _DEFAULT_READ_TIMEOUT)),
         lifetime=lifetime if lifetime is not None else _DEFAULT_LIFETIME_TIMEOUT,
     )
 
@@ -214,7 +214,10 @@ def common_cli_options(**enabled_flags: bool) -> Callable[[F], F]:
                 save=extracted["save"],
             )
 
-            func_kwargs: dict[str, Any] = {**kwargs, **{spec.kwarg: extracted[spec.kwarg] for spec in active_specs}}
+            func_kwargs: dict[str, Any] = {
+                **kwargs,
+                **{spec.kwarg: extracted[spec.kwarg] for spec in active_specs},
+            }
 
             _setup_logging(cli_opts)
 
@@ -263,7 +266,14 @@ def _handle_output(result: Any, output_format: str, *, no_color: bool) -> None:
     output_handlers: dict[str, Callable[[], None]] = {
         "json": lambda: click.echo(json.dumps(result, indent=2, default=str, ensure_ascii=False)),
         "yaml": lambda: click.echo(
-            yaml.dump(result, allow_unicode=True, default_flow_style=False, sort_keys=False, indent=2, width=120)
+            yaml.dump(
+                result,
+                allow_unicode=True,
+                default_flow_style=False,
+                sort_keys=False,
+                indent=2,
+                width=120,
+            )
         ),
         "table": lambda: print_results_table(result, no_color=no_color),
         "csv": lambda: print_csv_table(result),

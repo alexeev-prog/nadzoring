@@ -29,7 +29,11 @@ from dns.resolver import Answer, Resolver
 
 from nadzoring.dns_lookup.types import DNSResult, RecordType
 from nadzoring.logger import get_logger
-from nadzoring.utils.timeout import TimeoutConfig, timeout_context
+from nadzoring.utils.timeout import (
+    OperationTimeoutError,
+    TimeoutConfig,
+    timeout_context,
+)
 
 logger: Logger = get_logger(__name__)
 
@@ -283,7 +287,7 @@ def resolve_with_timer(
             except Exception as exc:
                 result["error"] = str(exc)
                 logger.debug("DNS resolution failed for %s %s: %s", domain, record_type, exc)
-    except TimeoutError:
+    except OperationTimeoutError:
         result["error"] = "Operation exceeded lifetime timeout"
 
     return result

@@ -141,7 +141,7 @@ class ARPRealtimeDetector:
                 prn=_packet_handler,
                 store=False,
                 count=count if count > 0 else None,
-                timeout=timeout_config.lifetime if timeout_config.lifetime > 0 else None,
+                timeout=(timeout_config.lifetime if timeout_config.lifetime > 0 else None),
             )
         except Exception as exc:
             raise RuntimeError(f"Failed to sniff packets: {exc}") from exc
