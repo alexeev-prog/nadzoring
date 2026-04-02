@@ -16,9 +16,4 @@ currently being supported with security updates.
 | < 0.1.4   | :x:                |
 
 ## Reporting a Vulnerability
-
-Use this section to tell people how to report a vulnerability.
-
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+You can use issues, write to my email alexeev.dev@mail.ru or write to my telegram `@alexeev_dev`. or discord `alexeev.dev`.
