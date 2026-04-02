@@ -1,4 +1,128 @@
 # Changelog
+## [0.2.0](https://github.com/alexeev-prog/nadzoring/releases/tag/v0.2.0) - 2026-04-02
+
+### Bug Fixes
+
+- Fix: remove "| grep UP" in ipv4_local_cli.py([9d0be33](https://github.com/alexeev-prog/nadzoring/commit/9d0be33fae0ca486d202a186c81434804e144278))
+- Fix linters warnings&errors([69bb03a](https://github.com/alexeev-prog/nadzoring/commit/69bb03a1ef7266efd398d9913567d7d2d1d0e668))
+- Fix: fix typing errors, update network-base commands timeout options, update common_cli_options([1efc42f](https://github.com/alexeev-prog/nadzoring/commit/1efc42fe9ba25c5cf035a6fa52b8cbb44e252874))
+
+### Build System
+
+- Build(deps): bump actions/deploy-pages from 4 to 5
+
+Bumps [actions/deploy-pages](https://github.com/actions/deploy-pages) from 4 to 5.
+- [Release notes](https://github.com/actions/deploy-pages/releases)
+- [Commits](https://github.com/actions/deploy-pages/compare/v4...v5)
+
+---
+updated-dependencies:
+- dependency-name: actions/deploy-pages
+  dependency-version: '5'
+  dependency-type: direct:production
+  update-type: version-update:semver-major
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>([4bcf226](https://github.com/alexeev-prog/nadzoring/commit/4bcf2261cba6272820e841acb502804ddf038850))
+- Build(deps): bump actions/deploy-pages from 4 to 5 (#68)([de85b5f](https://github.com/alexeev-prog/nadzoring/commit/de85b5f1e897fe47d43bf81367b14c18990ba50a))
+
+### CI/CD
+
+- Ci: add basic mypy typing check in python-package workflow([e05f1f9](https://github.com/alexeev-prog/nadzoring/commit/e05f1f9edd8500de38804a4240749da5fe6f7c11))
+- Ci: update python-package CI([b8c1e9d](https://github.com/alexeev-prog/nadzoring/commit/b8c1e9d5127154561b9568142236b3c3c67554a8))
+- Ci: update python-package CI([7bd3885](https://github.com/alexeev-prog/nadzoring/commit/7bd3885cc95b5ddc6bfc2b70f2effdea3e6db432))
+- Ci: update python-package CI([22f9826](https://github.com/alexeev-prog/nadzoring/commit/22f9826c985669e201f149944ba01295d4c106a0))
+- Ci: fix python-package CI([530ac81](https://github.com/alexeev-prog/nadzoring/commit/530ac81ed148529c786be057afa1f718d766658c))
+- Ci: fix python-package CI([1f6f8fe](https://github.com/alexeev-prog/nadzoring/commit/1f6f8febea967be58b00537bb6bc3c126071a30e))
+- Ci: fix python-package CI and deps([ec34eb5](https://github.com/alexeev-prog/nadzoring/commit/ec34eb552d0f75bff2b76c99774a099089b1cd65))
+- Ci: fix noxfile([6936a3d](https://github.com/alexeev-prog/nadzoring/commit/6936a3df23129852252c816abb1334ffeffc8ec8))
+- Ci: add AI policy([d03394e](https://github.com/alexeev-prog/nadzoring/commit/d03394e78b7cc50c7b706bb484ea163d3461280d))
+
+### Code Refactoring
+
+- Refactor: update codestyle([3db49fd](https://github.com/alexeev-prog/nadzoring/commit/3db49fd635de9e08b22e3e27336c18519271eaf2))
+- Refactor: fix typing issues, remove ty([daafaed](https://github.com/alexeev-prog/nadzoring/commit/daafaeddd2057873ef2ed90340370c1aeddbf841))
+- Refactor: fix typing issues, remove ty (#56)([a3f6002](https://github.com/alexeev-prog/nadzoring/commit/a3f60024abc7a24bd09dee4b439614e934b97fb8))
+- Refactor: update code style and constants([d25d91c](https://github.com/alexeev-prog/nadzoring/commit/d25d91c95cff16b5684176923c48d54b9dc925eb))
+- Refactor: update code style and constants (#57)([013cfaf](https://github.com/alexeev-prog/nadzoring/commit/013cfaf018bc39102b2b3d7c5b495b697f0f7cde))
+- Refactor: replacing shell=true with shlex.split, and replacing grep with an internal function([9075df8](https://github.com/alexeev-prog/nadzoring/commit/9075df89a91d75dc2a0e0ca21f0febcb2f79e77b))
+- Refactor/fix: refactor tests and fix timeout([d16ffbc](https://github.com/alexeev-prog/nadzoring/commit/d16ffbc0836e5b5d3feb1e8a1dad1188f04df4ae))
+
+### Documentation
+
+- Docs: update CHANGELOG.md for v0.1.9 [skip ci]([ab1c66c](https://github.com/alexeev-prog/nadzoring/commit/ab1c66c141e5ff0c8178f4889665d35d2a6e9951))
+- Docs: update version([c6cc4d7](https://github.com/alexeev-prog/nadzoring/commit/c6cc4d7afac49fa917ae2b42462ccdbfa63f6fac))
+- Docs/ci: update readme and integrate coveralls([333ae3b](https://github.com/alexeev-prog/nadzoring/commit/333ae3ba23fd085b041a92d498d9d5ed1a6d407a))
+- Docs: update readme([ff4f9a5](https://github.com/alexeev-prog/nadzoring/commit/ff4f9a53e59bf84d40394468448154dfc76330ef))
+- Docs: update readme([a19de8f](https://github.com/alexeev-prog/nadzoring/commit/a19de8fec5f399d3d2165e9a13d25560402faaa2))
+- Docs: update readme([c54a958](https://github.com/alexeev-prog/nadzoring/commit/c54a958da05f146acd2d03ef085c81661dd603d9))
+- Docs/ci: create workflow for publish, update docs([9bb196c](https://github.com/alexeev-prog/nadzoring/commit/9bb196c3b75bf2cc49205b73fd5b1512432607d1))
+
+### Features
+
+- Add tests for network_base module([6ac7f5c](https://github.com/alexeev-prog/nadzoring/commit/6ac7f5c23a07cd86ee2a6acbab35dbb993ff129f))
+- Add tests for network_base module (#67)([2bb56d6](https://github.com/alexeev-prog/nadzoring/commit/2bb56d62e63faa6bfd959bbe3d90dacc4b786490))
+- Feat: create utils.timeout and unify timeout configuration([3c3d5bd](https://github.com/alexeev-prog/nadzoring/commit/3c3d5bda3eee8a62106bb3926777eb4657f80010))
+- Feature: unify all timeouts to TimeoutConfig([84c2e08](https://github.com/alexeev-prog/nadzoring/commit/84c2e08ed8c03a920c7ff611cf25a422255c58b5))
+- Feat: Implement unified timeout handling architecture with TimeoutConfig (#71)([ac53843](https://github.com/alexeev-prog/nadzoring/commit/ac538433028649a9fbcfa26baa958c6aa597e11b))
+
+### Other Changes
+
+- Bump actions/setup-python from 5 to 6
+
+Bumps [actions/setup-python](https://github.com/actions/setup-python) from 5 to 6.
+- [Release notes](https://github.com/actions/setup-python/releases)
+- [Commits](https://github.com/actions/setup-python/compare/v5...v6)
+
+---
+updated-dependencies:
+- dependency-name: actions/setup-python
+  dependency-version: '6'
+  dependency-type: direct:production
+  update-type: version-update:semver-major
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>([d50b4b4](https://github.com/alexeev-prog/nadzoring/commit/d50b4b42f5d564c503101e0234439fedd34bbc33))
+- Bump actions/setup-python from 5 to 6 (#55)([4233796](https://github.com/alexeev-prog/nadzoring/commit/4233796ceb6162db3fc93baa4374a6e59bcf3e88))
+- Update src/nadzoring/commands/dns_commands.py
+
+Co-authored-by: devin-ai-integration[bot] <158243242+devin-ai-integration[bot]@users.noreply.github.com>([fb95ce9](https://github.com/alexeev-prog/nadzoring/commit/fb95ce9eb580b65ab79fd23f6add03b288154448))
+- Update src/nadzoring/network_base/domain_info.py
+
+Co-authored-by: devin-ai-integration[bot] <158243242+devin-ai-integration[bot]@users.noreply.github.com>([1e54f37](https://github.com/alexeev-prog/nadzoring/commit/1e54f37b97b56dad4ee535872590a80ec201bff1))
+- Update readme([f0bfeb5](https://github.com/alexeev-prog/nadzoring/commit/f0bfeb53bff43345548ce0f6567e3663ff8bb932))
+- Update deps([b1c8ee5](https://github.com/alexeev-prog/nadzoring/commit/b1c8ee56638990ecb318b6e53a3715c40e2e0248))
+- Fix WHOIS table formatting and datetime display([a3df54c](https://github.com/alexeev-prog/nadzoring/commit/a3df54ccc1a4da321040ef743412eed2b970466f))
+- Fix CLI exception handling and WHOIS docstring formatting
+
+- Updated cli.py to raise ClickException using 'raise ... from e' for proper exception chaining
+- Adjusted whois_command docstring in dns_commands.py to fit a single line
+- Fixed line wrapping in formatters.py to comply with Ruff line-length checks
+- Only modified files that were touched during current work
+- All modified files pass Ruff linting checks([ca55bcc](https://github.com/alexeev-prog/nadzoring/commit/ca55bcc41dfe6b72837ca6544ac746f014448234))
+- Address review feedback and fix test failures([1410265](https://github.com/alexeev-prog/nadzoring/commit/1410265ec0fb53d365a7ae0ae1316f3912ba9117))
+- Fix dns whois command registration and restore router_ip docstring([f18688f](https://github.com/alexeev-prog/nadzoring/commit/f18688f73f9956fc770359e7dfc3c08adb096b98))
+- Fix lint issues from review([219aaa2](https://github.com/alexeev-prog/nadzoring/commit/219aaa2bad2d0cd1fa0d88caf3a6504be40d02b6))
+- Handle ASCII-only IPv4 normalization([048c083](https://github.com/alexeev-prog/nadzoring/commit/048c083f2413c71acdd186bce37584ea75537a1a))
+- Move WHOIS logic out of CLI and simplify main entrypoint([757cd55](https://github.com/alexeev-prog/nadzoring/commit/757cd553ca5a98c4f0ab6cc14d2ed273e9a45840))
+- Keep WHOIS errors in CLI layer([2375196](https://github.com/alexeev-prog/nadzoring/commit/2375196eecf0e59c998ea5807eeda1b775d0ae80))
+- Update CONTRIBUTING guide([95b8ffd](https://github.com/alexeev-prog/nadzoring/commit/95b8ffd080dbf3648f37693077c277c5a1078047))
+- Update readme([89d7339](https://github.com/alexeev-prog/nadzoring/commit/89d7339401ea89393b17fa4f18e7bf4a78929868))
+- Replace shell=True with safe argument lists (#66)([b274752](https://github.com/alexeev-prog/nadzoring/commit/b274752c7594d57425b4b3e4ad14458bee804ef0))
+- Improve error messages with actionable suggestions #46 (#64)([6d8c105](https://github.com/alexeev-prog/nadzoring/commit/6d8c105999d03d3f92dd9c4388b0a9fe885a6bb5))
+- Update readme([9e7f6ae](https://github.com/alexeev-prog/nadzoring/commit/9e7f6ae1228ca6977b021979d3a1774c1ba3e65e))
+- Update readme([fcf7e6a](https://github.com/alexeev-prog/nadzoring/commit/fcf7e6ac684b543ee8215d28259b6fdb02c6163a))
+- Small fix for docs([bf6b1a7](https://github.com/alexeev-prog/nadzoring/commit/bf6b1a7cc680457a3ace3381e9b5987ec1db322b))
+- Update readme (issue #69)([f8ece03](https://github.com/alexeev-prog/nadzoring/commit/f8ece03d3ae028b712c35e1f57282a54f1833062))
+- Update readme([cb3bcf1](https://github.com/alexeev-prog/nadzoring/commit/cb3bcf191dc770450c1545ed4875241c23665dc9))
+
+### Testing
+
+- Tests: add tests for nadzoring.utils, setup pytest and update contributing guide([ab70204](https://github.com/alexeev-prog/nadzoring/commit/ab70204bd2888e06ae97d0ddcfac2a76ac28436a))
+- Tests: Create tests for nadzoring.utils (#65)([9cf228d](https://github.com/alexeev-prog/nadzoring/commit/9cf228de5e262807832712b468e3614410587cbd))
+- Tests: create more tests for network_base module (~90% coverage)([d83a5c9](https://github.com/alexeev-prog/nadzoring/commit/d83a5c9311ab4db36014a72e323f5f47fb443d3f))
+- Tests: create more tests for network_base module (#70)([f252e58](https://github.com/alexeev-prog/nadzoring/commit/f252e58e93292804e0804ed8b25190b423c305e2))
+- Tests/fix: fix issues with TimeoutConfig for dns, and update tests([1e7920a](https://github.com/alexeev-prog/nadzoring/commit/1e7920a66097351c1991479c43cf88404068625a))
 ## [0.1.9](https://github.com/alexeev-prog/nadzoring/releases/tag/v0.1.9) - 2026-03-18
 
 ### Bug Fixes
