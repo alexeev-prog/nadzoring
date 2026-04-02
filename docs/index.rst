@@ -24,35 +24,35 @@ Versions
      - Latest development version from the main branch
      - **Latest**
    * - `v0.2.0 </nadzoring/v0.2.0/>`_
-     - Stable release — add more commands, add asyncio support, improve codestyle and python API
+     - Stable release — add unified timeout configuration, improve python api and abstractions, fix bugs
      - Stable
    * - `v0.1.9 </nadzoring/v0.1.9/>`_
-     - Stable release — add more commands, add asyncio support, improve codestyle and python API
-     - Stable
+     - Legacy release — add more commands, add asyncio support, improve codestyle and python API
+     - Legacy
    * - `v0.1.8 </nadzoring/v0.1.8/>`_
-     - Stable release — fix issues and bugs and improve project API
-     - Stable
+     - Legacy release — fix issues and bugs and improve project API
+     - Legacy
    * - `v0.1.7 </nadzoring/v0.1.7/>`_
      - Stable release — add security command group and improve library API
      - Stable
    * - `v0.1.6 </nadzoring/v0.1.6/>`_
      - Stable release — refactor core modules, improve library-mode
-     - Stable
+     - Legacy
    * - `v0.1.5 </nadzoring/v0.1.5/>`_
-     - Stable release — small code API redesigning, typing improvements, UX improved
-     - Stable
+     - Legacy release — small code API redesigning, typing improvements, UX improved
+     - Legacy
    * - `v0.1.4 </nadzoring/v0.1.4/>`_
-     - Stable release — improved network base, arp commands
-     - Stable
+     - Legacy release — improved network base, arp commands
+     - Legacy
    * - `v0.1.3 </nadzoring/v0.1.3/>`_
-     - Stable release — DNS lookup, network base, utils, commands
-     - Stable
+     - Legacy release — DNS lookup, network base, utils, commands
+     - Legacy
    * - `v0.1.2 </nadzoring/v0.1.2/>`_
      - Added DNS lookup and commands modules
-     - Stable
+     - Legacy
    * - `v0.1.1 </nadzoring/v0.1.1/>`_
      - Initial public release with network base
-     - Stable
+     - Legacy
 
 .. toctree::
    :maxdepth: 2
