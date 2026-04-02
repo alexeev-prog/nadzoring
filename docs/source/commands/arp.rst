@@ -130,7 +130,13 @@ Options
      - Number of ARP packets to capture (0 = unlimited)
    * - ``--timeout / -t``
      - ``30``
-     - Capture timeout in seconds (0 = no timeout)
+     - Capture timeout in seconds — sets lifetime timeout
+   * - ``--connect-timeout``
+     - ``5.0``
+     - Connection timeout (seconds). Falls back to ``--timeout``.
+   * - ``--read-timeout``
+     - ``10.0``
+     - Read timeout (seconds). Falls back to ``--timeout``.
 
 Examples
 ~~~~~~~~
@@ -152,12 +158,15 @@ Python API
 .. code-block:: python
 
    from nadzoring.arp.realtime import ARPRealtimeDetector
+   from nadzoring.utils.timeout import TimeoutConfig
+
+   config = TimeoutConfig(connect=2.0, read=8.0, lifetime=45.0)
 
    detector = ARPRealtimeDetector()
    alerts = detector.monitor(
        interface="eth0",
        count=100,
-       timeout=30,
+       timeout_config=config,
    )
 
    print(f"Processed {detector.stats['packets_processed']} packets")

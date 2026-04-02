@@ -57,6 +57,10 @@ Before adding a feature, read :doc:`architecture`.  The short version:
    annotations; use ``TypedDict`` for structured return values.
 6. **No comments** — use Google-style docstrings with ``Args``, ``Returns``,
    and ``Examples`` sections instead of inline comments.
+7. **Timeout support** — all network-bound functions must accept an optional
+   ``timeout_config: TimeoutConfig | None = None`` parameter and respect
+   phase-specific timeouts (connect/read) as well as the overall lifetime
+   timeout.
 
 ----
 
@@ -70,12 +74,15 @@ packages.  When adding a new security check:
    function (SRP).
 2. Return a structured dict with an ``"error"`` key set to ``None`` on
    success or a human-readable string on failure.  Never raise.
-3. Export the function from ``src/nadzoring/security/__init__.py``.
-4. Add a CLI command in ``src/nadzoring/commands/security_commands.py``
-   using ``@common_cli_options``.
-5. Add the result shape to ``utils/formatters.py`` if a new formatter is
+3. Accept an optional ``timeout_config: TimeoutConfig | None = None``
+   parameter and pass it down to any network-bound calls.
+4. Export the function from ``src/nadzoring/security/__init__.py``.
+5. Add a CLI command in ``src/nadzoring/commands/security_commands.py``
+   using ``@common_cli_options(include_timeout=True)``.
+6. Add the result shape to ``utils/formatters.py`` if a new formatter is
    needed.
-6. Document the command in ``docs/commands/security.rst``.
+7. Document the command in ``docs/commands/security.rst`` including the
+   timeout options.
 
 ----
 
@@ -92,6 +99,7 @@ New features require at least:
 
 - A happy-path test
 - An error/edge-case test (e.g. domain not found, timeout, SSL error)
+- A test verifying timeout configuration is respected (if applicable)
 
 ----
 
@@ -134,3 +142,4 @@ https://github.com/alexeev-prog/nadzoring/issues.  Please include:
 - Python version and OS
 - The full command or code snippet that triggered the issue
 - The full error output
+- If the issue is timeout-related, include the timeout values used

@@ -50,6 +50,15 @@ Options
      - off
      - Show all fields — SAN list, protocol support, chain length, serial
        number — instead of the compact summary
+   * - ``--timeout``
+     - ``30.0``
+     - Lifetime timeout (seconds)
+   * - ``--connect-timeout``
+     - ``5.0``
+     - Connection timeout (seconds). Falls back to ``--timeout``.
+   * - ``--read-timeout``
+     - ``10.0``
+     - Read timeout (seconds). Falls back to ``--timeout``.
 
 Status values
 ~~~~~~~~~~~~~
@@ -86,6 +95,9 @@ Examples
    # Full details: SAN, protocol support, chain, serial number
    nadzoring security check-ssl --full ya.ru
 
+   # Custom timeout for slow servers
+   nadzoring security check-ssl --connect-timeout 10 example.com
+
    # Save full JSON report
    nadzoring security check-ssl --full -o json --save ssl_report.json example.com github.com
 
@@ -99,9 +111,12 @@ Python API
        check_ssl_expiry,
        check_ssl_expiry_with_fallback,
    )
+   from nadzoring.utils.timeout import TimeoutConfig
+
+   config = TimeoutConfig(connect=3.0, read=10.0)
 
    # Verified check (full certificate chain validation)
-   result = check_ssl_certificate("example.com", days_before=14)
+   result = check_ssl_certificate("example.com", days_before=14, timeout_config=config)
 
    print(result["status"])           # 'valid' | 'warning' | 'expired' | 'error'
    print(result["remaining_days"])   # e.g. 142
@@ -172,7 +187,13 @@ Options
      - Description
    * - ``--timeout``
      - ``10.0``
-     - HTTP request timeout in seconds
+     - HTTP request timeout in seconds — sets both connect and read
+   * - ``--connect-timeout``
+     - ``5.0``
+     - Connection timeout (seconds). Falls back to ``--timeout``.
+   * - ``--read-timeout``
+     - ``10.0``
+     - Read timeout (seconds). Falls back to ``--timeout``.
    * - ``--no-verify``
      - off
      - Disable SSL certificate verification for the request
@@ -227,7 +248,7 @@ Examples
    nadzoring security check-headers --no-verify https://internal.corp.example.com
 
    # Slow server — increase timeout
-   nadzoring security check-headers --timeout 20 https://slow-api.example.com
+   nadzoring security check-headers --connect-timeout 20 https://slow-api.example.com
 
    # Export JSON for CI / dashboard
    nadzoring security check-headers -o json --save headers_audit.json https://example.com
@@ -238,10 +259,12 @@ Python API
 .. code-block:: python
 
    from nadzoring.security.http_headers import check_http_security_headers
+   from nadzoring.utils.timeout import TimeoutConfig
 
+   config = TimeoutConfig(connect=5.0, read=15.0)
    result = check_http_security_headers(
        "https://example.com",
-       timeout=10.0,
+       timeout_config=config,
        verify_ssl=True,
    )
 
@@ -432,7 +455,13 @@ Options
      - Number of concurrent DNS resolution threads
    * - ``--timeout``
      - ``3.0``
-     - Per-host DNS resolution timeout in seconds
+     - Per-host DNS resolution timeout (seconds) — sets connect timeout
+   * - ``--connect-timeout``
+     - ``5.0``
+     - Connection timeout (seconds). Falls back to ``--timeout``.
+   * - ``--read-timeout``
+     - ``10.0``
+     - Read timeout (seconds). Falls back to ``--timeout``.
    * - ``--no-bruteforce``
      - off
      - Skip DNS brute-force; use CT logs only
@@ -452,7 +481,7 @@ Examples
    nadzoring security subdomains \
        --wordlist /path/to/big-wordlist.txt \
        --threads 100 \
-       --timeout 5 \
+       --connect-timeout 5 \
        example.com
 
    # Save results as JSON
@@ -467,9 +496,12 @@ Python API
 .. code-block:: python
 
    from nadzoring.security.subdomain_scan import scan_subdomains
+   from nadzoring.utils.timeout import TimeoutConfig
+
+   config = TimeoutConfig(connect=2.0, read=8.0)
 
    # CT logs + built-in wordlist
-   results = scan_subdomains("example.com", max_threads=20, timeout=3.0)
+   results = scan_subdomains("example.com", max_threads=20, timeout_config=config)
 
    for r in results:
        print(f"{r['subdomain']:40}  {r['ip']:16}  [{r['source']}]")
@@ -483,7 +515,7 @@ Python API
        "example.com",
        wordlist_path="/path/to/custom_wordlist.txt",
        max_threads=50,
-       timeout=5.0,
+       timeout_config=config,
    )
 
    # Filter by source
@@ -545,6 +577,15 @@ Options
    * - ``--days-before / -d``
      - ``7``
      - Days before expiry to trigger a warning alert
+   * - ``--timeout``
+     - ``30.0``
+     - Lifetime timeout (seconds)
+   * - ``--connect-timeout``
+     - ``5.0``
+     - Connection timeout (seconds). Falls back to ``--timeout``.
+   * - ``--read-timeout``
+     - ``10.0``
+     - Read timeout (seconds). Falls back to ``--timeout``.
 
 Alert events
 ~~~~~~~~~~~~
@@ -585,6 +626,9 @@ Examples
        -o json --save ssl_monitor_history.json \
        example.com
 
+   # Custom timeout for slow servers
+   nadzoring security watch-ssl --connect-timeout 10 --interval 300 api.example.com
+
    # Quiet mode — suppress progress, emit only alert lines
    nadzoring security watch-ssl --quiet --cycles 10 --interval 30 example.com
 
@@ -594,11 +638,15 @@ Python API
 .. code-block:: python
 
    from nadzoring.security.ssl_monitor import SSLMonitor
+   from nadzoring.utils.timeout import TimeoutConfig
+
+   config = TimeoutConfig(connect=3.0, read=10.0)
 
    monitor = SSLMonitor(
        domains=["example.com", "github.com", "cloudflare.com"],
        interval=3600,   # seconds between cycles
        days_before=14,  # alert when fewer than 14 days remain
+       timeout_config=config,
    )
 
    # Custom alert handler — integrate with Slack, PagerDuty, email, etc.

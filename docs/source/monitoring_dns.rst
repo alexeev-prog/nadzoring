@@ -89,6 +89,18 @@ CLI Reference: ``dns monitor``
      -
      - Suppress all console output
      - ``False``
+   * - ``--timeout``
+     -
+     - Lifetime timeout (seconds)
+     - ``30.0``
+   * - ``--connect-timeout``
+     -
+     - Connection timeout (seconds). Falls back to ``--timeout``.
+     - ``5.0``
+   * - ``--read-timeout``
+     -
+     - Read timeout (seconds). Falls back to ``--timeout``.
+     - ``10.0``
 
 **Examples:**
 
@@ -112,6 +124,10 @@ CLI Reference: ``dns monitor``
    # Quiet mode for cron / systemd
    nadzoring dns monitor example.com \
        --quiet --log-file /var/log/nadzoring/dns_monitor.jsonl
+
+   # Custom timeouts for slow networks
+   nadzoring dns monitor example.com \
+       --connect-timeout 10 --read-timeout 20 --interval 60
 
 ----
 
@@ -229,6 +245,9 @@ Basic continuous monitoring
 .. code-block:: python
 
    from nadzoring.dns_lookup.monitor import DNSMonitor, MonitorConfig
+   from nadzoring.utils.timeout import TimeoutConfig
+
+   timeout_config = TimeoutConfig(connect=3.0, read=10.0, lifetime=30.0)
 
    config = MonitorConfig(
        domain="example.com",
@@ -237,6 +256,7 @@ Basic continuous monitoring
        max_response_time_ms=500.0,
        min_success_rate=0.95,
        log_file="dns_monitor.jsonl",
+       timeout_config=timeout_config,
    )
 
    monitor = DNSMonitor(config)
@@ -250,8 +270,11 @@ Custom alert callback
 
    import requests
    from nadzoring.dns_lookup.monitor import AlertEvent, DNSMonitor, MonitorConfig
+   from nadzoring.utils.timeout import TimeoutConfig
 
    SLACK_WEBHOOK = "https://hooks.slack.com/services/T.../B.../..."
+
+   timeout_config = TimeoutConfig(connect=2.0, read=8.0)
 
 
    def send_slack_alert(alert: AlertEvent) -> None:
@@ -268,6 +291,7 @@ Custom alert callback
        interval=30.0,
        max_response_time_ms=200.0,
        alert_callback=send_slack_alert,
+       timeout_config=timeout_config,
    )
    DNSMonitor(config).run()
 
@@ -277,7 +301,10 @@ Finite-cycle monitoring (CI / cron)
 .. code-block:: python
 
    from nadzoring.dns_lookup.monitor import DNSMonitor, MonitorConfig
+   from nadzoring.utils.timeout import TimeoutConfig
    from statistics import mean
+
+   timeout_config = TimeoutConfig(connect=2.0, read=8.0)
 
    config = MonitorConfig(
        domain="example.com",
@@ -285,6 +312,7 @@ Finite-cycle monitoring (CI / cron)
        interval=10.0,
        queries_per_sample=5,
        run_health_check=False,
+       timeout_config=timeout_config,
    )
    monitor = DNSMonitor(config)
    history = monitor.run_cycles(6)

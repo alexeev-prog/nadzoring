@@ -23,6 +23,7 @@ Key Features
 - **Security Auditing** — SSL/TLS certificate inspection, HTTP security headers,
   SPF/DKIM/DMARC validation, subdomain discovery, continuous certificate monitoring
 - **ARP Security** — cache inspection, spoofing detection, real-time monitoring
+- **Timeout Configuration** — per-operation lifetime, connect, and read timeouts
 - **Multiple Output Formats** — ``table``, ``json``, ``csv``, ``html``, ``html_table``, ``yaml``.
 - **Cross-Platform** — Linux, Windows, macOS
 
@@ -130,6 +131,9 @@ Quick Examples
 
    # Real-time ARP spoofing monitor
    nadzoring arp monitor-spoofing --interface eth0
+
+   # Custom timeouts for slow networks
+   nadzoring dns resolve --connect-timeout 10 --read-timeout 20 example.com
 
 ----
 

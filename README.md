@@ -5,7 +5,7 @@
     <img src="https://raw.githubusercontent.com/alexeev-prog/nadzoring/refs/heads/main/docs/logo.png" width=300>
     <h2>Nadzoring</h2>
     <p>An open source tool and python library for detecting website blocks, downdetecting and network analysis</p>
-    <a href="https://alexeev-prog.github.io/nadzoring/v0.1.9"><strong>Explore the docs »</strong></a>
+    <a href="https://alexeev-prog.github.io/nadzoring/v0.2.0"><strong>Explore the docs »</strong></a>
   </p>
   <p align="center">
     <a href="#-getting-started">Getting Started</a>
@@ -105,6 +105,7 @@ Beyond its technical strengths, Nadzoring is supported by an extensive, versione
   - [Output Formats](#output-formats)
   - [Saving Results](#saving-results)
   - [Logging Levels](#logging-levels)
+  - [Timeout Configuration](#timeout-configuration)
   - [Error Handling](#error-handling)
   - [Python API](#python-api)
     - [DNS Lookup API](#dns-lookup-api)
@@ -197,6 +198,14 @@ These options work with every command:
 | `--no-color` | | Disable colored output | `False` |
 | `--output` | `-o` | Output format: `table`, `json`, `csv`, `html`, `html_table`, `yaml` | `table` |
 | `--save` | | Save results to file | None |
+| `--timeout` | | Lifetime timeout for the entire operation (seconds) | `30.0` |
+| `--connect-timeout` | | Connection timeout (seconds). Falls back to `--timeout` | `5.0` |
+| `--read-timeout` | | Read timeout (seconds). Falls back to `--timeout` | `10.0` |
+
+**Timeout resolution order:**
+1. Explicit `--connect-timeout` / `--read-timeout`
+2. Generic `--timeout` (applies to both phases when phase-specific not set)
+3. Module-level defaults (shown above)
 
 ---
 
@@ -217,6 +226,9 @@ nadzoring dns resolve [OPTIONS] DOMAINS...
 | `--short` | | Compact output | `False` |
 | `--show-ttl` | | Show TTL value | `False` |
 | `--format-style` | | Output style: standard, bind, host, dig | `standard` |
+| `--timeout` | | Lifetime timeout (seconds) | `30.0` |
+| `--connect-timeout` | | Connection timeout (seconds) | `5.0` |
+| `--read-timeout` | | Read timeout (seconds) | `10.0` |
 
 ```bash
 # A record lookup
@@ -230,13 +242,18 @@ nadzoring dns resolve -t ALL -n 8.8.8.8 github.com
 
 # Show TTL values
 nadzoring dns resolve --show-ttl --type A cloudflare.com
+
+# Custom timeouts for slow networks
+nadzoring dns resolve --connect-timeout 10 --read-timeout 20 example.com
 ```
 
 **Python API:**
 
 ```python
 from nadzoring.dns_lookup.utils import resolve_with_timer
+from nadzoring.utils.timeout import TimeoutConfig
 
+# Using default timeouts
 result = resolve_with_timer("example.com", "A")
 if result["error"]:
     # Possible values:
@@ -256,6 +273,10 @@ result = resolve_with_timer(
 )
 print(result["records"])  # ['10 mail.example.com']
 print(result["ttl"])      # e.g. 3600
+
+# Custom timeout configuration
+config = TimeoutConfig(connect=3.0, read=8.0, lifetime=20.0)
+result = resolve_with_timer("example.com", "A", timeout_config=config)
 ```
 
 ---
@@ -290,6 +311,7 @@ nadzoring dns reverse -o json --save reverse_lookup.json 8.8.8.8 1.1.1.1
 
 ```python
 from nadzoring.dns_lookup.reverse import reverse_dns
+from nadzoring.utils.timeout import TimeoutConfig
 
 # IPv4 reverse lookup
 result = reverse_dns("8.8.8.8")
@@ -311,9 +333,9 @@ print(result["hostname"])  # 'dns.google'
 # Compact error-safe pattern
 hostname = result["hostname"] or f"[{result['error']}]"
 
-# Custom nameserver
-result = reverse_dns("8.8.8.8", nameserver="1.1.1.1")
-print(result["hostname"])
+# Custom nameserver and timeout
+config = TimeoutConfig(connect=2.0, read=5.0)
+result = reverse_dns("8.8.8.8", nameserver="1.1.1.1", timeout_config=config)
 ```
 
 ---
@@ -332,6 +354,9 @@ nadzoring dns check [OPTIONS] DOMAINS...
 | `--types` | `-t` | Record types to check | ALL |
 | `--validate-mx` | | Validate MX priority uniqueness | `False` |
 | `--validate-txt` | | Validate SPF and DKIM TXT records | `False` |
+| `--timeout` | | Lifetime timeout (seconds) | `30.0` |
+| `--connect-timeout` | | Connection timeout (seconds) | `5.0` |
+| `--read-timeout` | | Read timeout (seconds) | `10.0` |
 
 ```bash
 # Full DNS check
@@ -348,12 +373,15 @@ nadzoring dns check -n 9.9.9.9 google.com cloudflare.com
 
 ```python
 from nadzoring.dns_lookup.health import check_dns
+from nadzoring.utils.timeout import TimeoutConfig
 
+config = TimeoutConfig(connect=3.0, read=10.0, lifetime=15.0)
 result = check_dns(
     "example.com",
     record_types=["MX", "TXT"],
     validate_mx=True,
     validate_txt=True,
+    timeout_config=config,
 )
 print(result["records"])        # {'MX': ['10 mail.example.com']}
 print(result["errors"])         # {'AAAA': 'No AAAA records'} — only failed types
@@ -371,9 +399,12 @@ Trace the complete DNS resolution delegation chain from root to authoritative na
 nadzoring dns trace [OPTIONS] DOMAIN
 ```
 
-| Option | Short | Description |
-|--------|-------|-------------|
-| `--nameserver` | `-n` | Starting nameserver (default: root `198.41.0.4`) |
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--nameserver` | `-n` | Starting nameserver | root `198.41.0.4` |
+| `--timeout` | | Lifetime timeout (seconds) | `30.0` |
+| `--connect-timeout` | | Connection timeout (seconds) | `5.0` |
+| `--read-timeout` | | Read timeout (seconds) | `10.0` |
 
 ```bash
 # Trace from root servers
@@ -390,8 +421,10 @@ nadzoring dns trace -v github.com
 
 ```python
 from nadzoring.dns_lookup.trace import trace_dns
+from nadzoring.utils.timeout import TimeoutConfig
 
-result = trace_dns("example.com")
+config = TimeoutConfig(connect=3.0, read=5.0, lifetime=30.0)
+result = trace_dns("example.com", timeout_config=config)
 
 for hop in result["hops"]:
     ns = hop["nameserver"]
@@ -464,9 +497,12 @@ Perform a scored DNS health check across all standard record types.
 nadzoring dns health [OPTIONS] DOMAIN
 ```
 
-| Option | Short | Description |
-|--------|-------|-------------|
-| `--nameserver` | `-n` | Nameserver IP |
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--nameserver` | `-n` | Nameserver IP | System default |
+| `--timeout` | | Lifetime timeout (seconds) | `30.0` |
+| `--connect-timeout` | | Connection timeout (seconds) | `5.0` |
+| `--read-timeout` | | Read timeout (seconds) | `10.0` |
 
 Health score: **80–100** = Healthy · **50–79** = Degraded · **0–49** = Unhealthy
 
@@ -480,8 +516,10 @@ nadzoring dns health -o json --save health.json example.com
 
 ```python
 from nadzoring.dns_lookup.health import health_check_dns
+from nadzoring.utils.timeout import TimeoutConfig
 
-result = health_check_dns("example.com")
+config = TimeoutConfig(connect=2.0, read=8.0)
+result = health_check_dns("example.com", timeout_config=config)
 
 print(f"Score: {result['score']}/100")
 print(f"Status: {result['status']}")  # 'healthy' | 'degraded' | 'unhealthy'
@@ -511,6 +549,9 @@ nadzoring dns benchmark [OPTIONS]
 | `--type` | `-t` | Record type | `A` |
 | `--queries` | `-q` | Queries per server | `10` |
 | `--parallel/--sequential` | | Run concurrently or one by one | `parallel` |
+| `--timeout` | | Lifetime timeout (seconds) | `30.0` |
+| `--connect-timeout` | | Connection timeout (seconds) | `5.0` |
+| `--read-timeout` | | Read timeout (seconds) | `10.0` |
 
 ```bash
 nadzoring dns benchmark
@@ -523,9 +564,12 @@ nadzoring dns benchmark -o json --save benchmark.json
 
 ```python
 from nadzoring.dns_lookup.benchmark import benchmark_dns_servers, benchmark_single_server
+from nadzoring.utils.timeout import TimeoutConfig
+
+config = TimeoutConfig(connect=2.0, read=8.0, lifetime=60.0)
 
 # Single server
-result = benchmark_single_server("8.8.8.8", queries=10)
+result = benchmark_single_server("8.8.8.8", queries=10, timeout_config=config)
 print(f"avg={result['avg_response_time']:.1f}ms  success={result['success_rate']}%")
 
 # Multiple servers — returned sorted fastest-first
@@ -533,6 +577,7 @@ results = benchmark_dns_servers(
     servers=["8.8.8.8", "1.1.1.1", "9.9.9.9"],
     queries=10,
     parallel=True,
+    timeout_config=config,
 )
 fastest = results[0]
 print(f"Fastest: {fastest['server']} at {fastest['avg_response_time']:.1f}ms")
@@ -554,6 +599,9 @@ nadzoring dns poisoning [OPTIONS] DOMAIN
 | `--test-servers` | `-t` | Servers to test against control | All public servers |
 | `--type` | `-T` | Record type | `A` |
 | `--additional-types` | `-a` | Extra record types from control server | None |
+| `--timeout` | | Lifetime timeout (seconds) | `30.0` |
+| `--connect-timeout` | | Connection timeout (seconds) | `5.0` |
+| `--read-timeout` | | Read timeout (seconds) | `10.0` |
 
 Severity levels: `NONE` → `LOW` → `MEDIUM` → `HIGH` → `CRITICAL` / `SUSPICIOUS`
 
@@ -567,8 +615,10 @@ nadzoring dns poisoning -o html --save poisoning_report.html twitter.com
 
 ```python
 from nadzoring.dns_lookup.poisoning import check_dns_poisoning
+from nadzoring.utils.timeout import TimeoutConfig
 
-result = check_dns_poisoning("example.com")
+config = TimeoutConfig(connect=3.0, read=10.0, lifetime=45.0)
+result = check_dns_poisoning("example.com", timeout_config=config)
 
 level = result.get("poisoning_level", "NONE")
 confidence = result.get("confidence", 0.0)
@@ -603,6 +653,9 @@ nadzoring dns monitor [OPTIONS] DOMAIN
 | `--no-health` | | Skip DNS health check each cycle | `False` |
 | `--log-file` | `-l` | JSONL file to append all cycle results to | None |
 | `--cycles` | `-c` | Stop after N cycles (0 = indefinite) | `0` |
+| `--timeout` | | Lifetime timeout (seconds) | `30.0` |
+| `--connect-timeout` | | Connection timeout (seconds) | `5.0` |
+| `--read-timeout` | | Read timeout (seconds) | `10.0` |
 
 ```bash
 # Monitor with default servers, save log
@@ -631,6 +684,9 @@ After Ctrl-C (or after `--cycles` completes), a statistical summary is printed a
 
 ```python
 from nadzoring.dns_lookup.monitor import AlertEvent, DNSMonitor, MonitorConfig
+from nadzoring.utils.timeout import TimeoutConfig
+
+config = TimeoutConfig(connect=2.0, read=8.0, lifetime=30.0)
 
 
 def my_alert_handler(alert: AlertEvent) -> None:
@@ -646,6 +702,7 @@ config = MonitorConfig(
     min_success_rate=0.95,
     log_file="dns_monitor.jsonl",
     alert_callback=my_alert_handler,
+    timeout_config=config,
 )
 
 monitor = DNSMonitor(config)
@@ -735,7 +792,9 @@ nadzoring network-base http-ping [OPTIONS] URLS...
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--timeout` | Request timeout (seconds) | `10.0` |
+| `--timeout` | Request timeout (seconds) — sets both connect and read | `10.0` |
+| `--connect-timeout` | Connection timeout (seconds) | `5.0` |
+| `--read-timeout` | Read timeout (seconds) | `10.0` |
 | `--no-ssl-verify` | Disable SSL certificate check | `False` |
 | `--no-redirects` | Do not follow redirects | `False` |
 | `--show-headers` | Include response headers | `False` |
@@ -753,8 +812,10 @@ nadzoring network-base http-ping -o csv --save http_metrics.csv https://api.gith
 
 ```python
 from nadzoring.network_base.http_ping import http_ping
+from nadzoring.utils.timeout import TimeoutConfig
 
-result = http_ping("https://example.com", timeout=10.0, include_headers=True)
+config = TimeoutConfig(connect=2.0, read=10.0, lifetime=30.0)
+result = http_ping("https://example.com", timeout_config=config, include_headers=True)
 
 if result.error:
     print("HTTP probe failed:", result.error)
@@ -917,7 +978,9 @@ nadzoring network-base port-scan [OPTIONS] TARGETS...
 | `--mode` | `fast`, `full`, or `custom` | `fast` |
 | `--ports` | Port list or range, e.g. `22,80,443` or `1-1024` | None |
 | `--protocol` | `tcp` or `udp` | `tcp` |
-| `--timeout` | Socket timeout (seconds) | `2.0` |
+| `--timeout` | Socket timeout (seconds) — sets connect timeout | `2.0` |
+| `--connect-timeout` | Connection timeout (seconds) | `5.0` |
+| `--read-timeout` | Read timeout (seconds) for banner grabbing | `10.0` |
 | `--workers` | Concurrent workers | `50` |
 | `--no-banner` | Disable banner grabbing | `False` |
 | `--show-closed` | Show closed ports | `False` |
@@ -936,14 +999,16 @@ nadzoring network-base port-scan -o json --save scan.json example.com
 
 ```python
 from nadzoring.network_base.port_scanner import ScanConfig, scan_ports
+from nadzoring.utils.timeout import TimeoutConfig
 
-config = ScanConfig(
+config = TimeoutConfig(connect=1.5, read=5.0, lifetime=60.0)
+scan_config = ScanConfig(
     targets=["example.com"],
     mode="fast",
     protocol="tcp",
-    timeout=2.0,
+    timeout_config=config,
 )
-results = scan_ports(config)
+results = scan_ports(scan_config)
 
 for scan in results:
     print(f"Target: {scan.target}  ({scan.target_ip})")
@@ -967,7 +1032,9 @@ nadzoring network-base detect-service [OPTIONS] TARGET PORTS...
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--timeout` | Connection timeout (seconds) | `3.0` |
+| `--timeout` | Connection timeout (seconds) — sets connect timeout | `3.0` |
+| `--connect-timeout` | Connection timeout (seconds) | `5.0` |
+| `--read-timeout` | Read timeout (seconds) for banner | `10.0` |
 | `--no-probe` | Disable sending protocol-specific probes | `False` |
 
 ```bash
@@ -975,16 +1042,17 @@ nadzoring network-base detect-service [OPTIONS] TARGET PORTS...
 nadzoring network-base detect-service example.com 80 443 22
 
 # Database ports with longer timeout
-nadzoring network-base detect-service --timeout 5 192.168.1.100 3306 5432 6379
+nadzoring network-base detect-service --connect-timeout 5 192.168.1.100 3306 5432 6379
 ```
 
 **Python API:**
 
 ```python
 from nadzoring.network_base.service_detector import detect_service_on_host
+from nadzoring.utils.timeout import TimeoutConfig
 
-# Detect service on port 80
-result = detect_service_on_host("example.com", 80)
+config = TimeoutConfig(connect=3.0, read=8.0)
+result = detect_service_on_host("example.com", 80, timeout_config=config)
 
 if result.detected_service:
     print(f"Service: {result.detected_service} (method: {result.method})")
@@ -1151,7 +1219,8 @@ nadzoring network-base traceroute [OPTIONS] TARGETS...
 | Option | Description | Default |
 |--------|-------------|---------|
 | `--max-hops` | Maximum hops | `30` |
-| `--timeout` | Per-hop timeout (seconds) | `2.0` |
+| `--timeout` | Per-hop timeout (seconds) — sets connect timeout | `2.0` |
+| `--connect-timeout` | Per-hop timeout (seconds) | `5.0` |
 | `--sudo` | Run with sudo (Linux) | `False` |
 
 > **Linux privilege note:** `traceroute` needs raw-socket access.
@@ -1169,8 +1238,10 @@ nadzoring network-base traceroute -o html --save trace.html 8.8.8.8
 
 ```python
 from nadzoring.network_base.traceroute import traceroute
+from nadzoring.utils.timeout import TimeoutConfig
 
-hops = traceroute("8.8.8.8", max_hops=15)
+config = TimeoutConfig(connect=1.5, read=5.0)
+hops = traceroute("8.8.8.8", max_hops=15, per_hop_timeout=config.connect)
 for hop in hops:
     rtts = [f"{r}ms" if r else "*" for r in hop.rtt_ms]
     print(f"{hop.hop:2}  {hop.ip or '*':16}  {' '.join(rtts)}")
@@ -1229,6 +1300,9 @@ nadzoring security check-ssl [OPTIONS] DOMAINS...
 | `--days-before` | `-d` | Days before expiry to flag as `warning` status | `7` |
 | `--no-verify` | | Disable certificate chain verification (falls back automatically) | `False` |
 | `--full` | | Show all certificate fields instead of compact summary | `False` |
+| `--timeout` | | Lifetime timeout (seconds) | `30.0` |
+| `--connect-timeout` | | Connection timeout (seconds) | `5.0` |
+| `--read-timeout` | | Read timeout (seconds) | `10.0` |
 
 **Status values:**
 
@@ -1264,9 +1338,12 @@ from nadzoring.security.check_website_ssl_cert import (
     check_ssl_expiry,
     check_ssl_expiry_with_fallback,
 )
+from nadzoring.utils.timeout import TimeoutConfig
+
+config = TimeoutConfig(connect=3.0, read=8.0)
 
 # Verified check (full certificate chain validation)
-result = check_ssl_certificate("example.com", days_before=14)
+result = check_ssl_certificate("example.com", days_before=14, timeout_config=config)
 
 print(result["status"])          # 'valid' | 'warning' | 'expired' | 'error'
 print(result["remaining_days"])  # e.g. 142
@@ -1322,7 +1399,9 @@ nadzoring security check-headers [OPTIONS] URLS...
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--timeout` | Request timeout in seconds | `10.0` |
+| `--timeout` | Request timeout in seconds — sets both connect and read | `10.0` |
+| `--connect-timeout` | Connection timeout (seconds) | `5.0` |
+| `--read-timeout` | Read timeout (seconds) | `10.0` |
 | `--no-verify` | Disable SSL certificate verification | `False` |
 
 **Checked security headers:**
@@ -1355,15 +1434,17 @@ nadzoring security check-headers --no-verify https://internal.corp.example.com
 nadzoring security check-headers -o json --save headers_audit.json https://example.com
 
 # Adjust timeout for slow servers
-nadzoring security check-headers --timeout 20 https://slow-api.example.com
+nadzoring security check-headers --connect-timeout 20 https://slow-api.example.com
 ```
 
 **Python API:**
 
 ```python
 from nadzoring.security.http_headers import check_http_security_headers
+from nadzoring.utils.timeout import TimeoutConfig
 
-result = check_http_security_headers("https://example.com", timeout=10.0)
+config = TimeoutConfig(connect=5.0, read=15.0)
+result = check_http_security_headers("https://example.com", timeout_config=config)
 
 print(result["url"])          # final URL after redirects
 print(result["status_code"])  # 200
@@ -1492,6 +1573,8 @@ nadzoring security subdomains [OPTIONS] DOMAIN
 | `--wordlist` | Path to a custom wordlist file (one prefix per line) | Built-in 80+ prefix list |
 | `--threads` | Number of concurrent DNS resolution threads | `20` |
 | `--timeout` | Per-host DNS resolution timeout in seconds | `3.0` |
+| `--connect-timeout` | Connection timeout (seconds) | `5.0` |
+| `--read-timeout` | Read timeout (seconds) | `10.0` |
 | `--no-bruteforce` | Skip DNS brute-force entirely, use CT logs only | `False` |
 
 ```bash
@@ -1505,7 +1588,7 @@ nadzoring security subdomains --no-bruteforce example.com
 nadzoring security subdomains --wordlist /path/to/subdomains.txt example.com
 
 # Increase concurrency and timeout for faster / more thorough scanning
-nadzoring security subdomains --threads 50 --timeout 5 example.com
+nadzoring security subdomains --threads 50 --connect-timeout 5 example.com
 
 # Export results as JSON
 nadzoring security subdomains -o json --save subdomains.json example.com
@@ -1518,9 +1601,12 @@ nadzoring security subdomains --quiet example.com
 
 ```python
 from nadzoring.security.subdomain_scan import scan_subdomains
+from nadzoring.utils.timeout import TimeoutConfig
+
+config = TimeoutConfig(connect=2.0, read=8.0)
 
 # CT logs + built-in wordlist brute-force
-results = scan_subdomains("example.com", max_threads=20, timeout=3.0)
+results = scan_subdomains("example.com", max_threads=20, timeout_config=config)
 
 for r in results:
     print(f"{r['subdomain']:40}  {r['ip']:16}  [{r['source']}]")
@@ -1533,7 +1619,7 @@ results = scan_subdomains(
     "example.com",
     wordlist_path="/path/to/custom_wordlist.txt",
     max_threads=50,
-    timeout=5.0,
+    timeout_config=config,
 )
 
 # Source values: 'ct_log' | 'brute_force'
@@ -1560,6 +1646,9 @@ nadzoring security watch-ssl [OPTIONS] DOMAINS...
 | `--interval` | `-i` | Seconds between full check cycles | `3600` |
 | `--cycles` | `-c` | Number of cycles to run (`0` = run indefinitely) | `0` |
 | `--days-before` | `-d` | Days before expiry to trigger a warning alert | `7` |
+| `--timeout` | | Lifetime timeout (seconds) | `30.0` |
+| `--connect-timeout` | | Connection timeout (seconds) | `5.0` |
+| `--read-timeout` | | Read timeout (seconds) | `10.0` |
 
 ```bash
 # Monitor ya.ru indefinitely, check every hour
@@ -1594,12 +1683,16 @@ nadzoring security watch-ssl --quiet --cycles 10 --interval 30 example.com
 
 ```python
 from nadzoring.security.ssl_monitor import SSLMonitor
+from nadzoring.utils.timeout import TimeoutConfig
+
+config = TimeoutConfig(connect=3.0, read=10.0)
 
 # Create monitor for multiple domains
 monitor = SSLMonitor(
     domains=["example.com", "github.com", "cloudflare.com"],
     interval=3600,   # seconds between cycles
     days_before=14,  # alert when fewer than 14 days remain
+    timeout_config=config,
 )
 
 # Custom alert handler
@@ -1712,7 +1805,9 @@ nadzoring arp monitor-spoofing [OPTIONS]
 |--------|-------|-------------|---------|
 | `--interface` | `-i` | Interface to monitor | All |
 | `--count` | `-c` | Packets to capture | `10` |
-| `--timeout` | `-t` | Capture timeout (seconds) | `30` |
+| `--timeout` | `-t` | Capture timeout (seconds) — sets lifetime timeout | `30` |
+| `--connect-timeout` | | Connection timeout (seconds) | `5.0` |
+| `--read-timeout` | | Read timeout (seconds) | `10.0` |
 
 ```bash
 nadzoring arp monitor-spoofing
@@ -1724,9 +1819,11 @@ nadzoring arp monitor-spoofing -o json --save arp_alerts.json
 
 ```python
 from nadzoring.arp.realtime import ARPRealtimeDetector
+from nadzoring.utils.timeout import TimeoutConfig
 
+config = TimeoutConfig(connect=2.0, read=8.0, lifetime=45.0)
 detector = ARPRealtimeDetector()
-alerts = detector.monitor(interface="eth0", count=100, timeout=30)
+alerts = detector.monitor(interface="eth0", count=100, timeout_config=config)
 for alert in alerts:
     print(f"{alert['timestamp']}  {alert['message']}")
     print(f"  src_ip={alert['src_ip']}  src_mac={alert['src_mac']}")
@@ -1793,6 +1890,63 @@ nadzoring arp cache -o csv --save arp.csv
 
 ---
 
+## Timeout Configuration
+
+Nadzoring provides three timeout options that work together:
+
+| Option | Description | Default | Fallback |
+|--------|-------------|---------|----------|
+| `--timeout` | Lifetime timeout for the entire operation | `30.0` | — |
+| `--connect-timeout` | Timeout for establishing connections | `5.0` | Falls back to `--timeout` |
+| `--read-timeout` | Timeout for read operations after connection | `10.0` | Falls back to `--timeout` |
+
+**Resolution order per phase:**
+1. Phase-specific option (`--connect-timeout` / `--read-timeout`)
+2. Generic `--timeout`
+3. Module default (shown above)
+
+**Example:**
+```bash
+# All three phases have explicit timeouts
+nadzoring dns resolve --timeout 60 --connect-timeout 5 --read-timeout 30 example.com
+
+# Connect timeout inherits from generic timeout (30s), read uses default (10s)
+nadzoring dns resolve --timeout 30 example.com
+
+# Connect timeout = 3s, read timeout = 3s (both inherit from --timeout)
+nadzoring dns resolve --timeout 3 example.com
+```
+
+**Python API `TimeoutConfig`:**
+```python
+from nadzoring.utils.timeout import TimeoutConfig, OperationTimeoutError, with_lifetime_timeout
+
+# Create configuration
+config = TimeoutConfig(
+    connect=3.0,   # connection phase
+    read=8.0,      # read operations
+    lifetime=30.0, # total operation limit
+)
+
+# Apply to a socket
+sock = socket.socket()
+config.apply_to_socket(sock)  # sets read timeout only
+
+# Context manager for lifetime timeout
+try:
+    with timeout_context(config):
+        result = long_running_operation()
+except OperationTimeoutError:
+    print("Operation exceeded lifetime timeout")
+
+# Decorator for lifetime timeout
+@with_lifetime_timeout(config)
+def fetch_data():
+    return expensive_network_operation()
+```
+
+---
+
 ## Error Handling
 
 Every public Python API function follows a consistent error contract — functions never raise on expected DNS or network failures. All errors are returned as structured data so that scripts can handle them uniformly.
@@ -1825,6 +1979,19 @@ else:
     print(f"{result['city']}, {result['country']}")
 ```
 
+**Timeout exceptions** — raised only when lifetime timeout is exceeded:
+
+```python
+from nadzoring.utils.timeout import OperationTimeoutError, timeout_context, TimeoutConfig
+
+config = TimeoutConfig(lifetime=5.0)
+try:
+    with timeout_context(config):
+        result = resolve_with_timer("example.com", "A")
+except OperationTimeoutError:
+    print("Operation exceeded 5 second lifetime limit")
+```
+
 **Exception pattern** — used only for system-level failures (missing commands, unsupported OS):
 
 ```python
@@ -1855,9 +2022,12 @@ Nadzoring can be used as a Python library — all functionality is accessible pr
 
 ```python
 from nadzoring.dns_lookup.utils import resolve_with_timer, get_public_dns_servers
+from nadzoring.utils.timeout import TimeoutConfig
+
+config = TimeoutConfig(connect=2.0, read=8.0)
 
 # Resolve any record type
-result = resolve_with_timer("example.com", "MX", include_ttl=True)
+result = resolve_with_timer("example.com", "MX", include_ttl=True, timeout_config=config)
 if result["error"]:
     print("Error:", result["error"])
 else:
@@ -1873,9 +2043,12 @@ servers = get_public_dns_servers()  # ['8.8.8.8', '1.1.1.1', ...]
 
 ```python
 from nadzoring.dns_lookup.reverse import reverse_dns
+from nadzoring.utils.timeout import TimeoutConfig
+
+config = TimeoutConfig(connect=2.0, read=5.0)
 
 # Standard reverse lookup
-result = reverse_dns("8.8.8.8")
+result = reverse_dns("8.8.8.8", timeout_config=config)
 if result["error"]:
     # Possible values: 'No PTR record', 'No reverse DNS',
     # 'Query timeout', 'Invalid IP address: ...'
@@ -1906,12 +2079,15 @@ from nadzoring.network_base.domain_info import get_domain_info
 from nadzoring.network_base.port_scanner import ScanConfig, scan_ports
 from nadzoring.network_base.service_detector import detect_service_on_host
 from nadzoring.network_base.parse_url import parse_url
+from nadzoring.utils.timeout import TimeoutConfig
+
+config = TimeoutConfig(connect=2.0, read=8.0, lifetime=30.0)
 
 # Ping — returns bool
 alive = ping_addr("8.8.8.8")
 
 # HTTP probe — check .error before reading timing fields
-r = http_ping("https://example.com")
+r = http_ping("https://example.com", timeout_config=config)
 if not r.error:
     print(r.ttfb_ms, r.status_code)
 
@@ -1932,7 +2108,7 @@ print(info["geolocation"]["country"])
 print(info["reverse_dns"])
 
 # Traceroute
-for hop in traceroute("8.8.8.8", max_hops=10):
+for hop in traceroute("8.8.8.8", max_hops=10, per_hop_timeout=config.connect):
     print(hop.hop, hop.ip, hop.rtt_ms)
 
 # Active connections
@@ -1940,12 +2116,12 @@ for conn in get_connections(protocol="tcp", state_filter="ESTABLISHED"):
     print(conn.local_address, "->", conn.remote_address)
 
 # Port scan
-config = ScanConfig(targets=["example.com"], mode="fast", timeout=2.0)
-for result in scan_ports(config):
+scan_config = ScanConfig(targets=["example.com"], mode="fast", timeout_config=config)
+for result in scan_ports(scan_config):
     print("Open ports:", result.open_ports)
 
 # Service detection on a specific port
-service = detect_service_on_host("example.com", 80)
+service = detect_service_on_host("example.com", 80, timeout_config=config)
 print(service.detected_service or service.guessed_service)
 ```
 
@@ -1961,9 +2137,12 @@ from nadzoring.security.http_headers import check_http_security_headers
 from nadzoring.security.email_security import check_email_security
 from nadzoring.security.subdomain_scan import scan_subdomains
 from nadzoring.security.ssl_monitor import SSLMonitor
+from nadzoring.utils.timeout import TimeoutConfig
+
+config = TimeoutConfig(connect=3.0, read=10.0)
 
 # SSL/TLS certificate check
-result = check_ssl_certificate("example.com", days_before=14)
+result = check_ssl_certificate("example.com", days_before=14, timeout_config=config)
 print(result["status"], result["remaining_days"])
 print(result["protocols"]["supported"])   # ['TLSv1.2', 'TLSv1.3']
 print(result["public_key"]["strength"])   # 'good'
@@ -1972,7 +2151,7 @@ print(result["public_key"]["strength"])   # 'good'
 result = check_ssl_expiry_with_fallback("self-signed.example.com")
 
 # HTTP security header audit
-headers = check_http_security_headers("https://example.com")
+headers = check_http_security_headers("https://example.com", timeout_config=config)
 print(headers["score"])     # 0–100
 print(headers["missing"])   # list of absent recommended headers
 print(headers["leaking"])   # {'Server': 'nginx/1.18.0'}
@@ -1988,13 +2167,13 @@ print(email["all_issues"])              # aggregated issue list
 subdomains = scan_subdomains(
     "example.com",
     max_threads=30,
-    timeout=4.0,
+    timeout_config=config,
 )
 for s in subdomains:
     print(s["subdomain"], s["ip"], s["source"])
 
 # Continuous SSL monitoring
-monitor = SSLMonitor(["example.com", "github.com"], interval=3600, days_before=14)
+monitor = SSLMonitor(["example.com", "github.com"], interval=3600, days_before=14, timeout_config=config)
 monitor.set_alert_callback(lambda domain, msg: print(f"ALERT {domain}: {msg}"))
 results = monitor.run_cycles(cycles=3)
 for r in monitor.history():
@@ -2007,6 +2186,7 @@ for r in monitor.history():
 from nadzoring.arp.cache import ARPCache, ARPCacheRetrievalError
 from nadzoring.arp.detector import ARPSpoofingDetector
 from nadzoring.arp.realtime import ARPRealtimeDetector
+from nadzoring.utils.timeout import TimeoutConfig
 
 # ARP cache — raises ARPCacheRetrievalError on system failure
 try:
@@ -2021,9 +2201,10 @@ detector = ARPSpoofingDetector(cache)
 for alert in detector.detect():
     print(alert.alert_type, alert.description)
 
-# Real-time monitoring
+# Real-time monitoring with timeouts
+config = TimeoutConfig(connect=2.0, read=8.0, lifetime=45.0)
 rt = ARPRealtimeDetector()
-alerts = rt.monitor(interface="eth0", count=50, timeout=30)
+alerts = rt.monitor(interface="eth0", count=50, timeout_config=config)
 print(rt.get_stats())
 ```
 
@@ -2149,7 +2330,7 @@ nadzoring security subdomains --no-bruteforce example.com
 nadzoring security subdomains \
     --wordlist /path/to/big-wordlist.txt \
     --threads 100 \
-    --timeout 5 \
+    --connect-timeout 5 \
     example.com
 
 # Save discovered subdomains as JSON
@@ -2231,6 +2412,9 @@ REPORT_DIR="${DNS_MONITOR_DIR:-/var/log/nadzoring}"
 ALERT_EMAIL="${DNS_ALERT_EMAIL:-}"        # leave empty to disable email alerts
 HEALTH_THRESHOLD=70                       # score below this triggers an alert
 BENCHMARK_QUERIES=5                       # queries per server for each run
+CONNECT_TIMEOUT="${DNS_CONNECT_TIMEOUT:-5}"
+READ_TIMEOUT="${DNS_READ_TIMEOUT:-10}"
+LIFETIME_TIMEOUT="${DNS_LIFETIME_TIMEOUT:-30}"
 
 # ── Setup ────────────────────────────────────────────────────────────────────
 mkdir -p "$REPORT_DIR"
@@ -2251,6 +2435,9 @@ log "Starting DNS health check for $TARGET_DOMAIN via $DNS_SERVER"
 
 HEALTH_JSON="$REPORT_DIR/health_${TIMESTAMP}.json"
 if nadzoring dns health -n "$DNS_SERVER" -o json --quiet \
+        --connect-timeout "$CONNECT_TIMEOUT" \
+        --read-timeout "$READ_TIMEOUT" \
+        --timeout "$LIFETIME_TIMEOUT" \
         --save "$HEALTH_JSON" "$TARGET_DOMAIN"; then
     SCORE=$(python3 -c "import json,sys; d=json.load(open('$HEALTH_JSON')); print(d.get('score',0))" 2>/dev/null || echo 0)
     STATUS=$(python3 -c "import json,sys; d=json.load(open('$HEALTH_JSON')); print(d.get('status','unknown'))" 2>/dev/null || echo unknown)
@@ -2268,6 +2455,9 @@ fi
 BENCH_JSON="$REPORT_DIR/benchmark_${TIMESTAMP}.json"
 if nadzoring dns benchmark -s "$DNS_SERVER" -s 8.8.8.8 -s 1.1.1.1 \
         -d "$TARGET_DOMAIN" -q "$BENCHMARK_QUERIES" \
+        --connect-timeout "$CONNECT_TIMEOUT" \
+        --read-timeout "$READ_TIMEOUT" \
+        --timeout "$LIFETIME_TIMEOUT" \
         -o json --quiet --save "$BENCH_JSON"; then
     AVG_MS=$(python3 -c "
 import json
@@ -2307,6 +2497,8 @@ REVERSE_HOST="N/A"
 if [[ -n "$RESOLVED_IP" ]]; then
     REVERSE_JSON="$REPORT_DIR/reverse_${TIMESTAMP}.json"
     nadzoring dns reverse -n "$DNS_SERVER" -o json --quiet \
+        --connect-timeout "$CONNECT_TIMEOUT" \
+        --read-timeout "$READ_TIMEOUT" \
         --save "$REVERSE_JSON" "$RESOLVED_IP" || true
     REVERSE_HOST=$(python3 -c "
 import json
@@ -2366,6 +2558,9 @@ Type=oneshot
 ExecStart=/path/to/dns_monitor.sh example.com 8.8.8.8
 Environment=DNS_MONITOR_DIR=/var/log/nadzoring
 Environment=DNS_ALERT_EMAIL=ops@example.com
+Environment=DNS_CONNECT_TIMEOUT=5
+Environment=DNS_READ_TIMEOUT=10
+Environment=DNS_LIFETIME_TIMEOUT=30
 StandardOutput=journal
 StandardError=journal
 ```
@@ -2402,6 +2597,9 @@ Use `DNSMonitor` directly for in-process monitoring with custom alerting:
 
 ```python
 from nadzoring.dns_lookup.monitor import AlertEvent, DNSMonitor, MonitorConfig
+from nadzoring.utils.timeout import TimeoutConfig
+
+timeout_config = TimeoutConfig(connect=3.0, read=10.0, lifetime=30.0)
 
 
 def send_alert(alert: AlertEvent) -> None:
@@ -2416,6 +2614,7 @@ config = MonitorConfig(
     min_success_rate=0.95,
     log_file="dns_monitor.jsonl",
     alert_callback=send_alert,
+    timeout_config=timeout_config,
 )
 
 monitor = DNSMonitor(config)
@@ -2427,13 +2626,17 @@ print(monitor.report())
 
 ```python
 from nadzoring.dns_lookup.monitor import DNSMonitor, MonitorConfig
+from nadzoring.utils.timeout import TimeoutConfig
 from statistics import mean
+
+timeout_config = TimeoutConfig(connect=2.0, read=8.0)
 
 config = MonitorConfig(
     domain="example.com",
     nameservers=["8.8.8.8", "1.1.1.1"],
     interval=10.0,
     run_health_check=False,
+    timeout_config=timeout_config,
 )
 monitor = DNSMonitor(config)
 history = monitor.run_cycles(6)
@@ -2514,7 +2717,8 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 | Version | Link | Status |
 |---------|------|--------|
 | **main** | [Latest (development)](https://alexeev-prog.github.io/nadzoring/main) | 🟡 Development |
-| **v0.1.9** | [Release](https://alexeev-prog.github.io/nadzoring/v0.1.9) | 🟢 Stable |
+| **v0.2.0** | [Release](https://alexeev-prog.github.io/nadzoring/v0.2.0) | 🟢 Stable |
+| v0.1.9 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.9) | ⚪ Legacy |
 | v0.1.8 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.8) | ⚪ Legacy |
 | v0.1.7 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.7) | ⚪ Legacy |
 | v0.1.6 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.6) | ⚪ Legacy |
@@ -2524,7 +2728,7 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 | v0.1.2 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.2) | ⚪ Legacy |
 | v0.1.1 | [First version](https://alexeev-prog.github.io/nadzoring/v0.1.1) | ⚪ Legacy |
 
-The documentation site includes:
+The documentation site includes (examples for `main`):
 - [Error Handling guide](https://alexeev-prog.github.io/nadzoring/main/error_handling.html) — complete reference of all error patterns and return values
 - [Architecture overview](https://alexeev-prog.github.io/nadzoring/main/architecture.html) — layer design, SRP/DRY/KISS principles applied
 - [DNS command reference](https://alexeev-prog.github.io/nadzoring/main/commands/dns.html) — full CLI + Python API per command

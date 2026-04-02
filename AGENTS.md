@@ -48,10 +48,27 @@ When adding a new feature, the agent must enforce the separation between the CLI
 ### 4.2 Error Handling Strategy
 Domain functions must never raise exceptions for expected failures. All expected error conditions (DNS timeouts, NXDOMAIN, connection refused) must be captured and returned in the result's `error` field. The agent must review new function implementations to ensure they follow this pattern. Only truly unexpected errors (programming mistakes, missing system commands) should be allowed to propagate as exceptions.
 
-### 4.3 Adding a New CLI Command
-The procedure for adding a new command is documented in `architecture.rst`. The agent should follow it step by step: create a new module in the appropriate domain package, define a public function with docstring and types, export it in the package `__init__.py`, add a CLI command in the relevant `commands/` file using `@common_cli_options`, and add a formatter in `formatters.py` if needed. The agent must verify each step is completed.
+### 4.3 Timeout Configuration
+All network-bound functions must accept an optional `timeout_config: TimeoutConfig | None = None` parameter. If `None` is passed, the function must create a default `TimeoutConfig()` instance. The `TimeoutConfig` class (from `nadzoring.utils.timeout`) provides three timeout values:
 
-### 4.4 Documentation Updates
+- `connect: float` — timeout for establishing connections (default: 5.0)
+- `read: float` — timeout for read operations after connection (default: 10.0)
+- `lifetime: float` — total operation duration limit (default: 120.0)
+
+**Resolution order:** Phase-specific values take precedence over the generic `lifetime` value when both are provided.
+
+**CLI exposure:** Use `include_timeout=True` in `@common_cli_options` to automatically expose `--timeout`, `--connect-timeout`, and `--read-timeout` flags.
+
+**Lifetime enforcement:** Use `with timeout_context(timeout_config):` around the entire operation. On Unix systems this uses SIGALRM to interrupt blocking calls; on Windows it provides a best-effort post-check.
+
+**Socket configuration:** Use `timeout_config.apply_to_socket(sock)` to set the read timeout, or `configure_socket_with_timeouts(sock, config, connect_mode=True/False)` for phase-specific control.
+
+**Timeout exceptions:** The `OperationTimeoutError` exception is raised when the lifetime timeout is exceeded. This is an expected failure and should be caught and converted to an error field in the result dict.
+
+### 4.4 Adding a New CLI Command
+The procedure for adding a new command is documented in `architecture.rst`. The agent should follow it step by step: create a new module in the appropriate domain package, define a public function with docstring and types, export it in the package `__init__.py`, add a CLI command in the relevant `commands/` file using `@common_cli_options(include_timeout=True)` for network-bound commands, and add a formatter in `formatters.py` if needed. The agent must verify each step is completed.
+
+### 4.5 Documentation Updates
 Any change to the public API or command behavior must be reflected in the documentation. The documentation source is in `docs/`. The agent must guide the user to update the relevant `.rst` files. If a new module is added, the `genapidoc.sh` script must be re-run to update the API reference. The agent should remind the user that the documentation is versioned and that changes to the `main` branch will be reflected in the "latest" documentation after the next docs build.
 
 ## 5. Project Management and Releases
@@ -77,7 +94,7 @@ When citing a rule or standard, refer to the specific file in the repository. Fo
 The agent can invoke tools to interact with the repository. This includes reading files (`read_file`), searching for patterns (`search_files`), and listing directories (`list_dir`). Before suggesting a change, the agent should verify the current state of the relevant files. After suggesting a change, the agent may propose using a tool to write the change, but must always present the diff for the user to review.
 
 ### 6.4 Handling Ambiguity
-If the user's request is ambiguous, the agent must ask clarifying questions. For example, if the user asks "add a new security check," the agent should ask: "What type of security check? Should it be placed in `security/`? Does it need a CLI command? What should it return?" The agent should then reference the appropriate sections of this document to guide the user.
+If the user's request is ambiguous, the agent must ask clarifying questions. For example, if the user asks "add a new security check," the agent should ask: "What type of security check? Should it be placed in `security/`? Does it need a CLI command? What should it return? Does it need timeout support?" The agent should then reference the appropriate sections of this document to guide the user.
 
 ## 7. Final Verifications
 
@@ -86,8 +103,9 @@ Before any task is marked as complete, the agent must perform the following chec
 1.  **Linting**: Has `nox -s lint` been run and passed?
 2.  **Typing**: Has `nox -s typing` been run and passed?
 3.  **Tests**: Have new tests been added for the change? Does `nox -s test` pass with 100% coverage?
-4.  **Documentation**: Have relevant `.rst` files been updated? If new public APIs were added, was `genapidoc.sh` run?
-5.  **Commit Hygiene**: Are commit messages clear and follow patterns that `git-cliff` will parse?
-6.  **PR Ready**: If this is for a PR, is the description filled out and linked to the correct issue?
+4.  **Timeout Support**: If the change involves network I/O, does it accept `timeout_config` and use `timeout_context` appropriately?
+5.  **Documentation**: Have relevant `.rst` files been updated? If new public APIs were added, was `genapidoc.sh` run? Have timeout options been documented?
+6.  **Commit Hygiene**: Are commit messages clear and follow patterns that `git-cliff` will parse?
+7.  **PR Ready**: If this is for a PR, is the description filled out and linked to the correct issue?
 
 Only when all these checks pass should the agent confirm the task as complete.

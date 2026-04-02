@@ -23,6 +23,7 @@ Thank you for your interest in contributing! Please read this guide carefully be
     - [Dataclasses](#dataclasses)
     - [Logging](#logging)
     - [Error Handling](#error-handling)
+    - [Timeout Configuration](#timeout-configuration)
     - [`noqa` Comments](#noqa-comments)
     - [CLI Commands](#cli-commands)
     - [Module Structure](#module-structure)
@@ -92,12 +93,11 @@ ruff check src/nadzoring
 # Format with ruff
 ruff format src/nadzoring
 
-# Type check with mypy (must pass with no warnings for src/nadzoring) --cov-report=xml
+# Type check with mypy (must pass with no warnings for src/nadzoring)
 mypy src/nadzoring
 
 # Run tests
 pytest tests -s -v --tb=short --cov=src/nadzoring/ --strict-markers --cov-report=term-missing
-
 ```
 
 All three commands must pass with **no warnings or errors** for code in `src/nadzoring`.
@@ -214,6 +214,36 @@ except (CalledProcessError, FileNotFoundError):
     return []
 ```
 
+### Timeout Configuration
+
+When adding a new network or DNS function that may block, use `TimeoutConfig` from `nadzoring.utils.timeout`:
+
+```python
+from nadzoring.utils.timeout import TimeoutConfig, timeout_context
+
+def my_network_operation(
+    target: str,
+    *,
+    timeout_config: TimeoutConfig | None = None,
+) -> ResultType:
+    """Perform a network operation with timeout support."""
+    if timeout_config is None:
+        timeout_config = TimeoutConfig()
+
+    try:
+        with timeout_context(timeout_config):
+            # Phase-specific timeouts can be applied to sockets:
+            # sock.settimeout(timeout_config.connect)  # for connect phase
+            # sock.settimeout(timeout_config.read)     # for read phase
+
+            result = do_work()
+            return result
+    except OperationTimeoutError:
+        return {"error": "Operation exceeded lifetime timeout"}
+```
+
+**CLI commands** should include `include_timeout=True` in the `@common_cli_options` decorator to expose `--timeout`, `--connect-timeout`, and `--read-timeout` options automatically.
+
 ### `noqa` Comments
 
 Suppress ruff rules only where unavoidable, always with an inline comment explaining the rule code:
@@ -232,10 +262,11 @@ All CLI commands use the `@common_cli_options` decorator from `nadzoring.utils.d
 
 ```python
 @dns.command(name="resolve")
-@common_cli_options(include_quiet=True)
+@common_cli_options(include_quiet=True, include_timeout=True)
 @click.argument("domains", nargs=-1, required=True)
 def resolve_command(
     domains: tuple[str, ...],
+    timeout_config: TimeoutConfig,
     *,
     quiet: bool,
 ) -> list[dict]:
@@ -247,6 +278,7 @@ def resolve_command(
 - Never call `click.echo` for result data inside commands — only use it for progress hints to `err=True`
 - Use `tqdm` for progress bars; respect the `quiet` flag to suppress them
 - Pass `progress_callback` into library functions rather than coupling tqdm to business logic
+- Always accept `timeout_config: TimeoutConfig | None = None` in domain functions and create a default if `None`
 
 ### Module Structure
 
@@ -267,6 +299,7 @@ Group imports in standard order (stdlib → third-party → local), separated by
 - Mock external calls (DNS, subprocesses, network) — tests must not make real network requests
 - Name tests descriptively: `test_parse_linux_ip_route_timeout_hop`, not `test_parse`
 - Tests are not required to pass `ruff` or `mypy` with zero warnings, but they must still pass when executed
+- Test timeout configurations: verify that `TimeoutConfig` parameters are respected and `OperationTimeoutError` is raised when appropriate
 
 ---
 

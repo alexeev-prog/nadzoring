@@ -52,6 +52,23 @@ Every command supports these flags:
      -
      - Save results to a file
      - None
+   * - ``--timeout``
+     -
+     - Lifetime timeout for the entire operation (seconds)
+     - ``30.0``
+   * - ``--connect-timeout``
+     -
+     - Connection timeout (seconds). Falls back to ``--timeout``.
+     - ``5.0``
+   * - ``--read-timeout``
+     -
+     - Read timeout (seconds). Falls back to ``--timeout``.
+     - ``10.0``
+
+**Timeout resolution order:**
+1. Explicit phase-specific flag (``--connect-timeout`` / ``--read-timeout``)
+2. Generic ``--timeout`` flag
+3. Module default shown above
 
 ----
 
@@ -114,16 +131,25 @@ Look up specific DNS record types:
    # Use a specific nameserver
    nadzoring dns resolve -n 8.8.8.8 example.com
 
+   # Custom timeout for slow networks
+   nadzoring dns resolve --connect-timeout 10 --read-timeout 20 example.com
+
 **Python API:**
 
 .. code-block:: python
 
    from nadzoring.dns_lookup.utils import resolve_with_timer
+   from nadzoring.utils.timeout import TimeoutConfig
 
+   # Default timeouts
    result = resolve_with_timer("example.com", "A")
    if not result["error"]:
        print(result["records"])       # ['93.184.216.34']
        print(result["response_time"]) # e.g. 42.5 ms
+
+   # Custom timeouts
+   config = TimeoutConfig(connect=3.0, read=8.0, lifetime=20.0)
+   result = resolve_with_timer("example.com", "A", timeout_config=config)
 
 ----
 
@@ -255,13 +281,18 @@ Measure DNS resolution time, time-to-first-byte, and total download time:
    # Custom timeout, disable SSL verification
    nadzoring network-base http-ping --timeout 5 --no-ssl-verify https://self-signed.badssl.com
 
+   # Phase-specific timeouts
+   nadzoring network-base http-ping --connect-timeout 3 --read-timeout 15 https://slow.example.com
+
 **Python API:**
 
 .. code-block:: python
 
    from nadzoring.network_base.http_ping import http_ping
+   from nadzoring.utils.timeout import TimeoutConfig
 
-   result = http_ping("https://example.com")
+   config = TimeoutConfig(connect=2.0, read=10.0)
+   result = http_ping("https://example.com", timeout_config=config)
    if not result.error:
        print(result.status_code)    # 200
        print(result.dns_ms)         # e.g. 12.5
@@ -456,10 +487,17 @@ Monitor DNS health and performance over time, with alerts and logging:
 .. code-block:: python
 
    from nadzoring.dns_lookup.monitor import DNSMonitor, MonitorConfig, load_log
+   from nadzoring.utils.timeout import TimeoutConfig
+
+   config = TimeoutConfig(connect=2.0, read=8.0)
 
    # Monitor for 10 cycles
-   config = MonitorConfig(domain="example.com", interval=10.0)
-   monitor = DNSMonitor(config)
+   monitor_config = MonitorConfig(
+       domain="example.com",
+       interval=10.0,
+       timeout_config=config,
+   )
+   monitor = DNSMonitor(monitor_config)
    history = monitor.run_cycles(10)
 
    # Analyse existing log
@@ -484,14 +522,19 @@ Discover open ports and running services on a target:
    # Custom range
    nadzoring network-base port-scan --mode custom --ports 1-1024 example.com
 
+   # With custom timeouts
+   nadzoring network-base port-scan --connect-timeout 1 --read-timeout 3 example.com
+
 **Python API:**
 
 .. code-block:: python
 
    from nadzoring.network_base.port_scanner import ScanConfig, scan_ports
+   from nadzoring.utils.timeout import TimeoutConfig
 
-   config = ScanConfig(targets=["example.com"], mode="fast")
-   for result in scan_ports(config):
+   config = TimeoutConfig(connect=1.5, read=5.0)
+   scan_config = ScanConfig(targets=["example.com"], mode="fast", timeout_config=config)
+   for result in scan_ports(scan_config):
        print("Open ports:", result.open_ports)
 
 ----
@@ -510,8 +553,10 @@ Actively connect to a port and identify the running service by banner:
 .. code-block:: python
 
    from nadzoring.network_base.service_detector import detect_service_on_host
+   from nadzoring.utils.timeout import TimeoutConfig
 
-   result = detect_service_on_host("example.com", 80)
+   config = TimeoutConfig(connect=3.0, read=8.0)
+   result = detect_service_on_host("example.com", 80, timeout_config=config)
    print(result.detected_service or result.guessed_service)
 
 ----
@@ -529,13 +574,18 @@ Inspect SSL/TLS certificates for expiry and security:
    # 30-day warning window, full details
    nadzoring security check-ssl --days-before 30 --full example.com
 
+   # Custom timeout for slow servers
+   nadzoring security check-ssl --connect-timeout 10 example.com
+
 **Python API:**
 
 .. code-block:: python
 
    from nadzoring.security.check_website_ssl_cert import check_ssl_certificate
+   from nadzoring.utils.timeout import TimeoutConfig
 
-   result = check_ssl_certificate("example.com", days_before=14)
+   config = TimeoutConfig(connect=3.0, read=10.0)
+   result = check_ssl_certificate("example.com", days_before=14, timeout_config=config)
    print(result["status"], result["remaining_days"])
    print(result["protocols"]["supported"])
 
@@ -555,8 +605,10 @@ Audit HTTP security headers for a URL:
 .. code-block:: python
 
    from nadzoring.security.http_headers import check_http_security_headers
+   from nadzoring.utils.timeout import TimeoutConfig
 
-   result = check_http_security_headers("https://example.com")
+   config = TimeoutConfig(connect=5.0, read=15.0)
+   result = check_http_security_headers("https://example.com", timeout_config=config)
    print(result["score"])    # 0–100 coverage score
    print(result["missing"])  # list of absent headers
 
@@ -598,8 +650,10 @@ Find subdomains using CT logs and DNS brute-force:
 .. code-block:: python
 
    from nadzoring.security.subdomain_scan import scan_subdomains
+   from nadzoring.utils.timeout import TimeoutConfig
 
-   results = scan_subdomains("example.com")
+   config = TimeoutConfig(connect=2.0, read=8.0)
+   results = scan_subdomains("example.com", timeout_config=config)
    for r in results:
        print(r["subdomain"], r["ip"], r["source"])
 
@@ -619,8 +673,10 @@ Monitor SSL certificates for changes and expiry:
 .. code-block:: python
 
    from nadzoring.security.ssl_monitor import SSLMonitor
+   from nadzoring.utils.timeout import TimeoutConfig
 
-   monitor = SSLMonitor(["example.com"], interval=3600)
+   config = TimeoutConfig(connect=3.0, read=10.0)
+   monitor = SSLMonitor(["example.com"], interval=3600, timeout_config=config)
    monitor.set_alert_callback(lambda d, m: print(f"ALERT {d}: {m}"))
    monitor.run_cycles(5)
 
@@ -640,7 +696,7 @@ Detect spoofing statically or in real-time:
 .. code-block:: bash
 
    nadzoring arp detect-spoofing
-   nadzoring arp monitor-spoofing --interface eth0
+   nadzoring arp monitor-spoofing --interface eth0 --timeout 60
 
 **Python API:**
 
@@ -648,13 +704,15 @@ Detect spoofing statically or in real-time:
 
    from nadzoring.arp.cache import ARPCache
    from nadzoring.arp.realtime import ARPRealtimeDetector
+   from nadzoring.utils.timeout import TimeoutConfig
 
+   config = TimeoutConfig(lifetime=45.0)
    cache = ARPCache()
    for entry in cache.get_cache():
        print(entry.ip_address, entry.mac_address)
 
    detector = ARPRealtimeDetector()
-   alerts = detector.monitor(interface="eth0", count=50)
+   alerts = detector.monitor(interface="eth0", count=50, timeout_config=config)
 
 ----
 

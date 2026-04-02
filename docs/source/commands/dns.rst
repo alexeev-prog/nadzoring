@@ -48,11 +48,14 @@ Options
      - ``standard``
      - Output style: ``standard``, ``bind``, ``host``, ``dig``
    * - ``--timeout``
+     - ``30.0``
+     - Lifetime timeout for the entire operation (seconds)
+   * - ``--connect-timeout``
      - ``5.0``
-     - Per-query timeout in seconds
-   * - ``--lifetime``
+     - Connection timeout (seconds). Falls back to ``--timeout``.
+   * - ``--read-timeout``
      - ``10.0``
-     - Total query lifetime in seconds
+     - Read timeout (seconds). Falls back to ``--timeout``.
 
 Examples
 ~~~~~~~~
@@ -77,13 +80,18 @@ Examples
    # JSON output saved to file
    nadzoring dns resolve -t A -t AAAA -o json --save out.json example.com
 
+   # Custom timeouts for slow networks
+   nadzoring dns resolve --connect-timeout 10 --read-timeout 20 example.com
+
 Python API
 ~~~~~~~~~~
 
 .. code-block:: python
 
    from nadzoring.dns_lookup.utils import resolve_with_timer
+   from nadzoring.utils.timeout import TimeoutConfig
 
+   # Using default timeouts
    result = resolve_with_timer("example.com", "A")
    if result["error"]:
        print("Error:", result["error"])
@@ -100,6 +108,10 @@ Python API
    )
    print(result["records"])  # ['10 mail.example.com']
    print(result["ttl"])      # e.g. 3600
+
+   # Custom timeout configuration
+   config = TimeoutConfig(connect=3.0, read=8.0, lifetime=20.0)
+   result = resolve_with_timer("example.com", "A", timeout_config=config)
 
 ----
 
@@ -127,6 +139,15 @@ Options
    * - ``-n / --nameserver``
      - system
      - Custom nameserver IP
+   * - ``--timeout``
+     - ``30.0``
+     - Lifetime timeout (seconds)
+   * - ``--connect-timeout``
+     - ``5.0``
+     - Connection timeout (seconds)
+   * - ``--read-timeout``
+     - ``10.0``
+     - Read timeout (seconds)
 
 Examples
 ~~~~~~~~
@@ -144,8 +165,11 @@ Python API
 .. code-block:: python
 
    from nadzoring.dns_lookup.reverse import reverse_dns
+   from nadzoring.utils.timeout import TimeoutConfig
 
-   result = reverse_dns("8.8.8.8")
+   config = TimeoutConfig(connect=2.0, read=5.0)
+
+   result = reverse_dns("8.8.8.8", timeout_config=config)
 
    if result["error"]:
        print("Lookup failed:", result["error"])
@@ -172,6 +196,29 @@ Score a domain's DNS configuration from 0 to 100.
 
    nadzoring dns health [OPTIONS] DOMAIN
 
+Options
+~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 15 60
+
+   * - Option
+     - Default
+     - Description
+   * - ``-n / --nameserver``
+     - system
+     - Custom nameserver IP
+   * - ``--timeout``
+     - ``30.0``
+     - Lifetime timeout (seconds)
+   * - ``--connect-timeout``
+     - ``5.0``
+     - Connection timeout (seconds)
+   * - ``--read-timeout``
+     - ``10.0``
+     - Read timeout (seconds)
+
 Scoring thresholds:
 
 - **80–100** → Healthy
@@ -184,7 +231,7 @@ Examples
 .. code-block:: bash
 
    nadzoring dns health example.com
-   nadzoring dns health -n 1.1.1.1 example.com
+   nadzoring dns health -n 1.1.1.1 google.com
    nadzoring dns health -o json --save health.json example.com
 
 Python API
@@ -193,8 +240,10 @@ Python API
 .. code-block:: python
 
    from nadzoring.dns_lookup.health import health_check_dns
+   from nadzoring.utils.timeout import TimeoutConfig
 
-   result = health_check_dns("example.com")
+   config = TimeoutConfig(connect=2.0, read=8.0)
+   result = health_check_dns("example.com", timeout_config=config)
 
    print(f"Score: {result['score']}/100")
    print(f"Status: {result['status']}")  # healthy | degraded | unhealthy
@@ -238,6 +287,15 @@ Options
    * - ``--validate-txt``
      - off
      - Validate SPF and DKIM TXT records
+   * - ``--timeout``
+     - ``30.0``
+     - Lifetime timeout (seconds)
+   * - ``--connect-timeout``
+     - ``5.0``
+     - Connection timeout (seconds)
+   * - ``--read-timeout``
+     - ``10.0``
+     - Read timeout (seconds)
 
 Examples
 ~~~~~~~~
@@ -253,12 +311,15 @@ Python API
 .. code-block:: python
 
    from nadzoring.dns_lookup.health import check_dns
+   from nadzoring.utils.timeout import TimeoutConfig
 
+   config = TimeoutConfig(connect=3.0, read=10.0)
    result = check_dns(
        "example.com",
        record_types=["MX", "TXT"],
        validate_mx=True,
        validate_txt=True,
+       timeout_config=config,
    )
 
    print(result["records"])
@@ -298,6 +359,15 @@ Options
    * - ``-n / --nameserver``
      - root (198.41.0.4)
      - Starting nameserver IP
+   * - ``--timeout``
+     - ``30.0``
+     - Lifetime timeout (seconds)
+   * - ``--connect-timeout``
+     - ``5.0``
+     - Connection timeout (seconds)
+   * - ``--read-timeout``
+     - ``10.0``
+     - Read timeout (seconds)
 
 Examples
 ~~~~~~~~
@@ -313,8 +383,10 @@ Python API
 .. code-block:: python
 
    from nadzoring.dns_lookup.trace import trace_dns
+   from nadzoring.utils.timeout import TimeoutConfig
 
-   result = trace_dns("example.com")
+   config = TimeoutConfig(connect=3.0, read=5.0, lifetime=30.0)
+   result = trace_dns("example.com", timeout_config=config)
 
    for hop in result["hops"]:
        ns = hop["nameserver"]
@@ -429,6 +501,15 @@ Options
    * - ``--parallel/--sequential``
      - ``--parallel``
      - Run benchmarks concurrently or sequentially
+   * - ``--timeout``
+     - ``30.0``
+     - Lifetime timeout (seconds)
+   * - ``--connect-timeout``
+     - ``5.0``
+     - Connection timeout (seconds)
+   * - ``--read-timeout``
+     - ``10.0``
+     - Read timeout (seconds)
 
 Examples
 ~~~~~~~~
@@ -445,10 +526,14 @@ Python API
 .. code-block:: python
 
    from nadzoring.dns_lookup.benchmark import benchmark_dns_servers
+   from nadzoring.utils.timeout import TimeoutConfig
+
+   config = TimeoutConfig(connect=2.0, read=8.0, lifetime=60.0)
 
    results = benchmark_dns_servers(
        servers=["8.8.8.8", "1.1.1.1", "9.9.9.9"],
        queries=10,
+       timeout_config=config,
    )
    # Results are sorted fastest-first
    for r in results:
@@ -497,6 +582,15 @@ Options
    * - ``-a / --additional-types``
      - none
      - Additional record types to query on control server
+   * - ``--timeout``
+     - ``30.0``
+     - Lifetime timeout (seconds)
+   * - ``--connect-timeout``
+     - ``5.0``
+     - Connection timeout (seconds)
+   * - ``--read-timeout``
+     - ``10.0``
+     - Read timeout (seconds)
 
 Examples
 ~~~~~~~~
@@ -513,8 +607,10 @@ Python API
 .. code-block:: python
 
    from nadzoring.dns_lookup.poisoning import check_dns_poisoning
+   from nadzoring.utils.timeout import TimeoutConfig
 
-   result = check_dns_poisoning("example.com")
+   config = TimeoutConfig(connect=3.0, read=10.0, lifetime=45.0)
+   result = check_dns_poisoning("example.com", timeout_config=config)
 
    print(f"Level: {result.get('poisoning_level', 'NONE')}")
    print(f"Confidence: {result.get('confidence', 0):.0f}%")
@@ -579,6 +675,18 @@ Options
    * - ``-c / --cycles``
      - ``0``
      - Number of cycles to run (0 = infinite)
+   * - ``--timeout``
+     - ``30.0``
+     - Lifetime timeout (seconds)
+   * - ``--connect-timeout``
+     - ``5.0``
+     - Connection timeout (seconds)
+   * - ``--read-timeout``
+     - ``10.0``
+     - Read timeout (seconds)
+
+Examples
+~~~~~~~~
 
 .. code-block:: bash
 
@@ -615,6 +723,9 @@ Options
      - Description
    * - ``-s / --server``
      - Filter statistics to a specific server IP
+
+Examples
+~~~~~~~~
 
 .. code-block:: bash
 

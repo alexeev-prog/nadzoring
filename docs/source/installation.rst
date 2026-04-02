@@ -199,3 +199,6 @@ Run a quick smoke test after installing:
 
    # Validate email security records
    nadzoring security check-email example.com
+
+   # Test timeout configuration (slow operation will abort)
+   nadzoring dns resolve --timeout 2 google.com

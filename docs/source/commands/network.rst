@@ -65,11 +65,17 @@ Options
      - Description
    * - ``--timeout``
      - ``10.0``
-     - Request timeout in seconds
+     - Request timeout in seconds — sets both connect and read
+   * - ``--connect-timeout``
+     - ``5.0``
+     - Connection timeout (seconds). Falls back to ``--timeout``.
+   * - ``--read-timeout``
+     - ``10.0``
+     - Read timeout (seconds). Falls back to ``--timeout``.
    * - ``--no-ssl-verify``
      - off
      - Skip SSL certificate verification
-   * - ``--no-follow-redirects``
+   * - ``--no-redirects``
      - off
      - Do not follow HTTP redirects
    * - ``--show-headers``
@@ -83,7 +89,8 @@ Examples
 
    nadzoring network-base http-ping https://example.com
    nadzoring network-base http-ping --show-headers https://github.com
-   nadzoring network-base http-ping --timeout 5 --no-ssl-verify https://self-signed.example.com
+   nadzoring network-base http-ping --timeout 5 --no-ssl-verify https://self-signed.badssl.com
+   nadzoring network-base http-ping --connect-timeout 3 --read-timeout 15 https://slow.example.com
 
 Python API
 ~~~~~~~~~~
@@ -91,8 +98,10 @@ Python API
 .. code-block:: python
 
    from nadzoring.network_base.http_ping import http_ping
+   from nadzoring.utils.timeout import TimeoutConfig
 
-   result = http_ping("https://example.com")
+   config = TimeoutConfig(connect=2.0, read=10.0, lifetime=30.0)
+   result = http_ping("https://example.com", timeout_config=config, include_headers=True)
 
    if result.error:
        print("Failed:", result.error)
@@ -308,7 +317,13 @@ Options
      - Custom port list or range (e.g. ``22,80,443`` or ``1-1024``)
    * - ``--timeout``
      - ``2.0``
-     - Per-port connection timeout in seconds
+     - Socket timeout (seconds) — sets connect timeout
+   * - ``--connect-timeout``
+     - ``5.0``
+     - Connection timeout (seconds). Falls back to ``--timeout``.
+   * - ``--read-timeout``
+     - ``10.0``
+     - Read timeout (seconds) for banner grabbing
    * - ``--workers``
      - ``50``
      - Number of concurrent threads
@@ -328,6 +343,7 @@ Examples
    nadzoring network-base port-scan --mode full 192.168.1.1
    nadzoring network-base port-scan --mode custom --ports 1-1024 example.com
    nadzoring network-base port-scan --protocol udp --mode fast example.com
+   nadzoring network-base port-scan --connect-timeout 1 --read-timeout 3 example.com
 
 Python API
 ~~~~~~~~~~
@@ -335,14 +351,16 @@ Python API
 .. code-block:: python
 
    from nadzoring.network_base.port_scanner import ScanConfig, scan_ports
+   from nadzoring.utils.timeout import TimeoutConfig
 
-   config = ScanConfig(
+   config = TimeoutConfig(connect=1.5, read=5.0, lifetime=60.0)
+   scan_config = ScanConfig(
        targets=["example.com"],
        mode="fast",
        protocol="tcp",
-       timeout=2.0,
+       timeout_config=config,
    )
-   results = scan_ports(config)
+   results = scan_ports(scan_config)
 
    for scan in results:
        print(f"Target: {scan.target}  ({scan.target_ip})")
@@ -377,7 +395,13 @@ Options
      - Description
    * - ``--timeout``
      - ``3.0``
-     - Connection timeout in seconds
+     - Connection timeout (seconds) — sets connect timeout
+   * - ``--connect-timeout``
+     - ``5.0``
+     - Connection timeout (seconds). Falls back to ``--timeout``.
+   * - ``--read-timeout``
+     - ``10.0``
+     - Read timeout (seconds) for banner
    * - ``--no-probe``
      - off
      - Disable sending protocol-specific probes
@@ -394,7 +418,7 @@ Examples
    nadzoring network-base detect-service 192.168.1.100 3306 5432 6379
 
    # Longer timeout for slow services
-   nadzoring network-base detect-service --timeout 5 example.com 8080
+   nadzoring network-base detect-service --connect-timeout 5 example.com 8080
 
    # JSON output for scripting
    nadzoring network-base detect-service -o json example.com 80 443
@@ -405,9 +429,10 @@ Python API
 .. code-block:: python
 
    from nadzoring.network_base.service_detector import detect_service_on_host
+   from nadzoring.utils.timeout import TimeoutConfig
 
-   # Detect service on port 80
-   result = detect_service_on_host("example.com", 80)
+   config = TimeoutConfig(connect=3.0, read=8.0)
+   result = detect_service_on_host("example.com", 80, timeout_config=config)
 
    if result.detected_service:
        print(f"Service: {result.detected_service} (method: {result.method})")
@@ -469,7 +494,10 @@ Options
      - Maximum number of hops
    * - ``--timeout``
      - ``2.0``
-     - Per-hop timeout in seconds
+     - Per-hop timeout (seconds) — sets connect timeout
+   * - ``--connect-timeout``
+     - ``5.0``
+     - Per-hop timeout (seconds). Falls back to ``--timeout``.
    * - ``--sudo``
      - off
      - Prefix command with ``sudo`` (Linux only)
@@ -490,8 +518,10 @@ Python API
 .. code-block:: python
 
    from nadzoring.network_base.traceroute import traceroute
+   from nadzoring.utils.timeout import TimeoutConfig
 
-   hops = traceroute("8.8.8.8", max_hops=15)
+   config = TimeoutConfig(connect=1.5, read=5.0)
+   hops = traceroute("8.8.8.8", max_hops=15, per_hop_timeout=config.connect)
    for hop in hops:
        rtts = [f"{r}ms" if r else "*" for r in hop.rtt_ms]
        print(f"{hop.hop:2}  {hop.ip or '*':16}  {' '.join(rtts)}")
