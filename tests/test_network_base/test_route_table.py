@@ -79,6 +79,15 @@ def test_linux_route_with_via_after_dev():
     assert entries[0].interface == "eth0"
 
 
+def test_linux_route_with_extra_fields():
+    raw = "default via 10.0.0.1 dev eth0 proto static metric 100 scope global\n"
+    entries = _parse_linux_ip_route(raw)
+    assert entries[0].destination == "default"
+    assert entries[0].gateway == "10.0.0.1"
+    assert entries[0].interface == "eth0"
+    assert entries[0].metric == "100"
+
+
 WINDOWS_SAMPLE = (
     "IPv4 Route Table\n"
     "===========================================================================\n"
@@ -204,6 +213,15 @@ def test_get_linux_routes_with_multiple_entries(mocker):
     assert len(result) == 2
 
 
+def test_get_linux_routes_decode_error(mocker):
+    """Test that decode errors are handled gracefully."""
+    mock_output = b"\xff\xff\xff"
+    mocker.patch("nadzoring.network_base.route_table.check_output", return_value=mock_output)
+    # This should not raise an exception
+    result = _get_linux_routes()
+    assert isinstance(result, list)
+
+
 def test_get_windows_routes_success(mocker):
     mocker.patch(
         "nadzoring.network_base.route_table.check_output",
@@ -239,6 +257,16 @@ def test_get_windows_routes_file_not_found(mocker):
     assert _get_windows_routes() == []
 
 
+def test_get_windows_routes_decode_error(mocker):
+    """Test that decode errors with cp866 are handled."""
+    mocker.patch(
+        "nadzoring.network_base.route_table.check_output",
+        return_value=b"\xff\xff\xff",
+    )
+    result = _get_windows_routes()
+    assert isinstance(result, list)
+
+
 def test_get_route_table_linux(mocker):
     mocker.patch("nadzoring.network_base.route_table.system", return_value="Linux")
     mock = mocker.patch("nadzoring.network_base.route_table._get_linux_routes", return_value=[])
@@ -267,3 +295,20 @@ def test_get_route_table_returns_list(mocker):
     result = get_route_table()
     assert isinstance(result, list)
     assert isinstance(result[0], RouteEntry)
+
+
+def test_route_entry_dataclass():
+    entry = RouteEntry(
+        destination="0.0.0.0",
+        gateway="192.168.1.1",
+        netmask="0.0.0.0",
+        interface="eth0",
+        metric="100",
+        flags="UG",
+    )
+    assert entry.destination == "0.0.0.0"
+    assert entry.gateway == "192.168.1.1"
+    assert entry.netmask == "0.0.0.0"
+    assert entry.interface == "eth0"
+    assert entry.metric == "100"
+    assert entry.flags == "UG"

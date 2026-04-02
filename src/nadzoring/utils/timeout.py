@@ -101,7 +101,7 @@ def timeout_context(timeout: TimeoutConfig):
 
     try:
         signal.signal(signal.SIGALRM, _raise_timeout_error)
-        signal.alarm(int(timeout.lifetime))
+        signal.alarm(max(1, int(timeout.lifetime)))
         yield
         signal.alarm(0)
     except OperationTimeoutError:

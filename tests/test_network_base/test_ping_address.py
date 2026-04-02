@@ -50,6 +50,23 @@ def test_empty_string():
     assert isinstance(result, str)
 
 
+def test_normalize_with_ftp_scheme():
+    """Test that ftp scheme is not stripped (only http/https are handled)."""
+    result = _normalize_address("ftp://example.com")
+    # ftp:// is not in the list of schemes to strip, so it remains
+    assert result == "ftp://example.com"
+
+
+def test_normalize_with_https_and_trailing_slash():
+    result = _normalize_address("https://example.com/")
+    assert result == "example.com"
+
+
+def test_normalize_with_www_and_https():
+    result = _normalize_address("https://www.example.com/path")
+    assert result == "www.example.com"
+
+
 def test_reachable_returns_true(mocker):
     mocker.patch("nadzoring.network_base.ping_address.ping3.ping", return_value=0.042)
     assert ping_addr("8.8.8.8") is True
@@ -108,3 +125,38 @@ def test_oserror_returns_false(mocker):
 def test_return_type_is_bool(mocker):
     mocker.patch("nadzoring.network_base.ping_address.ping3.ping", return_value=0.1)
     assert isinstance(ping_addr("1.1.1.1"), bool)
+
+
+def test_ping_with_timeout_parameter(mocker):
+    """Test that ping3.ping is called with default timeout."""
+    mock = mocker.patch("nadzoring.network_base.ping_address.ping3.ping", return_value=0.1)
+    ping_addr("example.com")
+    # ping3.ping has a default timeout, we're just verifying the call
+    mock.assert_called_once()
+
+
+def test_ping_with_float_response(mocker):
+    """Test that float response (RTT in seconds) is treated as success."""
+    mocker.patch("nadzoring.network_base.ping_address.ping3.ping", return_value=0.123)
+    assert ping_addr("8.8.8.8") is True
+
+
+def test_ping_with_none_value(mocker):
+    """Test that None (no response) is treated as failure."""
+    mocker.patch("nadzoring.network_base.ping_address.ping3.ping", return_value=None)
+    assert ping_addr("8.8.8.8") is False
+
+
+def test_ping_with_very_long_hostname(mocker):
+    """Test that long hostnames are handled."""
+    mock = mocker.patch("nadzoring.network_base.ping_address.ping3.ping", return_value=0.01)
+    long_host = "very-long-hostname-" + "x" * 100 + ".example.com"
+    ping_addr(long_host)
+    mock.assert_called_once_with(long_host)
+
+
+def test_ping_with_ipv6_address(mocker):
+    """Test that IPv6 addresses are passed through."""
+    mock = mocker.patch("nadzoring.network_base.ping_address.ping3.ping", return_value=0.01)
+    ping_addr("2001:db8::1")
+    mock.assert_called_once_with("2001:db8::1")

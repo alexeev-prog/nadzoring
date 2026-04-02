@@ -1,7 +1,7 @@
 # tests/test_network_base/test_traceroute.py
 """Tests for nadzoring.network_base.traceroute — 100% coverage."""
 
-from subprocess import TimeoutExpired
+from subprocess import CalledProcessError, TimeoutExpired
 
 import pytest
 
@@ -99,6 +99,23 @@ def test_parse_linux_precision():
     assert hops[0].rtt_ms[0] == pytest.approx(123.456)
 
 
+def test_parse_linux_ip_only_no_host():
+    """Test parsing line with IP only, no hostname."""
+    raw = " 1  192.168.1.1  1.0 ms\n"
+    hops = _parse_linux_traceroute(raw)
+    assert hops[0].hop == 1
+    assert hops[0].host == "192.168.1.1" or hops[0].host is None
+    assert hops[0].ip == "192.168.1.1"
+
+
+def test_parse_linux_extra_whitespace():
+    raw = "  1    router.example.com (10.0.0.1)    1.0 ms   1.1 ms\n"
+    hops = _parse_linux_traceroute(raw)
+    assert hops[0].hop == 1
+    assert hops[0].host == "router.example.com"
+    assert hops[0].ip == "10.0.0.1"
+
+
 def test_parse_windows_empty():
     assert _parse_windows_tracert("") == []
 
@@ -148,6 +165,12 @@ def test_parse_windows_host_fallback_to_ip():
     assert hops[0].ip == "10.0.0.1"
 
 
+def test_parse_windows_varied_rtt_count():
+    raw = "  1     5 ms   10 ms   15 ms   20 ms  8.8.8.8\n"
+    hops = _parse_windows_tracert(raw)
+    assert len(hops[0].rtt_ms) == 4
+
+
 def test_stream_process_success(mocker):
     mock_proc = mocker.MagicMock()
     mock_proc.communicate.return_value = ("output text", "")
@@ -173,6 +196,18 @@ def test_stream_process_timeout_returns_partial(mocker):
     stdout, stderr = _stream_process("traceroute 8.8.8.8", wall_timeout=1.0)
     assert stdout == "partial"
     mock_proc.kill.assert_called_once()
+
+
+def test_stream_process_with_stderr(mocker):
+    mock_proc = mocker.MagicMock()
+    mock_proc.communicate.return_value = ("stdout text", "stderr text")
+    mock_proc.__enter__ = mocker.MagicMock(return_value=mock_proc)
+    mock_proc.__exit__ = mocker.MagicMock(return_value=False)
+    mocker.patch("nadzoring.network_base.traceroute.Popen", return_value=mock_proc)
+
+    stdout, stderr = _stream_process("cmd", wall_timeout=5.0)
+    assert stdout == "stdout text"
+    assert stderr == "stderr text"
 
 
 def test_run_linux_traceroute_success(mocker):
@@ -303,6 +338,25 @@ def test_run_windows_tracert_timeout_returns_partial(mocker):
     assert isinstance(result, list)
 
 
+def test_run_windows_tracert_exception_handling(mocker):
+    """Test that exceptions during Popen are handled."""
+    mocker.patch("nadzoring.network_base.traceroute.Popen", side_effect=Exception("Popen failed"))
+    result = _run_windows_tracert("8.8.8.8", max_hops=5, per_hop_timeout=2.0)
+    assert result == []
+
+
+def test_run_windows_tracert_called_process_error(mocker):
+    """Test CalledProcessError handling."""
+    mock_proc = mocker.MagicMock()
+    mock_proc.communicate.side_effect = CalledProcessError(1, "tracert")
+    mock_proc.__enter__ = mocker.MagicMock(return_value=mock_proc)
+    mock_proc.__exit__ = mocker.MagicMock(return_value=False)
+    mocker.patch("nadzoring.network_base.traceroute.Popen", return_value=mock_proc)
+
+    result = _run_windows_tracert("8.8.8.8", max_hops=5, per_hop_timeout=2.0)
+    assert result == []
+
+
 def test_traceroute_linux(mocker):
     mocker.patch("nadzoring.network_base.traceroute.system", return_value="Linux")
     mock = mocker.patch("nadzoring.network_base.traceroute._run_linux_traceroute", return_value=[])
@@ -353,3 +407,9 @@ def test_tracehop_none_values():
     assert hop.host is None
     assert hop.ip is None
     assert hop.rtt_ms == [None]
+
+
+def test_tracehop_with_rtt_values():
+    hop = TraceHop(hop=1, host="gw", ip="10.0.0.1", rtt_ms=[1.5, 2.0, 1.8])
+    assert len(hop.rtt_ms) == 3
+    assert hop.rtt_ms[0] == 1.5

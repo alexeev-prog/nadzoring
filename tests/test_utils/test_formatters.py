@@ -8,6 +8,10 @@ from unittest.mock import MagicMock, patch
 import yaml
 
 from nadzoring.utils.formatters import (
+    _CRITICAL_TERMS,
+    _INFO_TERMS,
+    _POSITIVE_TERMS,
+    _WARNING_TERMS,
     _build_html_page,
     _calculate_column_widths,
     colorize_value,
@@ -170,6 +174,32 @@ class TestColorizeValue:
         result = colorize_value(1.5)
         assert "\x1b" not in result
 
+    def test_critical_terms_set_contains_expected(self):
+        assert "CRITICAL" in _CRITICAL_TERMS
+        assert "HIGH" in _CRITICAL_TERMS
+        assert "POISONED" in _CRITICAL_TERMS
+        assert "ERROR" in _CRITICAL_TERMS
+        assert "NXDOMAIN" in _CRITICAL_TERMS
+
+    def test_warning_terms_set_contains_expected(self):
+        assert "MEDIUM" in _WARNING_TERMS
+        assert "WARNING" in _WARNING_TERMS
+        assert "MISMATCH" in _WARNING_TERMS
+        assert "TTL_DIFF" in _WARNING_TERMS
+
+    def test_info_terms_set_contains_expected(self):
+        assert "LOW" in _INFO_TERMS
+        assert "INFO" in _INFO_TERMS
+        assert "REFERENCE" in _INFO_TERMS
+        assert "CLEAN" in _INFO_TERMS
+
+    def test_positive_terms_set_contains_expected(self):
+        assert "yes" in _POSITIVE_TERMS
+        assert "up" in _POSITIVE_TERMS
+        assert "passed" in _POSITIVE_TERMS
+        assert "good" in _POSITIVE_TERMS
+        assert "healthy" in _POSITIVE_TERMS
+
 
 class TestPrintResultsTable:
     def test_empty_data_prints_no_results(self, capsys):
@@ -311,6 +341,14 @@ class TestCalculateColumnWidths:
         max_w = {"a": 20, "b": 20, "c": 20}
         widths = _calculate_column_widths(headers, min_w, max_w, 50)
         assert sum(widths) <= 50
+
+    def test_overflow_trimming_reduces_widest_first(self):
+        headers = ["a", "b", "c"]
+        min_w = {"a": 10, "b": 10, "c": 10}
+        max_w = {"a": 100, "b": 50, "c": 30}
+        # Give more space than min but less than sum of maxes
+        widths = _calculate_column_widths(headers, min_w, max_w, 40)
+        assert sum(widths) <= 40
 
 
 class TestFormatDnsRecord:
@@ -477,6 +515,13 @@ class TestFormatScanResults:
         assert "host1" in targets
         assert "host2" in targets
 
+    def test_no_open_ports_multiple_targets_with_show_closed_false(self):
+        sr1 = _make_scan_result(open_ports=[], results={})
+        sr2 = _make_scan_result(open_ports=[], results={})
+        result = format_scan_results([sr1, sr2], show_closed=False)
+        assert len(result) == 2
+        assert all(r["state"] == "NO OPEN PORTS" for r in result)
+
 
 class TestFormatDnsTrace:
     def _sample_trace(self):
@@ -566,6 +611,13 @@ class TestFormatDnsTrace:
         result = format_dns_trace(trace)
         assert result[0]["next"] == "N/A"
 
+    def test_final_answer_same_as_last_hop_not_duplicated(self):
+        hop = {"nameserver": "ns1", "response_time": 1.0, "records": ["a"]}
+        trace = {"hops": [hop], "final_answer": hop}
+        result = format_dns_trace(trace)
+        # Should not add duplicate
+        assert len(result) == 1
+
 
 class TestFormatDnsComparison:
     def test_basic_structure(self):
@@ -613,6 +665,11 @@ class TestFormatDnsComparison:
         comp = {"servers": {"ns": {"A": {}}}}
         result = format_dns_comparison(comp)
         assert result[0]["records"] == "None"
+
+    def test_response_time_none_shows_na(self):
+        comp = {"servers": {"ns": {"A": {"records": ["x"], "response_time": None}}}}
+        result = format_dns_comparison(comp)
+        assert result[0]["response_time_ms"] is None
 
 
 class TestFormatDnsHealth:
@@ -686,12 +743,18 @@ class TestFormatDnsHealth:
     def test_warnings_empty(self):
         health = {**self._sample_health(), "warnings": []}
         result = format_dns_health(health)
-        assert result[0]["warnings"] == "None"
+        assert result[0]["warnings"] == ""
 
     def test_issues_empty(self):
         health = {**self._sample_health(), "issues": []}
         result = format_dns_health(health)
-        assert result[0]["issues"] == "None"
+        assert result[0]["issues"] == ""
+
+    def test_missing_status_uses_unknown(self):
+        health = {**self._sample_health(), "status": None}
+        del health["status"]
+        result = format_dns_health(health)
+        assert result[0]["status"] == "UNKNOWN"
 
 
 def _base_poisoning(**overrides):
@@ -926,6 +989,15 @@ class TestFormatDnsPoisoning:
         dns_analysis = next(r for r in result if r["section"] == "DNS ANALYSIS")
         assert dns_analysis["note"] == "POISONING CHECK"
 
+    def test_missing_control_server_fields(self):
+        result = format_dns_poisoning(_base_poisoning(control_server=None))
+        control_section = next(r for r in result if r["section"] == "CONTROL SERVER")
+        assert control_section is not None
+
+    def test_empty_consensus_top(self):
+        result = format_dns_poisoning(_base_poisoning(consensus_top=[]))
+        assert "CONSENSUS" not in [r["section"] for r in result]
+
 
 class TestBuildHtmlPage:
     def test_contains_doctype(self):
@@ -1034,3 +1106,10 @@ class TestSaveResults:
         content = Path(fp).read_text()
         assert "col1,col2" in content
         assert "value1,value2" in content
+
+    def test_save_yaml_with_unicode(self, tmp_path):
+        data = [{"text": "привет мир"}]
+        fp = str(tmp_path / "unicode.yaml")
+        save_results(data, fp, "yaml")
+        loaded = yaml.safe_load(Path(fp).read_text(encoding="utf-8"))
+        assert loaded[0]["text"] == "привет мир"

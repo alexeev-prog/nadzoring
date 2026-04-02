@@ -2,11 +2,13 @@
 """Tests for nadzoring.network_base.service_detector — 100% coverage."""
 
 from nadzoring.network_base.service_detector import (
+    SERVICE_SIGNATURES,
     ServiceDetectionResult,
     _analyze_banner,
     _get_probe_for_port,
     detect_service_on_host,
 )
+from nadzoring.utils.timeout import TimeoutConfig
 
 
 def test_probe_port_80():
@@ -123,7 +125,7 @@ def test_analyze_postgresql_banner():
 
 
 def test_analyze_redis_ok_banner():
-    assert _analyze_banner("+OK", 6379) == "POP3"
+    assert _analyze_banner("+OK", 6379) == "POP3"  # +OK matches POP3 signature
 
 
 def test_analyze_redis_specific():
@@ -174,6 +176,22 @@ def test_analyze_banner_bytes_pattern_matching():
     banner_bytes = b"HTTP/1.1 200 OK"
     result = _analyze_banner(banner_bytes.decode(), 80)
     assert result == "HTTP"
+
+
+def test_analyze_banner_with_byte_signature_match():
+    """Test that bytes signature matching works correctly."""
+    banner = "SSH-2.0-OpenSSH"
+    # The signature is bytes, but banner is string - should still match
+    result = _analyze_banner(banner, 22)
+    assert result == "SSH"
+
+
+def test_service_signatures_structure():
+    """Test that SERVICE_SIGNATURES has expected structure."""
+    assert isinstance(SERVICE_SIGNATURES, dict)
+    assert "SSH" in SERVICE_SIGNATURES
+    assert "HTTP" in SERVICE_SIGNATURES
+    assert isinstance(SERVICE_SIGNATURES["SSH"], list)
 
 
 def test_detect_success_banner_method(mocker):
@@ -359,11 +377,12 @@ def test_detect_with_custom_timeout_config(mocker):
         "nadzoring.network_base.service_detector.get_service_on_port",
         return_value="ssh",
     )
-    from nadzoring.utils.timeout import TimeoutConfig
 
     cfg = TimeoutConfig(connect=0.5, read=1.0, lifetime=3.0)
     result = detect_service_on_host("localhost", 22, timeout_config=cfg)
     assert result.method == "banner"
+    # Verify that settimeout was called with the connect timeout
+    mock_sock.settimeout.assert_called_once_with(0.5)
 
 
 def test_detect_banner_with_probe_for_http(mocker):
@@ -388,3 +407,34 @@ def test_result_error_default_none():
         method="banner",
     )
     assert r.error is None
+
+
+def test_detect_with_default_timeout_config(mocker):
+    """Test that default TimeoutConfig is used when None is passed."""
+    mock_sock = mocker.MagicMock()
+    mock_sock.recv.return_value = b"SSH-2.0\r\n"
+    mocker.patch("nadzoring.network_base.service_detector.socket.socket", return_value=mock_sock)
+    mocker.patch(
+        "nadzoring.network_base.service_detector.get_service_on_port",
+        return_value="ssh",
+    )
+
+    result = detect_service_on_host("localhost", 22, timeout_config=None)
+    assert result.method == "banner"
+    # Default timeout should be set
+    mock_sock.settimeout.assert_called_once()
+
+
+def test_detect_socket_timeout_exception(mocker):
+    """Test socket timeout exception handling."""
+    mock_sock = mocker.MagicMock()
+    mock_sock.connect.side_effect = TimeoutError("timed out")
+    mocker.patch("nadzoring.network_base.service_detector.socket.socket", return_value=mock_sock)
+    mocker.patch(
+        "nadzoring.network_base.service_detector.get_service_on_port",
+        return_value="http",
+    )
+
+    result = detect_service_on_host("localhost", 80)
+    assert result.method == "failed"
+    assert "timed out" in result.error or result.error == "Connection timeout"

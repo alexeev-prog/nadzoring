@@ -75,7 +75,7 @@ def create_resolver(
 
     """
     if timeout_config is None:
-        timeout_config = TimeoutConfig()
+        timeout_config = TimeoutConfig(connect=5.0, read=5.0, lifetime=10.0)
 
     resolver = dns.resolver.Resolver()
     resolver.timeout = timeout_config.read
@@ -112,7 +112,7 @@ def create_async_resolver(
 
     """
     if timeout_config is None:
-        timeout_config = TimeoutConfig()
+        timeout_config = TimeoutConfig(connect=5.0, read=5.0, lifetime=10.0)
 
     resolver = dns.asyncresolver.Resolver()
     resolver.timeout = timeout_config.read
@@ -262,7 +262,7 @@ def resolve_with_timer(
     result: DNSResult = _make_empty_result(domain, record_type)
 
     if timeout_config is None:
-        timeout_config = TimeoutConfig()
+        timeout_config = TimeoutConfig(connect=5.0, read=5.0, lifetime=10.0)
 
     try:
         with timeout_context(timeout_config):
@@ -348,7 +348,7 @@ async def resolve_with_timer_async(
 
     """
     if timeout_config is None:
-        timeout_config = TimeoutConfig()
+        timeout_config = TimeoutConfig(connect=5.0, read=5.0, lifetime=10.0)
 
     result: DNSResult = _make_empty_result(domain, record_type)
 

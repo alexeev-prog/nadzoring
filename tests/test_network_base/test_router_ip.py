@@ -6,11 +6,41 @@ from socket import gaierror
 from nadzoring.network_base.router_ip import (
     _get_linux_router_ip,
     _get_windows_router_ip,
+    _is_valid_ipv4,
+    _is_valid_ipv6,
     check_ipv4,
     check_ipv6,
     get_ip_from_host,
     router_ip,
 )
+
+
+def test_is_valid_ipv4_true():
+    assert _is_valid_ipv4("192.168.1.1") is True
+    assert _is_valid_ipv4("0.0.0.0") is True
+    assert _is_valid_ipv4("255.255.255.255") is True
+
+
+def test_is_valid_ipv4_false():
+    assert _is_valid_ipv4("256.1.1.1") is False
+    assert _is_valid_ipv4("192.168.1") is False
+    assert _is_valid_ipv4("192.168.1.1.1") is False
+    assert _is_valid_ipv4("not-an-ip") is False
+    assert _is_valid_ipv4("") is False
+
+
+def test_is_valid_ipv6_true():
+    assert _is_valid_ipv6("2001:db8::1") is True
+    assert _is_valid_ipv6("::1") is True
+    assert _is_valid_ipv6("::") is True
+    assert _is_valid_ipv6("fe80::1") is True
+
+
+def test_is_valid_ipv6_false():
+    assert _is_valid_ipv6("not-ipv6") is False
+    assert _is_valid_ipv6("192.168.1.1") is False
+    assert _is_valid_ipv6("2001:db8::1::2") is False
+    assert _is_valid_ipv6("") is False
 
 
 def test_get_ip_from_host_resolves_hostname(mocker):
@@ -102,6 +132,13 @@ def test_check_ipv4_empty_string(mocker):
     mock = mocker.patch("nadzoring.network_base.router_ip.get_ip_from_host", return_value="")
     check_ipv4("")
     mock.assert_called_once_with("")
+
+
+def test_check_ipv4_with_valid_ipv4_but_non_digit_octets(mocker):
+    """Test that IP with valid format but non-digit parts is resolved."""
+    mock = mocker.patch("nadzoring.network_base.router_ip.get_ip_from_host", return_value="1.2.3.4")
+    result = check_ipv4("192.168.1.abc")
+    mock.assert_called_once_with("192.168.1.abc")
 
 
 def test_check_ipv6_compressed():
@@ -242,12 +279,24 @@ def test_linux_router_gateway_as_hostname(mocker):
     mocker.patch(
         "nadzoring.network_base.router_ip.check_output",
         return_value=_make_route_bytes(
-            mocker, "default        gateway.local    0.0.0.0         UG    100    0        0 eth0\n"
+            mocker,
+            "default        gateway.local    0.0.0.0         UG    100    0        0 eth0\n",
         ),
     )
     mock_cv4 = mocker.patch("nadzoring.network_base.router_ip.check_ipv4", return_value="192.168.1.1")
     _get_linux_router_ip(ipv6=False)
     mock_cv4.assert_called_once_with("gateway.local")
+
+
+def test_linux_router_with_check_ipv4_returning_different_value(mocker):
+    """Test that the returned value from check_ipv4 is used."""
+    mocker.patch(
+        "nadzoring.network_base.router_ip.check_output",
+        return_value=_make_route_bytes(mocker, "default        gateway.local    0.0.0.0         UG\n"),
+    )
+    mocker.patch("nadzoring.network_base.router_ip.check_ipv4", return_value="10.0.0.1")
+    result = _get_linux_router_ip(ipv6=False)
+    assert result == "10.0.0.1"
 
 
 def test_windows_router_ipv4_success(mocker):
@@ -300,6 +349,15 @@ def test_windows_router_index_error_returns_none(mocker):
     mb.decode.return_value = "0.0.0.0\n"
     mocker.patch("nadzoring.network_base.router_ip.check_output", return_value=mb)
     assert _get_windows_router_ip(ipv6=False) is None
+
+
+def test_windows_router_with_check_ipv4_returning_different_value(mocker):
+    mb = mocker.MagicMock()
+    mb.decode.return_value = "0.0.0.0  0.0.0.0  192.168.1.1  interface  25\n"
+    mocker.patch("nadzoring.network_base.router_ip.check_output", return_value=mb)
+    mocker.patch("nadzoring.network_base.router_ip.check_ipv4", return_value="10.0.0.1")
+    result = _get_windows_router_ip(ipv6=False)
+    assert result == "10.0.0.1"
 
 
 def test_router_ip_linux(mocker):

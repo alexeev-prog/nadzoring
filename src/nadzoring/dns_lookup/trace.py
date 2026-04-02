@@ -25,6 +25,10 @@ _ROOT_NAMESERVER = "198.41.0.4"
 _MAX_HOPS = 30
 _DELEGATION_TIMEOUT = 5
 
+_TRACE_CONNECT_TIMEOUT = 5.0
+_TRACE_READ_TIMEOUT = 3.0
+_TRACE_LIFETIME_TIMEOUT = 5.0
+
 
 def _create_hop(nameserver: str) -> dict[str, Any]:
     """
@@ -148,7 +152,8 @@ def trace_dns(
         domain: Domain name to trace (e.g. ``"example.com"``).
         nameserver: Starting nameserver IP. Defaults to ``a.root-servers.net``
             (``198.41.0.4``) when ``None``.
-        timeout_config: Unified timeout configuration. If None, uses default.
+        timeout_config: Unified timeout configuration. If None, uses trace-specific
+            defaults (connect=5.0, read=3.0, lifetime=5.0).
 
     Returns:
         Dict with ``domain``, ``hops`` (list of hop dicts), and
@@ -161,7 +166,11 @@ def trace_dns(
 
     """
     if timeout_config is None:
-        timeout_config = TimeoutConfig()
+        timeout_config = TimeoutConfig(
+            connect=_TRACE_CONNECT_TIMEOUT,
+            read=_TRACE_READ_TIMEOUT,
+            lifetime=_TRACE_LIFETIME_TIMEOUT,
+        )
 
     result: dict[str, Any] = {
         "domain": domain,
