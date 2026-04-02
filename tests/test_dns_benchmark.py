@@ -1,3 +1,4 @@
+# tests/test_utils/test_dns_benchmark.py
 import asyncio
 from unittest.mock import AsyncMock, patch
 
@@ -61,6 +62,7 @@ def test_benchmark_single_server_async_collects_success_and_failures(
             record_type="A",
             queries=3,
             delay=0,
+            timeout_config=None,
         )
     )
 
@@ -80,7 +82,14 @@ def test_benchmark_single_server_async_collects_success_and_failures(
     new_callable=AsyncMock,
 )
 def test_benchmark_dns_servers_parallel_returns_sorted_results(mock_single_async):
-    async def _fake(server: str, domain: str, record_type: str, queries: int, delay: float = 0.1):
+    async def _fake(
+        server: str,
+        domain: str,
+        record_type: str,
+        queries: int,
+        delay: float = 0.1,
+        timeout_config=None,
+    ):
         await asyncio.sleep(0)
         if server == "8.8.8.8":
             return _result(server, 25.0, total=queries)
@@ -200,7 +209,14 @@ def test_benchmark_dns_servers_async_works_inside_running_loop(mock_single_async
 def test_benchmark_dns_servers_parallel_returns_fallback_on_unexpected_error(
     mock_single_async,
 ):
-    async def _fake(server: str, domain: str, record_type: str, queries: int, delay: float = 0.1):
+    async def _fake(
+        server: str,
+        domain: str,
+        record_type: str,
+        queries: int,
+        delay: float = 0.1,
+        timeout_config=None,
+    ):
         await asyncio.sleep(0)
         if server == "8.8.8.8":
             raise RuntimeError("boom")

@@ -18,6 +18,7 @@ from nadzoring.arp import (
 from nadzoring.arp.realtime import ARPRealtimeDetector
 from nadzoring.logger import get_logger
 from nadzoring.utils.decorators import common_cli_options
+from nadzoring.utils.timeout import TimeoutConfig
 
 logger: Logger = get_logger(__name__)
 
@@ -108,7 +109,7 @@ def detect_spoofing(interfaces: tuple[str, ...], *, quiet: bool) -> list[dict[st
 
 
 @arp_group.command(name="monitor-spoofing")
-@common_cli_options(include_quiet=True, include_output=True, include_save=True)
+@common_cli_options(include_quiet=True, include_timeout=True)
 @click.option(
     "--interface",
     "-i",
@@ -122,21 +123,12 @@ def detect_spoofing(interfaces: tuple[str, ...], *, quiet: bool) -> list[dict[st
     help="Number of packets to capture (default: 10).",
     show_default=True,
 )
-@click.option(
-    "--timeout",
-    "-t",
-    default=30,
-    help="Timeout in seconds (default: 30).",
-    show_default=True,
-)
 def monitor_spoofing(
     interface: str | None,
     count: int,
-    timeout: int,
+    timeout_config: TimeoutConfig,
     *,
     quiet: bool,
-    output: str,
-    save: str | None,
 ) -> list[dict[str, Any]]:
     """
     Monitor network for ARP spoofing attacks in real-time.
@@ -174,7 +166,7 @@ def monitor_spoofing(
             prn=packet_callback,
             store=False,
             count=count if count > 0 else None,
-            timeout=timeout if timeout > 0 else None,
+            timeout=timeout_config.lifetime if timeout_config.lifetime > 0 else None,
         )
 
         if not quiet:

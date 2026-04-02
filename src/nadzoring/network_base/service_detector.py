@@ -7,6 +7,7 @@ from typing import Literal
 
 from nadzoring.logger import get_logger
 from nadzoring.network_base.service_on_port import get_service_on_port
+from nadzoring.utils.timeout import TimeoutConfig
 
 logger: Logger = get_logger(__name__)
 
@@ -53,7 +54,7 @@ def detect_service_on_host(
     host: str,
     port: int,
     *,
-    timeout: float = 3.0,
+    timeout_config: TimeoutConfig | None = None,
     send_probe: bool = True,
 ) -> ServiceDetectionResult:
     """
@@ -73,7 +74,7 @@ def detect_service_on_host(
     Args:
         host: Target hostname or IP address to scan
         port: Port number to connect to for service detection
-        timeout: Connection timeout in seconds (default: 3.0)
+        timeout_config: Unified timeout configuration.
         send_probe: Whether to send a protocol-specific probe string
                    (e.g., "HEAD /" for HTTP) to elicit a banner response
 
@@ -98,12 +99,15 @@ def detect_service_on_host(
         - Common service signatures are defined in SERVICE_SIGNATURES
 
     """
+    if timeout_config is None:
+        timeout_config = TimeoutConfig()
+
     guessed: str = get_service_on_port(port)
 
     sock = None
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(timeout)
+        sock.settimeout(timeout_config.connect)
         sock.connect((host, port))
 
         if send_probe:

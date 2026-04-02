@@ -25,6 +25,7 @@ from dns.resolver import Answer, Resolver
 
 from nadzoring.dns_lookup.utils import create_resolver
 from nadzoring.logger import get_logger
+from nadzoring.utils.timeout import TimeoutConfig
 
 logger: Logger = get_logger(__name__)
 
@@ -42,6 +43,7 @@ def _make_result(ip_address: str) -> dict[str, str | float | None]:
 def reverse_dns(
     ip_address: str,
     nameserver: str | None = None,
+    timeout_config: TimeoutConfig | None = None,
 ) -> dict[str, str | float | None]:
     """
     Perform a reverse DNS lookup to resolve an IP address to a hostname.
@@ -60,6 +62,7 @@ def reverse_dns(
         ip_address: IPv4 or IPv6 address to look up (e.g. ``"8.8.8.8"``).
         nameserver: Optional nameserver IP address.  ``None`` uses the
             system default resolvers.
+        timeout_config: Unified timeout configuration. If None, uses default.
 
     Returns:
         Dict with the following keys:
@@ -106,10 +109,13 @@ def reverse_dns(
             result = reverse_dns("8.8.8.8", nameserver="1.1.1.1")
 
     """
+    if timeout_config is None:
+        timeout_config = TimeoutConfig()
+
     result: dict[str, float | str | None] = _make_result(ip_address)
 
     try:
-        resolver: Resolver = create_resolver(nameserver)
+        resolver: Resolver = create_resolver(nameserver, timeout_config)
         reverse_name: Name = dns.reversename.from_address(ip_address)
 
         start_time: float = time()

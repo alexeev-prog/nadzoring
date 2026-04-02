@@ -1,3 +1,4 @@
+# tests/test_network_base/test_port_scanner.py
 """Tests for nadzoring.network_base.port_scanner — 100% coverage."""
 
 import socket
@@ -18,6 +19,10 @@ from nadzoring.network_base.port_scanner import (
     resolve_target,
     scan_ports,
 )
+from nadzoring.utils.timeout import TimeoutConfig
+
+TIMEOUT_CONFIG = TimeoutConfig(connect=1.0, read=2.0, lifetime=5.0)
+
 
 # ---------------------------------------------------------------------------
 # resolve_target
@@ -103,7 +108,7 @@ def test_custom_no_ports_no_range_returns_empty():
 
 def test_unknown_mode_returns_empty():
     cfg = ScanConfig(targets=["x"], mode="fast")
-    cfg.mode = "unknown"  # type: ignore[assignment]
+    cfg.mode = "unknown"
     assert get_ports_from_mode(cfg) == []
 
 
@@ -257,7 +262,7 @@ def test_scan_tcp_port_open(mocker):
     mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
     mocker.patch("nadzoring.network_base.port_scanner.get_service_on_port", return_value="http")
 
-    port, result = _scan_tcp_port("192.168.1.1", 80, grab_banner=False)
+    port, result = _scan_tcp_port("192.168.1.1", 80, TIMEOUT_CONFIG, grab_banner=False)
     assert result.state == "open"
     assert result.service == "http"
     assert port == 80
@@ -273,7 +278,7 @@ def test_scan_tcp_port_open_with_banner(mocker):
         return_value="HTTP/1.1 200 OK",
     )
 
-    port, result = _scan_tcp_port("192.168.1.1", 80, grab_banner=True)
+    port, result = _scan_tcp_port("192.168.1.1", 80, TIMEOUT_CONFIG, grab_banner=True)
     assert result.banner == "HTTP/1.1 200 OK"
 
 
@@ -284,7 +289,7 @@ def test_scan_tcp_port_open_banner_none(mocker):
     mocker.patch("nadzoring.network_base.port_scanner.get_service_on_port", return_value="http")
     mocker.patch("nadzoring.network_base.port_scanner._grab_banner", return_value=None)
 
-    _, result = _scan_tcp_port("192.168.1.1", 80, grab_banner=True)
+    _, result = _scan_tcp_port("192.168.1.1", 80, TIMEOUT_CONFIG, grab_banner=True)
     assert result.banner is None
 
 
@@ -293,7 +298,7 @@ def test_scan_tcp_port_closed_111(mocker):
     mock_sock.connect_ex.return_value = 111
     mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
 
-    _, result = _scan_tcp_port("192.168.1.1", 80, grab_banner=False)
+    _, result = _scan_tcp_port("192.168.1.1", 80, TIMEOUT_CONFIG, grab_banner=False)
     assert result.state == "closed"
 
 
@@ -302,16 +307,16 @@ def test_scan_tcp_port_closed_61(mocker):
     mock_sock.connect_ex.return_value = 61
     mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
 
-    _, result = _scan_tcp_port("192.168.1.1", 80, grab_banner=False)
+    _, result = _scan_tcp_port("192.168.1.1", 80, TIMEOUT_CONFIG, grab_banner=False)
     assert result.state == "closed"
 
 
 def test_scan_tcp_port_filtered_other_code(mocker):
     mock_sock = mocker.MagicMock()
-    mock_sock.connect_ex.return_value = 13  # EACCES
+    mock_sock.connect_ex.return_value = 13
     mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
 
-    _, result = _scan_tcp_port("192.168.1.1", 80, grab_banner=False)
+    _, result = _scan_tcp_port("192.168.1.1", 80, TIMEOUT_CONFIG, grab_banner=False)
     assert result.state == "filtered"
 
 
@@ -320,7 +325,7 @@ def test_scan_tcp_port_timeout_error(mocker):
     mock_sock.connect_ex.side_effect = TimeoutError
     mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
 
-    _, result = _scan_tcp_port("192.168.1.1", 80, grab_banner=False)
+    _, result = _scan_tcp_port("192.168.1.1", 80, TIMEOUT_CONFIG, grab_banner=False)
     assert result.state == "filtered"
 
 
@@ -329,7 +334,7 @@ def test_scan_tcp_port_generic_exception(mocker):
     mock_sock.connect_ex.side_effect = OSError("err")
     mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
 
-    _, result = _scan_tcp_port("192.168.1.1", 80, grab_banner=False)
+    _, result = _scan_tcp_port("192.168.1.1", 80, TIMEOUT_CONFIG, grab_banner=False)
     assert result.state == "filtered"
 
 
@@ -339,7 +344,7 @@ def test_scan_tcp_port_response_time_set(mocker):
     mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
     mocker.patch("nadzoring.network_base.port_scanner.get_service_on_port", return_value="http")
 
-    _, result = _scan_tcp_port("192.168.1.1", 80, grab_banner=False)
+    _, result = _scan_tcp_port("192.168.1.1", 80, TIMEOUT_CONFIG, grab_banner=False)
     assert result.response_time is not None
 
 
@@ -347,7 +352,7 @@ def test_scan_tcp_sock_closed_on_exception(mocker):
     mock_sock = mocker.MagicMock()
     mock_sock.connect_ex.side_effect = OSError("err")
     mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
-    _scan_tcp_port("192.168.1.1", 80, grab_banner=False)
+    _scan_tcp_port("192.168.1.1", 80, TIMEOUT_CONFIG, grab_banner=False)
     mock_sock.close.assert_called_once()
 
 
@@ -362,7 +367,7 @@ def test_scan_udp_open_on_response(mocker):
     mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
     mocker.patch("nadzoring.network_base.port_scanner.get_service_on_port", return_value="dns")
 
-    _, result = _scan_udp_port("192.168.1.1", 53)
+    _, result = _scan_udp_port("192.168.1.1", 53, TIMEOUT_CONFIG)
     assert result.state == "open"
     assert result.service == "dns"
 
@@ -372,7 +377,7 @@ def test_scan_udp_open_filtered_on_timeout(mocker):
     mock_sock.recvfrom.side_effect = TimeoutError
     mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
 
-    _, result = _scan_udp_port("192.168.1.1", 53)
+    _, result = _scan_udp_port("192.168.1.1", 53, TIMEOUT_CONFIG)
     assert result.state == "open|filtered"
 
 
@@ -383,7 +388,7 @@ def test_scan_udp_closed_on_errno_10054(mocker):
     mock_sock.recvfrom.side_effect = err
     mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
 
-    _, result = _scan_udp_port("192.168.1.1", 53)
+    _, result = _scan_udp_port("192.168.1.1", 53, TIMEOUT_CONFIG)
     assert result.state == "closed"
 
 
@@ -394,7 +399,7 @@ def test_scan_udp_other_oserror_stays_filtered(mocker):
     mock_sock.recvfrom.side_effect = err
     mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
 
-    _, result = _scan_udp_port("192.168.1.1", 53)
+    _, result = _scan_udp_port("192.168.1.1", 53, TIMEOUT_CONFIG)
     assert result.state == "filtered"
 
 
@@ -403,7 +408,7 @@ def test_scan_udp_generic_exception(mocker):
     mock_sock.sendto.side_effect = Exception("err")
     mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
 
-    _, result = _scan_udp_port("192.168.1.1", 53)
+    _, result = _scan_udp_port("192.168.1.1", 53, TIMEOUT_CONFIG)
     assert result.state == "filtered"
 
 
@@ -413,7 +418,7 @@ def test_scan_udp_response_time_set(mocker):
     mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
     mocker.patch("nadzoring.network_base.port_scanner.get_service_on_port", return_value="dns")
 
-    _, result = _scan_udp_port("192.168.1.1", 53)
+    _, result = _scan_udp_port("192.168.1.1", 53, TIMEOUT_CONFIG)
     assert result.response_time is not None
 
 
@@ -421,7 +426,7 @@ def test_scan_udp_sock_closed(mocker):
     mock_sock = mocker.MagicMock()
     mock_sock.sendto.side_effect = Exception("err")
     mocker.patch("nadzoring.network_base.port_scanner.socket.socket", return_value=mock_sock)
-    _scan_udp_port("192.168.1.1", 53)
+    _scan_udp_port("192.168.1.1", 53, TIMEOUT_CONFIG)
     mock_sock.close.assert_called_once()
 
 
@@ -441,6 +446,7 @@ def test_scan_target_ports_tcp(mocker):
         custom_ports=[80],
         max_workers=1,
         grab_banner=False,
+        timeout_config=TIMEOUT_CONFIG,
     )
     result = _scan_target_ports("192.168.1.1", [80], cfg, "192.168.1.1")
     assert isinstance(result, ScanResult)
@@ -459,6 +465,7 @@ def test_scan_target_ports_udp(mocker):
         protocol="udp",
         max_workers=1,
         grab_banner=False,
+        timeout_config=TIMEOUT_CONFIG,
     )
     result = _scan_target_ports("192.168.1.1", [53], cfg, "192.168.1.1")
     assert 53 in result.results
@@ -476,11 +483,11 @@ def test_scan_target_ports_progress_callback(mocker):
         custom_ports=[80],
         max_workers=1,
         grab_banner=False,
+        timeout_config=TIMEOUT_CONFIG,
         progress_callback=lambda msg, done, total: calls.append((msg, done, total)),
     )
     _scan_target_ports("192.168.1.1", [80], cfg, "x")
     assert len(calls) > 0
-    # Final "Completed" call
     assert any("Completed" in c[0] for c in calls)
 
 
@@ -491,12 +498,12 @@ def test_scan_target_ports_progress_callback(mocker):
 
 def test_scan_ports_unresolvable_target(mocker):
     mocker.patch("nadzoring.network_base.port_scanner.resolve_target", return_value=None)
-    cfg = ScanConfig(targets=["bad.host"], mode="fast")
+    cfg = ScanConfig(targets=["bad.host"], mode="fast", timeout_config=TIMEOUT_CONFIG)
     assert scan_ports(cfg) == []
 
 
 def test_scan_ports_empty_port_list(mocker):
-    cfg = ScanConfig(targets=["x"], mode="custom")
+    cfg = ScanConfig(targets=["x"], mode="custom", timeout_config=TIMEOUT_CONFIG)
     assert scan_ports(cfg) == []
 
 
@@ -506,7 +513,7 @@ def test_scan_ports_returns_scan_result(mocker):
         "nadzoring.network_base.port_scanner._scan_target_ports",
         return_value=mocker.MagicMock(spec=ScanResult),
     )
-    cfg = ScanConfig(targets=["host"], mode="fast")
+    cfg = ScanConfig(targets=["host"], mode="fast", timeout_config=TIMEOUT_CONFIG)
     results = scan_ports(cfg)
     assert len(results) == 1
 
@@ -517,7 +524,7 @@ def test_scan_ports_multiple_targets(mocker):
         "nadzoring.network_base.port_scanner._scan_target_ports",
         return_value=mocker.MagicMock(spec=ScanResult),
     )
-    cfg = ScanConfig(targets=["h1", "h2", "h3"], mode="fast")
+    cfg = ScanConfig(targets=["h1", "h2", "h3"], mode="fast", timeout_config=TIMEOUT_CONFIG)
     assert len(scan_ports(cfg)) == 3
 
 
@@ -530,5 +537,5 @@ def test_scan_ports_mixed_targets(mocker):
         "nadzoring.network_base.port_scanner._scan_target_ports",
         return_value=mocker.MagicMock(spec=ScanResult),
     )
-    cfg = ScanConfig(targets=["good", "bad"], mode="fast")
+    cfg = ScanConfig(targets=["good", "bad"], mode="fast", timeout_config=TIMEOUT_CONFIG)
     assert len(scan_ports(cfg)) == 1

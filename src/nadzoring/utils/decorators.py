@@ -3,6 +3,7 @@
 import functools
 import json
 from collections.abc import Callable
+from dataclasses import dataclass
 from time import time
 from types import SimpleNamespace
 from typing import Any, TypeVar, cast
@@ -17,106 +18,216 @@ from nadzoring.utils.formatters import (
     print_results_table,
     save_results,
 )
+from nadzoring.utils.timeout import TimeoutConfig
 
 F = TypeVar("F", bound=Callable[..., Any])
 
+_DEFAULT_CONNECT_TIMEOUT: float = 5.0
+_DEFAULT_READ_TIMEOUT: float = 10.0
+_DEFAULT_LIFETIME_TIMEOUT: float = 30.0
 
-def common_cli_options(
-    *,
-    include_verbose: bool = False,
-    include_quiet: bool = False,
-    include_no_color: bool = False,
-    include_output: bool = False,
-    include_save: bool = False,
-) -> Callable[[F], F]:
+
+@dataclass(frozen=True)
+class _CliOptionSpec:
+    """Descriptor for a single injectable CLI option group.
+
+    Adding a new option to the decorator requires only a new entry in
+    ``_OPTION_REGISTRY`` — nothing else in this file changes.
+
+    Attributes:
+        flag: Keyword argument name for ``common_cli_options``,
+            e.g. ``"include_verbose"``.
+        kwarg: Parameter name injected into the wrapped function,
+            e.g. ``"verbose"``.
+        click_options: Click option decorators that register the underlying
+            CLI flags.  May be empty when the injected value is synthesised
+            from multiple raw flags (e.g. ``timeout_config``).
+        extractor: ``(kwargs) -> value`` — pops the relevant keys from the
+            raw kwargs dict and returns the value to inject.
+        default: Value used when the option group is disabled.
     """
-    Decorator factory that adds common CLI options to click commands.
 
-    This decorator provides standardized CLI options across all commands,
-    with selective inclusion based on the command's needs. It handles:
-    - Logging configuration (verbose/quiet modes)
-    - Output format selection (table, json, csv, html, yaml)
-    - Result saving to files
-    - Performance timing in verbose mode
+    flag: str
+    kwarg: str
+    click_options: tuple[Any, ...]
+    extractor: Callable[[dict[str, Any]], Any]
+    default: Any
+
+
+def _make_timeout_config(kwargs: dict[str, Any]) -> TimeoutConfig:
+    """Pop timeout-related kwargs and build a TimeoutConfig.
+
+    Resolution order for ``connect`` and ``read``:
+    1. Explicit ``--connect-timeout`` / ``--read-timeout``.
+    2. Generic ``--timeout`` (lifetime fallback for both phases).
+    3. Module-level defaults.
 
     Args:
-        include_verbose: If True, pass verbose flag to the wrapped function.
-            Defaults to False.
-        include_quiet: If True, pass quiet flag to the wrapped function.
-            Defaults to False.
-        include_no_color: If True, pass no_color flag to the wrapped function.
-            Defaults to False.
-        include_output: If True, pass output format to the wrapped function.
-            Defaults to False.
-        include_save: If True, pass save path to the wrapped function.
-            Defaults to False.
+        kwargs: Mutable dict from the wrapper call.
 
     Returns:
-        A decorator function that wraps a click command with common options.
+        Fully populated TimeoutConfig.
+
+    """
+    lifetime: float | None = kwargs.pop("timeout", None)
+    connect: float | None = kwargs.pop("connect_timeout", None)
+    read: float | None = kwargs.pop("read_timeout", None)
+
+    return TimeoutConfig(
+        connect=(connect if connect is not None else (lifetime if lifetime is not None else _DEFAULT_CONNECT_TIMEOUT)),
+        read=(read if read is not None else (lifetime if lifetime is not None else _DEFAULT_READ_TIMEOUT)),
+        lifetime=lifetime if lifetime is not None else _DEFAULT_LIFETIME_TIMEOUT,
+    )
+
+
+_OPTION_REGISTRY: tuple[_CliOptionSpec, ...] = (
+    _CliOptionSpec(
+        flag="include_verbose",
+        kwarg="verbose",
+        click_options=(click.option("--verbose", is_flag=True, help="Verbose output (DEBUG level)"),),
+        extractor=lambda kw: kw.pop("verbose", False),
+        default=False,
+    ),
+    _CliOptionSpec(
+        flag="include_quiet",
+        kwarg="quiet",
+        click_options=(click.option("--quiet", is_flag=True, help="Quiet mode (no logs, only results)"),),
+        extractor=lambda kw: kw.pop("quiet", False),
+        default=False,
+    ),
+    _CliOptionSpec(
+        flag="include_no_color",
+        kwarg="no_color",
+        click_options=(click.option("--no-color", is_flag=True, help="Disable colored output"),),
+        extractor=lambda kw: kw.pop("no_color", False),
+        default=False,
+    ),
+    _CliOptionSpec(
+        flag="include_output",
+        kwarg="output",
+        click_options=(
+            click.option(
+                "--output",
+                "-o",
+                type=click.Choice(["table", "json", "csv", "html", "html_table", "yaml"]),
+                default="table",
+                help="Output format",
+            ),
+        ),
+        extractor=lambda kw: kw.pop("output", "table"),
+        default="table",
+    ),
+    _CliOptionSpec(
+        flag="include_save",
+        kwarg="save",
+        click_options=(click.option("--save", type=click.Path(), help="Save results to file"),),
+        extractor=lambda kw: kw.pop("save", None),
+        default=None,
+    ),
+    _CliOptionSpec(
+        flag="include_timeout",
+        kwarg="timeout_config",
+        click_options=(
+            click.option(
+                "--timeout",
+                type=float,
+                default=None,
+                help="Lifetime timeout for the entire operation (seconds).",
+            ),
+            click.option(
+                "--connect-timeout",
+                type=float,
+                default=None,
+                help=f"Connection timeout (seconds). Falls back to --timeout, then {_DEFAULT_CONNECT_TIMEOUT}.",
+            ),
+            click.option(
+                "--read-timeout",
+                type=float,
+                default=None,
+                help=f"Read timeout (seconds). Falls back to --timeout, then {_DEFAULT_READ_TIMEOUT}.",
+            ),
+        ),
+        extractor=_make_timeout_config,
+        default=None,
+    ),
+)
+
+_REGISTRY_BY_FLAG: dict[str, _CliOptionSpec] = {spec.flag: spec for spec in _OPTION_REGISTRY}
+
+_ALWAYS_EXTRACTED: frozenset[str] = frozenset({"verbose", "quiet", "no_color", "output", "save"})
+
+
+def common_cli_options(**enabled_flags: bool) -> Callable[[F], F]:
+    """Decorator factory that adds common CLI options to click commands.
+
+    Pass any subset of the known ``include_*`` flags as keyword arguments.
+    Unknown flag names raise ``ValueError`` at decoration time.
+
+    Known flags (see ``_OPTION_REGISTRY`` for the authoritative list):
+        ``include_verbose``, ``include_quiet``, ``include_no_color``,
+        ``include_output``, ``include_save``, ``include_timeout``.
+
+    Args:
+        **enabled_flags: Mapping of ``include_<name>`` → ``bool``.
+            Omitted flags default to ``False``.
+
+    Returns:
+        A decorator that wraps a click command with the requested options.
+
+    Raises:
+        ValueError: If an unknown flag name is supplied.
 
     Example:
         @click.command()
-        @common_cli_options(include_verbose=True)
-        def my_command(verbose: bool) -> None:
-            '''My command implementation.'''
-            if verbose:
-                click.echo("Running in verbose mode")
+        @common_cli_options(include_verbose=True, include_timeout=True)
+        def port_scan(verbose: bool, timeout_config: TimeoutConfig) -> dict:
+            ...
 
     """
+    unknown = set(enabled_flags) - _REGISTRY_BY_FLAG.keys()
+    if unknown:
+        raise ValueError(f"Unknown common_cli_options flags: {unknown}")
+
+    active_specs: tuple[_CliOptionSpec, ...] = tuple(spec for spec in _OPTION_REGISTRY if enabled_flags.get(spec.flag))
 
     def decorator(func: F) -> F:
-        """Apply common CLI options decorators to the function."""
         decorated_func: F = func
-        decorated_func = click.option("--verbose", is_flag=True, help="Verbose output (DEBUG level)")(decorated_func)
-        decorated_func = click.option("--quiet", is_flag=True, help="Quiet mode (no logs, only results)")(
-            decorated_func
-        )
-        decorated_func = click.option("--no-color", is_flag=True, help="Disable colored output")(decorated_func)
-        decorated_func = click.option(
-            "--output",
-            "-o",
-            type=click.Choice(["table", "json", "csv", "html", "html_table", "yaml"]),
-            default="table",
-            help="Output format",
-        )(decorated_func)
-        decorated_func = click.option("--save", type=click.Path(), help="Save results to file")(decorated_func)
+
+        for spec in _OPTION_REGISTRY:
+            if enabled_flags.get(spec.flag) or spec.kwarg in _ALWAYS_EXTRACTED:
+                for click_opt in reversed(spec.click_options):
+                    decorated_func = click_opt(decorated_func)
 
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            """
-            Wrapper function that handles CLI options and output formatting.
+            extracted: dict[str, Any] = {
+                spec.kwarg: spec.extractor(kwargs)
+                for spec in _OPTION_REGISTRY
+                if enabled_flags.get(spec.flag) or spec.kwarg in _ALWAYS_EXTRACTED
+            }
 
-            Args:
-                *args: Variable positional arguments passed to the wrapped function.
-                **kwargs: Variable keyword arguments passed to the wrapped function.
-
-            Returns:
-                The result of the wrapped function.
-
-            """
-            cli_options: SimpleNamespace = _extract_cli_options(kwargs)
-
-            func_kwargs: dict[str, Any] = _filter_func_kwargs(
-                kwargs,
-                cli_options,
-                include_verbose=include_verbose,
-                include_quiet=include_quiet,
-                include_no_color=include_no_color,
-                include_output=include_output,
-                include_save=include_save,
+            cli_opts = SimpleNamespace(
+                verbose=extracted["verbose"],
+                quiet=extracted["quiet"],
+                no_color=extracted["no_color"],
+                output=extracted["output"],
+                save=extracted["save"],
             )
 
-            _setup_logging(cli_options)
+            func_kwargs: dict[str, Any] = {
+                **kwargs,
+                **{spec.kwarg: extracted[spec.kwarg] for spec in active_specs},
+            }
 
-            start_time: float = time()
+            _setup_logging(cli_opts)
+
+            start: float = time()
             result = func(*args, **func_kwargs)
-            elapsed: float = time() - start_time
+            elapsed: float = time() - start
 
-            _handle_output(result, cli_options.output, no_color=cli_options.no_color)
-
-            _handle_save(result, cli_options.save, cli_options.output)
-
-            _show_completion_time(elapsed, verbose=cli_options.verbose)
+            _handle_output(result, cli_opts.output, no_color=cli_opts.no_color)
+            _handle_save(result, cli_opts.save, cli_opts.output)
+            _show_completion_time(elapsed, verbose=cli_opts.verbose)
 
             return result
 
@@ -125,84 +236,11 @@ def common_cli_options(
     return decorator
 
 
-def _extract_cli_options(kwargs: dict[str, Any]) -> SimpleNamespace:
-    """
-    Extract CLI options from function keyword arguments.
-
-    This function removes CLI-specific options from the kwargs dictionary
-    and returns them as a SimpleNamespace object.
-
-    Args:
-        kwargs: Dictionary of keyword arguments passed to the wrapped function.
-
-    Returns:
-        SimpleNamespace containing extracted CLI options with default values
-        for any missing options.
-
-    """
-    return SimpleNamespace(
-        verbose=kwargs.pop("verbose", False),
-        quiet=kwargs.pop("quiet", False),
-        no_color=kwargs.pop("no_color", False),
-        output=kwargs.pop("output", "table"),
-        save=kwargs.pop("save", None),
-    )
-
-
-def _filter_func_kwargs(
-    kwargs: dict[str, Any],
-    cli_options: SimpleNamespace,
-    *,
-    include_verbose: bool,
-    include_quiet: bool,
-    include_no_color: bool,
-    include_output: bool,
-    include_save: bool,
-) -> dict[str, Any]:
-    """
-    Filter which CLI options are passed to the wrapped function.
-
-    Based on the include flags, this function selectively adds CLI options
-    to the keyword arguments that will be passed to the wrapped function.
-
-    Args:
-        kwargs: Original keyword arguments dictionary.
-        cli_options: SimpleNamespace containing extracted CLI options.
-        include_verbose: Whether to include the verbose option.
-        include_quiet: Whether to include the quiet option.
-        include_no_color: Whether to include the no_color option.
-        include_output: Whether to include the output option.
-        include_save: Whether to include the save option.
-
-    Returns:
-        Filtered dictionary of keyword arguments for the wrapped function.
-
-    """
-    func_kwargs: dict[str, Any] = kwargs.copy()
-
-    option_mappings: list[tuple[bool, str, Any]] = [
-        (include_verbose, "verbose", cli_options.verbose),
-        (include_quiet, "quiet", cli_options.quiet),
-        (include_no_color, "no_color", cli_options.no_color),
-        (include_output, "output", cli_options.output),
-        (include_save, "save", cli_options.save),
-    ]
-
-    filtered_options: dict[str, Any] = {name: value for include, name, value in option_mappings if include}
-
-    func_kwargs.update(filtered_options)
-    return func_kwargs
-
-
 def _setup_logging(cli_options: SimpleNamespace) -> None:
-    """
-    Configure logging based on CLI options.
-
-    Sets up logging with appropriate verbosity, quiet mode, and color settings.
+    """Configure logging based on CLI options.
 
     Args:
-        cli_options: SimpleNamespace containing CLI options with verbose,
-                    quiet, and no_color attributes.
+        cli_options: Namespace with ``verbose``, ``quiet``, ``no_color``.
 
     """
     setup_cli_logging(
@@ -213,23 +251,22 @@ def _setup_logging(cli_options: SimpleNamespace) -> None:
 
 
 def _handle_output(result: Any, output_format: str, *, no_color: bool) -> None:
-    """
-    Display command results in the requested format.
+    """Render command results in the requested format.
 
     Args:
-        result: The result data from the command to display.
-        output_format: The output format to use (json, table, csv, html, html_table, yaml).
-        no_color: If True, disable colored output in table formatting.
+        result: Data returned by the command.
+        output_format: One of ``json``, ``yaml``, ``table``, ``csv``,
+            ``html``, ``html_table``.
+        no_color: Disable ANSI colours in table output.
 
     Raises:
-        click.ClickException: If there's an error processing the output format.
+        click.ClickException: On any rendering error.
 
     """
-    try:
-        if output_format == "json":
-            click.echo(json.dumps(result, indent=2, default=str, ensure_ascii=False))
-        elif output_format == "yaml":
-            yaml_output: str = yaml.dump(
+    output_handlers: dict[str, Callable[[], None]] = {
+        "json": lambda: click.echo(json.dumps(result, indent=2, default=str, ensure_ascii=False)),
+        "yaml": lambda: click.echo(
+            yaml.dump(
                 result,
                 allow_unicode=True,
                 default_flow_style=False,
@@ -237,44 +274,48 @@ def _handle_output(result: Any, output_format: str, *, no_color: bool) -> None:
                 indent=2,
                 width=120,
             )
-            click.echo(yaml_output)
-        elif output_format == "table":
-            print_results_table(result, no_color=no_color)
-        elif output_format == "csv":
-            print_csv_table(result)
-        elif output_format in {"html", "html_table"}:
-            print_html_table(result, full_page=(output_format == "html"))
+        ),
+        "table": lambda: print_results_table(result, no_color=no_color),
+        "csv": lambda: print_csv_table(result),
+        "html": lambda: print_html_table(result, full_page=True),
+        "html_table": lambda: print_html_table(result, full_page=False),
+    }
+
+    try:
+        handler = output_handlers.get(output_format)
+        if handler is not None:
+            handler()
     except Exception as e:
         raise click.ClickException(f"Error displaying output: {e}") from e
 
 
 def _handle_save(result: Any, save_path: str | None, output_format: str) -> None:
-    """
-    Save command results to a file if a save path is provided.
+    """Persist command results to a file when a path is provided.
 
     Args:
-        result: The result data from the command to save.
-        save_path: Path where the results should be saved, or None if not saving.
-        output_format: The output format to use for saving.
+        result: Data returned by the command.
+        save_path: Destination path, or ``None`` to skip.
+        output_format: Format used when serialising.
 
     Raises:
-        click.ClickException: If there's an error saving the file.
+        click.ClickException: On any I/O error.
 
     """
-    if save_path:
-        try:
-            save_results(result, save_path, output_format)
-        except Exception as e:
-            raise click.ClickException(f"Error saving results to {save_path}: {e}") from e
+    if save_path is None:
+        return
+
+    try:
+        save_results(result, save_path, output_format)
+    except Exception as e:
+        raise click.ClickException(f"Error saving results to {save_path}: {e}") from e
 
 
 def _show_completion_time(elapsed: float, *, verbose: bool) -> None:
-    """
-    Display command completion time in verbose mode.
+    """Print elapsed time when verbose mode is active.
 
     Args:
-        elapsed: Time elapsed in seconds since command started.
-        verbose: If True, display the completion time.
+        elapsed: Seconds since the command started.
+        verbose: Emit the timing line only when ``True``.
 
     """
     if verbose:

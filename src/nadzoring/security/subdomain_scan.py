@@ -11,6 +11,7 @@ import requests
 from requests import RequestException
 
 from nadzoring.logger import get_logger
+from nadzoring.utils.timeout import TimeoutConfig
 
 logger: Logger = get_logger(__name__)
 
@@ -104,12 +105,13 @@ _DEFAULT_WORDLIST: tuple[str, ...] = (
 )
 
 
-def _fetch_ct_subdomains(domain: str) -> set[str]:
+def _fetch_ct_subdomains(domain: str, timeout_config: TimeoutConfig) -> set[str]:
     """
     Query crt.sh certificate transparency logs for subdomains.
 
     Args:
         domain: The apex domain to search.
+        timeout_config: Unified timeout configuration.
 
     Returns:
         Set of unique subdomain strings discovered via CT logs.
@@ -119,7 +121,7 @@ def _fetch_ct_subdomains(domain: str) -> set[str]:
     subdomains: set[str] = set()
 
     try:
-        response = requests.get(url, timeout=20)
+        response = requests.get(url, timeout=(timeout_config.connect, timeout_config.read))
         response.raise_for_status()
         entries: list[dict[str, Any]] = response.json()
 
@@ -135,13 +137,16 @@ def _fetch_ct_subdomains(domain: str) -> set[str]:
     return subdomains
 
 
-def _probe_subdomain(subdomain: str, timeout: float) -> dict[str, Any] | None:
+def _probe_subdomain(
+    subdomain: str,
+    timeout_config: TimeoutConfig,
+) -> dict[str, Any] | None:
     """
     Attempt to resolve a subdomain and return metadata if it exists.
 
     Args:
         subdomain: Fully qualified subdomain string to probe.
-        timeout: DNS resolution timeout in seconds.
+        timeout_config: Unified timeout configuration.
 
     Returns:
         Dictionary with ``subdomain`` and ``ip`` keys if the subdomain
@@ -150,7 +155,7 @@ def _probe_subdomain(subdomain: str, timeout: float) -> dict[str, Any] | None:
     """
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(timeout)
+        sock.settimeout(timeout_config.connect)
         sock.connect((subdomain, 80))
         sock.close()
         ip: str = socket.gethostbyname(subdomain)
@@ -183,7 +188,7 @@ def scan_subdomains(
     *,
     wordlist_path: str | None = None,
     max_threads: int = 20,
-    timeout: float = 3.0,
+    timeout_config: TimeoutConfig | None = None,
 ) -> list[dict[str, Any]]:
     """
     Discover subdomains using CT logs and optional DNS brute-force.
@@ -199,8 +204,7 @@ def scan_subdomains(
             empty string to skip brute-force entirely.
         max_threads: Maximum number of concurrent DNS resolution threads.
             Defaults to ``20``.
-        timeout: Per-host DNS resolution timeout in seconds. Defaults to
-            ``3.0``.
+        timeout_config: Unified timeout configuration. If None, uses default.
 
     Returns:
         List of dictionaries for each discovered live subdomain, each
@@ -216,7 +220,10 @@ def scan_subdomains(
         ...     print(r["subdomain"], r["ip"])
 
     """
-    ct_subdomains: set[str] = _fetch_ct_subdomains(domain)
+    if timeout_config is None:
+        timeout_config = TimeoutConfig()
+
+    ct_subdomains: set[str] = _fetch_ct_subdomains(domain, timeout_config)
 
     if not wordlist_path:
         brute_candidates: set[str] = set()
@@ -242,7 +249,7 @@ def scan_subdomains(
 
     with ThreadPoolExecutor(max_workers=max_threads) as executor:
         future_to_sub: dict[Future[dict[str, Any] | None], str] = {
-            executor.submit(_probe_subdomain, sub, timeout): sub for sub in all_candidates
+            executor.submit(_probe_subdomain, sub, timeout_config): sub for sub in all_candidates
         }
         for future in as_completed(future_to_sub):
             sub = future_to_sub[future]

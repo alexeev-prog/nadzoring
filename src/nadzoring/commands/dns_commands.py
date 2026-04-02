@@ -45,6 +45,7 @@ from nadzoring.utils.formatters import (
     format_dns_record,
     format_dns_trace,
 )
+from nadzoring.utils.timeout import TimeoutConfig
 
 logger: Logger = get_logger(__name__)
 
@@ -122,7 +123,7 @@ def whois_command(domain: str, *, quiet: bool) -> list[dict[str, str]]:
 
 
 @dns_group.command(name="monitor")
-@common_cli_options(include_quiet=True)
+@common_cli_options(include_quiet=True, include_timeout=True)
 @click.argument("domain", required=True)
 @click.option(
     "--nameservers",
@@ -198,6 +199,7 @@ def monitor_command(
     min_success: float,
     log_file: str | None,
     cycles: int,
+    timeout_config: TimeoutConfig,
     *,
     no_health: bool,
     quiet: bool,
@@ -222,6 +224,7 @@ def monitor_command(
         cycles: Number of cycles to run (0 = indefinite).
         no_health: When ``True``, skip the DNS health check each cycle.
         quiet: When ``True``, suppress all console output.
+        timeout_config: unified timeout configuration.
 
     Returns:
         List of cycle-result dictionaries for ``--output`` formatting.
@@ -257,6 +260,7 @@ def monitor_command(
         run_health_check=not no_health,
         log_file=log_file,
         alert_callback=_alert_cb,
+        timeout_config=timeout_config,
     )
     monitor = DNSMonitor(config)
 
@@ -372,7 +376,7 @@ def _aggregate_log(
 
 
 @dns_group.command(name="resolve")
-@common_cli_options(include_quiet=True)
+@common_cli_options(include_quiet=True, include_timeout=True)
 @click.argument("domains", nargs=-1, required=True)
 @click.option(
     "--type",
@@ -397,6 +401,7 @@ def resolve_command(
     record_types: tuple[str, ...],
     nameserver: str | None,
     format_style: str,
+    timeout_config: TimeoutConfig,
     *,
     quiet: bool,
     short: bool,
@@ -419,6 +424,7 @@ def resolve_command(
                 record_type=rtype,
                 nameserver=nameserver,
                 include_ttl=show_ttl,
+                timeout_config=timeout_config,
             )
             domain_result["records"][rtype] = result
 
@@ -485,7 +491,7 @@ def reverse_command(
 
 
 @dns_group.command(name="check")
-@common_cli_options(include_quiet=True)
+@common_cli_options(include_quiet=True, include_timeout=True)
 @click.argument("domains", nargs=-1, required=True)
 @click.option("--nameserver", "-n", help="Specific nameserver to use.")
 @click.option(
@@ -501,6 +507,7 @@ def check_command(
     domains: tuple[str, ...],
     nameserver: str | None,
     record_types: tuple[str, ...],
+    timeout_config: TimeoutConfig,
     *,
     quiet: bool,
 ) -> list[dict[str, Any]]:
@@ -516,6 +523,7 @@ def check_command(
         record_types: Record types to query; ``ALL`` expands to every
             supported type except PTR.
         quiet: Suppress progress bar output when ``True``.
+        timeout_config: unified timeout configuration.
 
     Returns:
         List of dicts with one entry per domain. Each entry contains the
@@ -536,6 +544,7 @@ def check_command(
             record_types=types_to_check,
             validate_mx=True,
             validate_txt=True,
+            timeout_config=timeout_config,
         )
 
         row: dict[str, Any] = {"domain": domain}
@@ -564,36 +573,25 @@ def check_command(
 
 
 @dns_group.command(name="trace")
-@common_cli_options(include_quiet=True)
+@common_cli_options(include_quiet=True, include_timeout=True)
 @click.argument("domain", required=True)
 @click.option("--nameserver", "-n", help="Starting nameserver to use.")
 def trace_command(
     domain: str,
     nameserver: str | None,
+    timeout_config: TimeoutConfig,
     *,
     quiet: bool,
 ) -> list[dict[str, Any]]:
-    """
-    Trace the full DNS resolution path for a domain.
-
-    Walks the DNS delegation chain from the specified (or root) nameserver
-    down to the authoritative answer, recording each intermediate hop.
-
-    Args:
-        domain: Domain name to trace.
-        nameserver: Optional starting nameserver; defaults to a root server.
-        quiet: Suppress informational messages when ``True``.
-
-    Returns:
-        List of dicts representing each hop in the resolution path, with
-        columns ``hop``, ``nameserver``, ``response_time``, ``records``,
-        and ``next``.
-
-    """
+    """Trace the full DNS resolution path for a domain."""
     if not quiet:
         click.echo(f"Tracing DNS for {domain}...", err=True)
 
-    result: dict[str, Any] = trace_dns(domain, nameserver)
+    result: dict[str, Any] = trace_dns(
+        domain,
+        nameserver,
+        timeout_config=timeout_config,
+    )
     return format_dns_trace(result)
 
 
@@ -622,24 +620,7 @@ def compare_command(
     *,
     quiet: bool,
 ) -> list[dict[str, Any]]:
-    """
-    Compare DNS responses for a domain across multiple nameservers.
-
-    Queries each listed server for the requested record types and flags
-    any discrepancies in the returned records or response times.
-
-    Args:
-        domain: Domain name to compare.
-        servers: DNS servers to query; defaults to Google, Cloudflare, and Quad9.
-        record_types: Record types to compare; defaults to ``A``.
-        quiet: Suppress progress bar output when ``True``.
-
-    Returns:
-        List of dicts with per-server, per-type results including
-        ``server``, ``type``, ``response_time_ms``, ``records``, and
-        ``differs`` flag.
-
-    """
+    """Compare DNS responses for a domain across multiple nameservers."""
     types_to_query: list[str] = list(record_types) if record_types else ["A"]
     total: int = len(servers) * len(types_to_query)
 
@@ -663,41 +644,30 @@ def compare_command(
 
 
 @dns_group.command(name="health")
-@common_cli_options(include_quiet=True)
+@common_cli_options(include_quiet=True, include_timeout=True)
 @click.argument("domain", required=True)
 @click.option("--nameserver", "-n", help="Nameserver to use for health checks.")
 def health_command(
     domain: str,
     nameserver: str | None,
+    timeout_config: TimeoutConfig,
     *,
     quiet: bool,
 ) -> list[dict[str, Any]]:
-    """
-    Run a comprehensive DNS health check for a domain.
-
-    Scores the domain's DNS configuration (0-100) by checking record
-    presence, MX priority uniqueness, SPF completeness, DKIM key presence,
-    and correct CNAME usage.
-
-    Args:
-        domain: Domain name to check.
-        nameserver: Optional DNS server to use instead of the system default.
-        quiet: Suppress informational messages when ``True``.
-
-    Returns:
-        List of dicts with the overall health score, status, issues, and
-        warnings; followed by per-record-type score rows.
-
-    """
+    """Run a comprehensive DNS health check for a domain."""
     if not quiet:
         click.echo(f"Checking DNS health for {domain}...", err=True)
 
-    result: HealthCheckResult = health_check_dns(domain, nameserver)
+    result: HealthCheckResult = health_check_dns(
+        domain,
+        nameserver,
+        timeout_config=timeout_config,
+    )
     return format_dns_health(dict(result))
 
 
 @dns_group.command(name="benchmark")
-@common_cli_options(include_quiet=True)
+@common_cli_options(include_quiet=True, include_timeout=True)
 @click.option(
     "--domain",
     "-d",
@@ -738,31 +708,12 @@ def benchmark_command(
     servers: tuple[str, ...],
     record_type: str,
     queries: int,
+    timeout_config: TimeoutConfig,
     *,
     parallel: bool,
     quiet: bool,
 ) -> list[dict[str, Any]]:
-    """
-    Benchmark DNS server performance.
-
-    Sends a configurable number of queries to each server and reports
-    average, minimum, and maximum response times together with a success
-    rate percentage.
-
-    Args:
-        domain: Domain used for each test query.
-        servers: Servers to benchmark; when empty the default public
-            resolvers are used.
-        record_type: DNS record type to query.
-        queries: Number of queries sent to each server.
-        parallel: Run queries concurrently when ``True``.
-        quiet: Suppress progress bar output when ``True``.
-
-    Returns:
-        List of dicts with ``server``, ``avg_ms``, ``min_ms``, ``max_ms``,
-        and ``success_rate`` for each benchmarked server.
-
-    """
+    """Benchmark DNS server performance."""
     if not quiet:
         click.echo(f"Benchmarking DNS servers for {domain}...", err=True)
 
@@ -784,6 +735,7 @@ def benchmark_command(
         queries=queries,
         parallel=parallel,
         progress_callback=progress_callback if not quiet else None,
+        timeout_config=timeout_config,
     )
 
     if pbar:
@@ -802,7 +754,7 @@ def benchmark_command(
 
 
 @dns_group.command(name="poisoning")
-@common_cli_options(include_quiet=True)
+@common_cli_options(include_timeout=True)
 @click.argument("domain", required=True)
 @click.option(
     "--control-server",
@@ -837,30 +789,9 @@ def poisoning_command(
     test_servers: tuple[str, ...],
     record_type: str,
     additional_types: tuple[str, ...],
-    *,
-    quiet: bool,
+    timeout_config: TimeoutConfig,
 ) -> list[dict[str, Any]]:
-    """
-    Detect DNS poisoning, censorship, or CDN routing variations for a domain.
-
-    Compares the control server's response against multiple test servers and
-    classifies any discrepancies by severity (INFO → CRITICAL). CDN and
-    anycast patterns are recognised as legitimate and reported separately.
-
-    Args:
-        domain: Domain name to test.
-        control_server: Trusted DNS server used as the reference baseline.
-        test_servers: Additional servers to compare against the control.
-        record_type: Primary record type to check.
-        additional_types: Extra record types to query on the control server.
-        quiet: Suppress informational messages when ``True``.
-
-    Returns:
-        Formatted list of analysis rows covering control server details,
-        summary statistics, CDN detection, IP diversity, consensus data,
-        and a final verdict.
-
-    """
+    """Detect DNS poisoning, censorship, or CDN routing variations for a domain."""
     test_servers_list: list[str] | None = list(test_servers) if test_servers else None
     additional: list[str] | None = list(additional_types) if additional_types else None
 
@@ -870,6 +801,7 @@ def poisoning_command(
         test_servers_list,
         record_type,
         additional,
+        timeout_config=timeout_config,
     )
 
     return format_dns_poisoning(dict(result))

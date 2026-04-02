@@ -51,6 +51,8 @@ from cryptography.x509 import (
 )
 from cryptography.x509.oid import ExtensionOID, NameOID
 
+from nadzoring.utils.timeout import TimeoutConfig
+
 
 class CertificateInfo:
     """
@@ -72,19 +74,24 @@ class CertificateInfo:
 
     """
 
-    def __init__(self, hostname: str, port: int = 443, timeout: int = 10) -> None:
+    def __init__(
+        self,
+        hostname: str,
+        port: int = 443,
+        timeout_config: TimeoutConfig | None = None,
+    ) -> None:
         """
         Initialize CertificateInfo instance.
 
         Args:
             hostname: The domain name or IP address to connect to.
             port: The port number for SSL/TLS connection. Defaults to 443.
-            timeout: Connection timeout in seconds. Defaults to 10.
+            timeout_config: Unified timeout configuration. If None, uses default TimeoutConfig.
 
         """
         self.hostname = hostname
         self.port = port
-        self.timeout = timeout
+        self.timeout_config = timeout_config or TimeoutConfig()
         self._cert: Certificate | None = None
         self._peercert: dict[str, Any] | None = None
         self._chain: list[Certificate] = []
@@ -114,7 +121,7 @@ class CertificateInfo:
         context.load_verify_locations(certifi.where())
 
         with (
-            socket.create_connection((self.hostname, self.port), timeout=self.timeout) as sock,
+            socket.create_connection((self.hostname, self.port), timeout=int(self.timeout_config.connect)) as sock,
             context.wrap_socket(sock, server_hostname=self.hostname) as ssock,
         ):
             self._peercert = ssock.getpeercert()
@@ -153,7 +160,7 @@ class CertificateInfo:
         context.verify_mode = ssl.CERT_NONE
 
         with (
-            socket.create_connection((self.hostname, self.port), timeout=self.timeout) as sock,
+            socket.create_connection((self.hostname, self.port), timeout=int(self.timeout_config.connect)) as sock,
             context.wrap_socket(sock, server_hostname=self.hostname) as ssock,
         ):
             der_cert: bytes | None = ssock.getpeercert(binary_form=True)
@@ -392,8 +399,8 @@ def get_issuer_info(cert: Certificate) -> dict[str, str]:
         cert: The X.509 certificate to extract issuer from.
 
     Returns:
-        Dictionary mapping field names to their values.
-        Only fields present in the certificate are included.
+            Dictionary mapping field names to their values.
+            Only fields present in the certificate are included.
 
     Examples:
         >>> issuer = get_issuer_info(cert)
@@ -457,6 +464,7 @@ def _probe_tls_version(
     port: int,
     min_version: ssl.TLSVersion,
     max_version: ssl.TLSVersion,
+    timeout_config: TimeoutConfig,
 ) -> bool:
     """
     Probe whether a server accepts a specific TLS version range.
@@ -471,6 +479,7 @@ def _probe_tls_version(
         port: TCP port to connect to.
         min_version: Minimum TLS version to offer.
         max_version: Maximum TLS version to offer.
+        timeout_config: Unified timeout configuration.
 
     Returns:
         ``True`` if the server accepted the connection, ``False``
@@ -484,7 +493,7 @@ def _probe_tls_version(
         context.minimum_version = min_version
         context.maximum_version = max_version
         with (
-            socket.create_connection((hostname, port), timeout=5) as sock,
+            socket.create_connection((hostname, port), timeout=int(timeout_config.connect)) as sock,
             context.wrap_socket(sock, server_hostname=hostname),
         ):
             return True
@@ -495,6 +504,7 @@ def _probe_tls_version(
 def check_protocols_and_ciphers(
     hostname: str,
     port: int = 443,
+    timeout_config: TimeoutConfig | None = None,
 ) -> dict[str, list[str] | bool]:
     """
     Check which TLS protocol versions are accepted by a server.
@@ -507,6 +517,7 @@ def check_protocols_and_ciphers(
     Args:
         hostname: The server hostname or IP address.
         port: The port to connect to. Defaults to ``443``.
+        timeout_config: Unified timeout configuration. If None, uses default.
 
     Returns:
         Dictionary with keys:
@@ -524,6 +535,9 @@ def check_protocols_and_ciphers(
         True
 
     """
+    if timeout_config is None:
+        timeout_config = TimeoutConfig()
+
     outdated: tuple[str, ...] = ("TLSv1.0", "TLSv1.1")
 
     candidates: list[tuple[str, ssl.TLSVersion]] = [
@@ -537,7 +551,7 @@ def check_protocols_and_ciphers(
     failed: list[str] = []
 
     for version_name, tls_version in candidates:
-        if _probe_tls_version(hostname, port, tls_version, tls_version):
+        if _probe_tls_version(hostname, port, tls_version, tls_version, timeout_config):
             supported.append(version_name)
         else:
             failed.append(version_name)
@@ -593,6 +607,7 @@ def check_ssl_certificate(
     days_before: int = 7,
     *,
     verify: bool = True,
+    timeout_config: TimeoutConfig | None = None,
 ) -> dict[str, Any]:
     """
     Comprehensive SSL certificate check for a domain.
@@ -607,6 +622,7 @@ def check_ssl_certificate(
                      Defaults to 7.
         verify: Whether to perform full certificate verification.
                 Defaults to True. This is a keyword-only argument.
+        timeout_config: Unified timeout configuration. If None, uses default.
 
     Returns:
         Dictionary containing comprehensive certificate information:
@@ -641,7 +657,10 @@ def check_ssl_certificate(
         ...     print(f"Certificate expires soon: {result['remaining_days']} days")
 
     """
-    cert_info = CertificateInfo(domain)
+    if timeout_config is None:
+        timeout_config = TimeoutConfig()
+
+    cert_info = CertificateInfo(domain, timeout_config=timeout_config)
     result: dict[str, Any] = {
         "domain": domain,
         "days_before": days_before,
@@ -693,7 +712,7 @@ def check_ssl_certificate(
         result["serial_number"] = str(cert.serial_number)
         result["version"] = cert.version.value
 
-        protocols: dict[str, bool | list[str]] = check_protocols_and_ciphers(domain)
+        protocols: dict[str, bool | list[str]] = check_protocols_and_ciphers(domain, timeout_config=timeout_config)
         result["protocols"] = protocols
 
         if verify:
@@ -718,6 +737,7 @@ def check_ssl_certificate(
 def check_ssl_expiry(
     domain: str,
     days_before: int = 7,
+    timeout_config: TimeoutConfig | None = None,
 ) -> dict[str, Any]:
     """
     Check SSL certificate expiration with full verification.
@@ -730,6 +750,7 @@ def check_ssl_expiry(
         domain: The domain name to check.
         days_before: Number of days before expiry to trigger warning.
                      Defaults to 7.
+        timeout_config: Unified timeout configuration. If None, uses default.
 
     Returns:
         Same as check_ssl_certificate() with verify=True.
@@ -739,12 +760,13 @@ def check_ssl_expiry(
         >>> print(f"Certificate expires in {result['remaining_days']} days")
 
     """
-    return check_ssl_certificate(domain, days_before, verify=True)
+    return check_ssl_certificate(domain, days_before, verify=True, timeout_config=timeout_config)
 
 
 def check_ssl_expiry_with_fallback(
     domain: str,
     days_before: int = 7,
+    timeout_config: TimeoutConfig | None = None,
 ) -> dict[str, Any]:
     """
     Check SSL certificate with automatic fallback to unverified mode.
@@ -757,6 +779,7 @@ def check_ssl_expiry_with_fallback(
         domain: The domain name to check.
         days_before: Number of days before expiry to trigger warning.
                      Defaults to 7.
+        timeout_config: Unified timeout configuration. If None, uses default.
 
     Returns:
         Same as check_ssl_certificate() with verification status indicated
@@ -780,12 +803,12 @@ def check_ssl_expiry_with_fallback(
     """
     errors: list[str] = []
     try:
-        return check_ssl_certificate(domain, days_before, verify=True)
+        return check_ssl_certificate(domain, days_before, verify=True, timeout_config=timeout_config)
     except Exception as e:
         errors.append(f"Verified check failed: {e}")
 
     try:
-        return check_ssl_certificate(domain, days_before, verify=False)
+        return check_ssl_certificate(domain, days_before, verify=False, timeout_config=timeout_config)
     except Exception as e:
         errors.append(f"Unverified check failed: {e}")
 

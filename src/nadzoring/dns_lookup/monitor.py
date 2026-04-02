@@ -18,6 +18,7 @@ from nadzoring.dns_lookup.health import HealthCheckResult, health_check_dns
 from nadzoring.dns_lookup.types import BenchmarkResult, DNSResult, RecordType
 from nadzoring.dns_lookup.utils import resolve_with_timer
 from nadzoring.logger import get_logger
+from nadzoring.utils.timeout import TimeoutConfig
 
 logger = get_logger(__name__)
 
@@ -52,6 +53,7 @@ class MonitorConfig:
             ``None`` disables file logging.
         alert_callback: Callable invoked with an :class:`AlertEvent` on
             every threshold breach.
+        timeout_config: Unified timeout configuration.
 
     Example:
         >>> config = MonitorConfig(
@@ -77,6 +79,7 @@ class MonitorConfig:
     max_history: int = _DEFAULT_MAX_HISTORY
     log_file: str | None = None
     alert_callback: Callable[[AlertEvent], None] | None = None
+    timeout_config: TimeoutConfig = field(default_factory=TimeoutConfig)
 
 
 @dataclass
@@ -391,11 +394,13 @@ class DNSMonitor:
                 record_type=self.config.record_type,
                 queries=self.config.queries_per_sample,
                 delay=0.0,
+                timeout_config=self.config.timeout_config,
             )
             resolved: DNSResult = resolve_with_timer(
                 self.config.domain,
                 self.config.record_type,
                 server,
+                timeout_config=self.config.timeout_config,
             )
             return ServerSample(
                 server=server,
@@ -427,6 +432,7 @@ class DNSMonitor:
             result: HealthCheckResult = health_check_dns(
                 self.config.domain,
                 self.config.nameservers[0],
+                timeout_config=self.config.timeout_config,
             )
             return result["score"], result["status"]
         except Exception:

@@ -14,6 +14,7 @@ from nadzoring.dns_lookup.utils import (
     resolve_with_timer_async,
 )
 from nadzoring.logger import get_logger
+from nadzoring.utils.timeout import TimeoutConfig
 
 logger: Logger = get_logger(__name__)
 
@@ -28,6 +29,7 @@ def benchmark_single_server(
     record_type: RecordType = "A",
     queries: int = 10,
     delay: float = _DEFAULT_DELAY,
+    timeout_config: TimeoutConfig | None = None,
 ) -> BenchmarkResult:
     """
     Benchmark the performance of a single DNS server.
@@ -42,6 +44,7 @@ def benchmark_single_server(
         queries: Number of queries to perform. Defaults to ``10``.
         delay: Seconds to wait between queries to avoid rate limiting.
             Defaults to ``0.1``. Set to ``0`` to disable.
+        timeout_config: Unified timeout configuration. If None, uses default.
 
     Returns:
         :class:`BenchmarkResult` dict with ``server``, ``avg_response_time``,
@@ -53,6 +56,9 @@ def benchmark_single_server(
         >>> print(f"{result['avg_response_time']:.2f}ms avg")
 
     """
+    if timeout_config is None:
+        timeout_config = TimeoutConfig()
+
     responses: list[float] = []
     failed = 0
 
@@ -61,7 +67,12 @@ def benchmark_single_server(
             sleep(delay)
 
         try:
-            result: DNSResult = resolve_with_timer(domain, record_type, server)
+            result: DNSResult = resolve_with_timer(
+                domain,
+                record_type,
+                server,
+                timeout_config=timeout_config,
+            )
             if result["response_time"] is not None and not result["error"]:
                 responses.append(result["response_time"])
             else:
@@ -93,6 +104,7 @@ def benchmark_dns_servers(
     progress_callback: Callable[[str, int], None] | None = None,
     *,
     parallel: bool = True,
+    timeout_config: TimeoutConfig | None = None,
 ) -> list[BenchmarkResult]:
     """
     Benchmark multiple DNS servers and compare their performance.
@@ -115,6 +127,7 @@ def benchmark_dns_servers(
         progress_callback: Called after each server completes with
             ``(server_ip, 1-based_index)``.
         parallel: Run benchmarks concurrently when ``True`` (default).
+        timeout_config: Unified timeout configuration. If None, uses default.
 
     Returns:
         List of :class:`BenchmarkResult` dicts sorted by
@@ -145,6 +158,7 @@ def benchmark_dns_servers(
             max_workers=max_workers,
             progress_callback=progress_callback,
             parallel=parallel,
+            timeout_config=timeout_config,
         )
     )
 
@@ -158,6 +172,7 @@ async def benchmark_dns_servers_async(
     progress_callback: Callable[[str, int], None] | None = None,
     *,
     parallel: bool = True,
+    timeout_config: TimeoutConfig | None = None,
 ) -> list[BenchmarkResult]:
     """
     Benchmark multiple DNS servers and compare their performance.
@@ -177,6 +192,7 @@ async def benchmark_dns_servers_async(
         progress_callback: Called after each server completes with
             ``(server_ip, 1-based_index)``.
         parallel: Run benchmarks concurrently when ``True`` (default).
+        timeout_config: Unified timeout configuration. If None, uses default.
 
     Returns:
         List of :class:`BenchmarkResult` dicts sorted by
@@ -189,6 +205,9 @@ async def benchmark_dns_servers_async(
         >>> print(f"{fastest['server']}: {fastest['avg_response_time']:.2f}ms")
 
     """
+    if timeout_config is None:
+        timeout_config = TimeoutConfig()
+
     if servers is None:
         servers = get_public_dns_servers()
 
@@ -200,6 +219,7 @@ async def benchmark_dns_servers_async(
             queries,
             max_workers,
             progress_callback,
+            timeout_config,
         )
     else:
         results_list = await _benchmark_sequential_async(
@@ -208,6 +228,7 @@ async def benchmark_dns_servers_async(
             record_type,
             queries,
             progress_callback,
+            timeout_config,
         )
 
     results_list.sort(key=operator.itemgetter("avg_response_time"))
@@ -220,8 +241,12 @@ async def _benchmark_single_server_async(
     record_type: RecordType,
     queries: int,
     delay: float = _DEFAULT_DELAY,
+    timeout_config: TimeoutConfig | None = None,
 ) -> BenchmarkResult:
     """Async variant of :func:`benchmark_single_server`."""
+    if timeout_config is None:
+        timeout_config = TimeoutConfig()
+
     responses: list[float] = []
     failed = 0
 
@@ -230,7 +255,12 @@ async def _benchmark_single_server_async(
             await asyncio.sleep(delay)
 
         try:
-            result: DNSResult = await resolve_with_timer_async(domain, record_type, server)
+            result: DNSResult = await resolve_with_timer_async(
+                domain,
+                record_type,
+                server,
+                timeout_config=timeout_config,
+            )
             if result["response_time"] is not None and not result["error"]:
                 responses.append(result["response_time"])
             else:
@@ -260,6 +290,7 @@ async def _benchmark_parallel_async(
     queries: int,
     max_workers: int,
     progress_callback: Callable[[str, int], None] | None,
+    timeout_config: TimeoutConfig,
 ) -> list[BenchmarkResult]:
     """
     Run server benchmarks concurrently using asyncio tasks.
@@ -271,6 +302,7 @@ async def _benchmark_parallel_async(
         queries: Queries per server.
         max_workers: Maximum concurrently running benchmark tasks.
         progress_callback: Optional progress callback.
+        timeout_config: Unified timeout configuration.
 
     Returns:
         List of benchmark results (unsorted).
@@ -287,7 +319,13 @@ async def _benchmark_parallel_async(
             async with semaphore:
                 return (
                     server,
-                    await _benchmark_single_server_async(server, domain, record_type, queries),
+                    await _benchmark_single_server_async(
+                        server,
+                        domain,
+                        record_type,
+                        queries,
+                        timeout_config=timeout_config,
+                    ),
                 )
         except Exception:
             logger.exception("Benchmark failed for %s", server)
@@ -312,6 +350,7 @@ async def _benchmark_sequential_async(
     record_type: RecordType,
     queries: int,
     progress_callback: Callable[[str, int], None] | None,
+    timeout_config: TimeoutConfig,
 ) -> list[BenchmarkResult]:
     """
     Run server benchmarks one at a time using async DNS queries.
@@ -322,6 +361,7 @@ async def _benchmark_sequential_async(
         record_type: DNS record type.
         queries: Queries per server.
         progress_callback: Optional progress callback.
+        timeout_config: Unified timeout configuration.
 
     Returns:
         List of benchmark results (unsorted).
@@ -331,7 +371,13 @@ async def _benchmark_sequential_async(
 
     for i, server in enumerate(servers):
         try:
-            result: BenchmarkResult = await _benchmark_single_server_async(server, domain, record_type, queries)
+            result: BenchmarkResult = await _benchmark_single_server_async(
+                server,
+                domain,
+                record_type,
+                queries,
+                timeout_config=timeout_config,
+            )
         except Exception:
             logger.exception("Benchmark failed for %s", server)
             result = _make_failed_benchmark_result(server, queries)

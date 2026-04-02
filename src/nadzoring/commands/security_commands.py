@@ -17,6 +17,7 @@ from nadzoring.security.http_headers import check_http_security_headers
 from nadzoring.security.ssl_monitor import SSLMonitor
 from nadzoring.security.subdomain_scan import scan_subdomains
 from nadzoring.utils.decorators import common_cli_options
+from nadzoring.utils.timeout import TimeoutConfig
 
 logger: Logger = get_logger(__name__)
 
@@ -27,7 +28,7 @@ def security_group() -> None:
 
 
 @security_group.command(name="check-ssl")
-@common_cli_options(include_quiet=True)
+@common_cli_options(include_quiet=True, include_timeout=True)
 @click.argument("domains", nargs=-1, required=True)
 @click.option(
     "--days-before",
@@ -50,6 +51,7 @@ def security_group() -> None:
 def check_ssl_command(
     domains: tuple[str, ...],
     days_before: int,
+    timeout_config: TimeoutConfig,
     *,
     no_verify: bool,
     full: bool,
@@ -64,9 +66,11 @@ def check_ssl_command(
     for domain in domains:
         try:
             if no_verify:
-                result: dict[str, Any] = check_ssl_expiry_with_fallback(domain, days_before)
+                result: dict[str, Any] = check_ssl_expiry_with_fallback(
+                    domain, days_before, timeout_config=timeout_config
+                )
             else:
-                result = check_ssl_certificate(domain, days_before, verify=True)
+                result = check_ssl_certificate(domain, days_before, verify=True, timeout_config=timeout_config)
 
             if not full:
                 filtered: dict[str, Any] = {
@@ -118,15 +122,8 @@ def check_ssl_command(
 
 
 @security_group.command(name="check-headers")
-@common_cli_options(include_quiet=True)
+@common_cli_options(include_quiet=True, include_timeout=True)
 @click.argument("urls", nargs=-1, required=True)
-@click.option(
-    "--timeout",
-    type=float,
-    default=10.0,
-    show_default=True,
-    help="Request timeout in seconds",
-)
 @click.option(
     "--no-verify",
     is_flag=True,
@@ -134,7 +131,7 @@ def check_ssl_command(
 )
 def check_headers_command(
     urls: tuple[str, ...],
-    timeout: float,
+    timeout_config: TimeoutConfig,
     *,
     no_verify: bool,
     quiet: bool,
@@ -148,7 +145,7 @@ def check_headers_command(
     for url in urls:
         result: dict[str, Any] = check_http_security_headers(
             url,
-            timeout=timeout,
+            timeout_config=timeout_config,
             verify_ssl=not no_verify,
         )
         results.append(result)
@@ -192,7 +189,7 @@ def check_email_command(
 
 
 @security_group.command(name="subdomains")
-@common_cli_options(include_quiet=True)
+@common_cli_options(include_quiet=True, include_timeout=True)
 @click.argument("domain", required=True)
 @click.option(
     "--wordlist",
@@ -207,13 +204,6 @@ def check_email_command(
     help="Number of concurrent threads",
 )
 @click.option(
-    "--timeout",
-    type=float,
-    default=3.0,
-    show_default=True,
-    help="DNS query timeout in seconds",
-)
-@click.option(
     "--no-bruteforce",
     is_flag=True,
     help="Skip DNS brute-force, use CT logs only",
@@ -222,7 +212,7 @@ def subdomains_command(
     domain: str,
     wordlist: str | None,
     threads: int,
-    timeout: float,
+    timeout_config: TimeoutConfig,
     *,
     no_bruteforce: bool,
     quiet: bool,
@@ -237,12 +227,12 @@ def subdomains_command(
         domain,
         wordlist_path=wordlist_arg,
         max_threads=threads,
-        timeout=timeout,
+        timeout_config=timeout_config,
     )
 
 
 @security_group.command(name="watch-ssl")
-@common_cli_options(include_quiet=True)
+@common_cli_options(include_quiet=True, include_timeout=True)
 @click.argument("domains", nargs=-1, required=True)
 @click.option(
     "--interval",
@@ -273,11 +263,17 @@ def watch_ssl_command(
     interval: int,
     cycles: int,
     days_before: int,
+    timeout_config: TimeoutConfig,
     *,
     quiet: bool,
 ) -> list[dict[str, Any]]:
     """Monitor SSL certificates continuously for changes and expiry."""
-    monitor = SSLMonitor(list(domains), interval, days_before)
+    monitor = SSLMonitor(
+        list(domains),
+        interval,
+        days_before,
+        timeout_config=timeout_config,
+    )
 
     def _alert(domain: str, message: str) -> None:
         if not quiet:
