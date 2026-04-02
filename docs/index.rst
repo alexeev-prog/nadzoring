@@ -23,6 +23,9 @@ Versions
    * - `main </nadzoring/main/>`_
      - Latest development version from the main branch
      - **Latest**
+   * - `v0.2.0 </nadzoring/v0.2.0/>`_
+     - Stable release — add more commands, add asyncio support, improve codestyle and python API
+     - Stable
    * - `v0.1.9 </nadzoring/v0.1.9/>`_
      - Stable release — add more commands, add asyncio support, improve codestyle and python API
      - Stable
