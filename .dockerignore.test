@@ -1,45 +1,33 @@
-# VCS
+# everything same as .dockerignore, but keep tests
 .git
 .gitignore
-
-# Editors/IDEs
 .vscode/
 .idea/
 .cursor/
 *.swp
-
-# Python caches
 __pycache__/
 *.py[cod]
-
-# Coverage caches (ok to ignore)
 .pytest_cache/
 .coverage
 coverage.xml
 htmlcov/
-
-# Build artifacts
 build/
 dist/
 *.egg-info/
 *.whl
 *.tar.gz
-
-# Local env / tooling
 .nox/
 .venv/
 venv/
 .env
 .env.*
 .python-version
-
-# Logs / temp
 *.log
 *.tmp
-
-# GitHub metadata
 .github/
-
-# Docs (optional)
 docs/
 articles/
+
+# explicitly include tests (just in case)
+!tests/
+!tests/**
