@@ -1,0 +1,46 @@
+# VCS
+.git
+.gitignore
+
+# Editors/IDEs
+.vscode/
+.idea/
+.cursor/
+*.swp
+
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Tests & coverage (not needed in production image builds)
+tests/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.whl
+*.tar.gz
+
+# Local env / tooling caches
+.nox/
+.venv/
+venv/
+.env
+.env.*
+.python-version
+
+# Logs / temp files
+*.log
+*.tmp
+
+# GitHub metadata not needed for build
+.github/
+
+# Docs not needed at runtime
+docs/
+articles/

@@ -80,7 +80,7 @@ def detect_service_command(
     results: list[dict[str, Any]] = []
     total: int = len(ports)
 
-    pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Detecting services", unit="port")
+    pbar: Any | None = None if quiet else tqdm(total=total, desc="Detecting services", unit="port")
 
     for port in ports:
         result: ServiceDetectionResult = detect_service_on_host(
