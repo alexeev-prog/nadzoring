@@ -1,0 +1,21 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY . /app
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --no-cache-dir -e . && \
+    pip install --no-cache-dir pytest pytest-mock
+
+ENTRYPOINT []
+CMD ["pytest", "-q"]

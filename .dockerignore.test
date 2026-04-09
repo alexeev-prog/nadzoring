@@ -1,0 +1,33 @@
+# everything same as .dockerignore, but keep tests
+.git
+.gitignore
+.vscode/
+.idea/
+.cursor/
+*.swp
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+build/
+dist/
+*.egg-info/
+*.whl
+*.tar.gz
+.nox/
+.venv/
+venv/
+.env
+.env.*
+.python-version
+*.log
+*.tmp
+.github/
+docs/
+articles/
+
+# explicitly include tests (just in case)
+!tests/
+!tests/**
