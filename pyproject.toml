@@ -59,5 +59,6 @@ dev = [
     "coveralls>=4.1.0",
     "basedpyright>=1.38.3",
     "pytest-mock>=3.15.1",
+    "import-linter[ui]>=2.11",
 ]
 
