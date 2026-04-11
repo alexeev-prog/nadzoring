@@ -1,4 +1,301 @@
 # Changelog
+## [0.2.1](https://github.com/alexeev-prog/nadzoring/releases/tag/v0.2.1) - 2026-04-11
+
+### Bug Fixes
+
+- Fix: resolve tqdm[Never] TypeError for Python 3.12+ compatibility
+- Created dockerignore file / Docker.md / Dockerfile
+- Replaced all 	qdm[Never] annotations with plain 	qdm
+- Fixed compatibility issue with Python 3.12 type checkers
+- No functional changes([72c5de0](https://github.com/alexeev-prog/nadzoring/commit/72c5de0fe74a038812ee98ce647816f2cecb2ead))
+- Fix: remove python-versions from noxfile([715a378](https://github.com/alexeev-prog/nadzoring/commit/715a3784f58904bc22b1928b717a5d55fe08ba37))
+- Fix: fix tests errors and fix mypy error in 3.12([27dc667](https://github.com/alexeev-prog/nadzoring/commit/27dc66784505d63a88499e10579785e496be657a))
+
+### Build System
+
+- Build(deps): bump astral-sh/setup-uv from 5 to 7
+
+Bumps [astral-sh/setup-uv](https://github.com/astral-sh/setup-uv) from 5 to 7.
+- [Release notes](https://github.com/astral-sh/setup-uv/releases)
+- [Commits](https://github.com/astral-sh/setup-uv/compare/v5...v7)
+
+---
+updated-dependencies:
+- dependency-name: astral-sh/setup-uv
+  dependency-version: '7'
+  dependency-type: direct:production
+  update-type: version-update:semver-major
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>([0ef2593](https://github.com/alexeev-prog/nadzoring/commit/0ef2593c621912b2739ba9305655258fd170056f))
+- Build(deps): bump astral-sh/setup-uv from 5 to 7 (#72)([d27942e](https://github.com/alexeev-prog/nadzoring/commit/d27942e29864344ca3cd360d0907b52d124fa5a7))
+- Build(deps): bump aiohttp from 3.13.3 to 3.13.5
+
+---
+updated-dependencies:
+- dependency-name: aiohttp
+  dependency-version: 3.13.5
+  dependency-type: direct:production
+  update-type: version-update:semver-patch
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>([0de76b9](https://github.com/alexeev-prog/nadzoring/commit/0de76b96e3b8dc85578be5b47594d7e51cd5378a))
+- Build(deps-dev): bump types-requests
+
+Bumps [types-requests](https://github.com/python/typeshed) from 2.32.4.20260107 to 2.33.0.20260327.
+- [Commits](https://github.com/python/typeshed/commits)
+
+---
+updated-dependencies:
+- dependency-name: types-requests
+  dependency-version: 2.33.0.20260327
+  dependency-type: direct:development
+  update-type: version-update:semver-minor
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>([c5a1bbb](https://github.com/alexeev-prog/nadzoring/commit/c5a1bbb2de1582e8d827dd13ce0869a4495e8175))
+- Build(deps): bump certifi from 2026.1.4 to 2026.2.25
+
+Bumps [certifi](https://github.com/certifi/python-certifi) from 2026.1.4 to 2026.2.25.
+- [Commits](https://github.com/certifi/python-certifi/compare/2026.01.04...2026.02.25)
+
+---
+updated-dependencies:
+- dependency-name: certifi
+  dependency-version: 2026.2.25
+  dependency-type: direct:production
+  update-type: version-update:semver-minor
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>([17623b8](https://github.com/alexeev-prog/nadzoring/commit/17623b8e8a2c4721efd65ff663832ff436a9da0c))
+- Build(deps): bump tabulate from 0.9.0 to 0.10.0
+
+Bumps [tabulate](https://github.com/astanin/python-tabulate) from 0.9.0 to 0.10.0.
+- [Changelog](https://github.com/astanin/python-tabulate/blob/master/CHANGELOG)
+- [Commits](https://github.com/astanin/python-tabulate/compare/v0.9.0...v0.10.0)
+
+---
+updated-dependencies:
+- dependency-name: tabulate
+  dependency-version: 0.10.0
+  dependency-type: direct:production
+  update-type: version-update:semver-minor
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>([0ccfb91](https://github.com/alexeev-prog/nadzoring/commit/0ccfb913fae2704d12f658de3613e352b8193dd4))
+- Build(deps-dev): bump pytest-cov from 7.0.0 to 7.1.0
+
+Bumps [pytest-cov](https://github.com/pytest-dev/pytest-cov) from 7.0.0 to 7.1.0.
+- [Changelog](https://github.com/pytest-dev/pytest-cov/blob/master/CHANGELOG.rst)
+- [Commits](https://github.com/pytest-dev/pytest-cov/compare/v7.0.0...v7.1.0)
+
+---
+updated-dependencies:
+- dependency-name: pytest-cov
+  dependency-version: 7.1.0
+  dependency-type: direct:development
+  update-type: version-update:semver-minor
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>([a7f2fe8](https://github.com/alexeev-prog/nadzoring/commit/a7f2fe82802fa933d64e56c54b361d7149e0768e))
+- Build(deps-dev): bump basedpyright from 1.38.3 to 1.39.0
+
+Bumps [basedpyright](https://github.com/detachhead/basedpyright) from 1.38.3 to 1.39.0.
+- [Release notes](https://github.com/detachhead/basedpyright/releases)
+- [Commits](https://github.com/detachhead/basedpyright/compare/v1.38.3...v1.39.0)
+
+---
+updated-dependencies:
+- dependency-name: basedpyright
+  dependency-version: 1.39.0
+  dependency-type: direct:development
+  update-type: version-update:semver-minor
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>([03c931e](https://github.com/alexeev-prog/nadzoring/commit/03c931e8f541564254ad08dcddf2c74b6f69eb27))
+- Build(deps-dev): bump ruff from 0.15.1 to 0.15.8
+
+Bumps [ruff](https://github.com/astral-sh/ruff) from 0.15.1 to 0.15.8.
+- [Release notes](https://github.com/astral-sh/ruff/releases)
+- [Changelog](https://github.com/astral-sh/ruff/blob/main/CHANGELOG.md)
+- [Commits](https://github.com/astral-sh/ruff/compare/0.15.1...0.15.8)
+
+---
+updated-dependencies:
+- dependency-name: ruff
+  dependency-version: 0.15.8
+  dependency-type: direct:development
+  update-type: version-update:semver-patch
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>([64800db](https://github.com/alexeev-prog/nadzoring/commit/64800dba577dc22e192bed18af602417d11a6aae))
+- Build(deps): bump pandas from 3.0.1 to 3.0.2
+
+Bumps [pandas](https://github.com/pandas-dev/pandas) from 3.0.1 to 3.0.2.
+- [Release notes](https://github.com/pandas-dev/pandas/releases)
+- [Commits](https://github.com/pandas-dev/pandas/compare/v3.0.1...v3.0.2)
+
+---
+updated-dependencies:
+- dependency-name: pandas
+  dependency-version: 3.0.2
+  dependency-type: direct:production
+  update-type: version-update:semver-patch
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>([4222a6b](https://github.com/alexeev-prog/nadzoring/commit/4222a6b606b42aeae2d0fdf01dc9be27c461b3bb))
+- Build(deps-dev): bump mypy from 1.19.1 to 1.20.0
+
+Bumps [mypy](https://github.com/python/mypy) from 1.19.1 to 1.20.0.
+- [Changelog](https://github.com/python/mypy/blob/master/CHANGELOG.md)
+- [Commits](https://github.com/python/mypy/compare/v1.19.1...v1.20.0)
+
+---
+updated-dependencies:
+- dependency-name: mypy
+  dependency-version: 1.20.0
+  dependency-type: direct:development
+  update-type: version-update:semver-minor
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>([b3d5013](https://github.com/alexeev-prog/nadzoring/commit/b3d50132e1a1be05ddb86543d902291ab9deea7a))
+- Build(deps-dev): bump mypy from 1.19.1 to 1.20.0 (#73)([e5efa42](https://github.com/alexeev-prog/nadzoring/commit/e5efa4237aab2546dab726f96d9ef518e2a0ec77))
+- Build(deps): bump pandas from 3.0.1 to 3.0.2 (#80)([1a73e2b](https://github.com/alexeev-prog/nadzoring/commit/1a73e2b15e971053be1b5c777973e8d946363da8))
+- Build(deps-dev): bump ruff from 0.15.1 to 0.15.8 (#74)([29c3541](https://github.com/alexeev-prog/nadzoring/commit/29c3541d6f4901c6f56694634532087cbab710e1))
+- Build(deps-dev): bump pyrefly from 0.56.0 to 0.59.0
+
+Bumps [pyrefly](https://github.com/facebook/pyrefly) from 0.56.0 to 0.59.0.
+- [Release notes](https://github.com/facebook/pyrefly/releases)
+- [Commits](https://github.com/facebook/pyrefly/compare/0.56.0...0.59.0)
+
+---
+updated-dependencies:
+- dependency-name: pyrefly
+  dependency-version: 0.59.0
+  dependency-type: direct:development
+  update-type: version-update:semver-minor
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>([cde0a68](https://github.com/alexeev-prog/nadzoring/commit/cde0a6846f3f8940fa1b31533ff69da0ef572948))
+- Build(deps-dev): bump pyrefly from 0.56.0 to 0.59.0 (#75)([8e8f73e](https://github.com/alexeev-prog/nadzoring/commit/8e8f73e2ee547a9151cf960a32890945cd15637d))
+- Build(deps-dev): bump basedpyright from 1.38.3 to 1.39.0 (#76)([8bea5ed](https://github.com/alexeev-prog/nadzoring/commit/8bea5ed73a26db9601e59514a8940cc4b6cd2925))
+- Build(deps-dev): bump pytest-cov from 7.0.0 to 7.1.0 (#77)([955fd0f](https://github.com/alexeev-prog/nadzoring/commit/955fd0f27a98e710aa48f342fe19d3c8ef7baa72))
+- Build(deps): bump tabulate from 0.9.0 to 0.10.0 (#79)([76e21e0](https://github.com/alexeev-prog/nadzoring/commit/76e21e073b9d344584d1b0ddf9f5f90bbe266fd8))
+- Build(deps): bump certifi from 2026.1.4 to 2026.2.25 (#81)([0c634a5](https://github.com/alexeev-prog/nadzoring/commit/0c634a5876e393396a22271886f992c2cfe45742))
+- Build(deps-dev): bump types-requests from 2.32.4.20260107 to 2.33.0.20260327 (#82)([60ac7a6](https://github.com/alexeev-prog/nadzoring/commit/60ac7a60b4880587694f4083ad8001058c3a380d))
+- Build(deps): bump aiohttp from 3.13.3 to 3.13.5 (#78)([e4c6c67](https://github.com/alexeev-prog/nadzoring/commit/e4c6c67356c19e53631f5a7554764e6f9fb73dc7))
+- Build(deps): bump cryptography from 46.0.5 to 46.0.6
+
+Bumps [cryptography](https://github.com/pyca/cryptography) from 46.0.5 to 46.0.6.
+- [Changelog](https://github.com/pyca/cryptography/blob/main/CHANGELOG.rst)
+- [Commits](https://github.com/pyca/cryptography/compare/46.0.5...46.0.6)
+
+---
+updated-dependencies:
+- dependency-name: cryptography
+  dependency-version: 46.0.6
+  dependency-type: direct:production
+  update-type: version-update:semver-patch
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>([1eeed01](https://github.com/alexeev-prog/nadzoring/commit/1eeed0183371fc4262c494dd719f37a42d9eab6e))
+- Build(deps): bump cryptography from 46.0.5 to 46.0.6 (#84)([28814b2](https://github.com/alexeev-prog/nadzoring/commit/28814b253cae0bb0df84f72cc7b216e4b11613d5))
+- Build(deps-dev): bump pyrefly from 0.59.0 to 0.59.1
+
+Bumps [pyrefly](https://github.com/facebook/pyrefly) from 0.59.0 to 0.59.1.
+- [Release notes](https://github.com/facebook/pyrefly/releases)
+- [Commits](https://github.com/facebook/pyrefly/compare/0.59.0...0.59.1)
+
+---
+updated-dependencies:
+- dependency-name: pyrefly
+  dependency-version: 0.59.1
+  dependency-type: direct:development
+  update-type: version-update:semver-patch
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>([6a3b972](https://github.com/alexeev-prog/nadzoring/commit/6a3b972689c2aa233ddba93494312d6cd1cd10fd))
+- Build(deps-dev): bump pyrefly from 0.59.0 to 0.59.1 (#85)([44a5eb5](https://github.com/alexeev-prog/nadzoring/commit/44a5eb50c35d2c095071521e1f4c2b02cedf8fd1))
+- Build(deps-dev): bump ruff from 0.15.8 to 0.15.9
+
+Bumps [ruff](https://github.com/astral-sh/ruff) from 0.15.8 to 0.15.9.
+- [Release notes](https://github.com/astral-sh/ruff/releases)
+- [Changelog](https://github.com/astral-sh/ruff/blob/main/CHANGELOG.md)
+- [Commits](https://github.com/astral-sh/ruff/compare/0.15.8...0.15.9)
+
+---
+updated-dependencies:
+- dependency-name: ruff
+  dependency-version: 0.15.9
+  dependency-type: direct:development
+  update-type: version-update:semver-patch
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>([a807938](https://github.com/alexeev-prog/nadzoring/commit/a80793855bfb57da729ceb26a52bcb2814d42928))
+- Build(deps-dev): bump types-requests
+
+Bumps [types-requests](https://github.com/python/typeshed) from 2.33.0.20260327 to 2.33.0.20260402.
+- [Commits](https://github.com/python/typeshed/commits)
+
+---
+updated-dependencies:
+- dependency-name: types-requests
+  dependency-version: 2.33.0.20260402
+  dependency-type: direct:development
+  update-type: version-update:semver-patch
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>([9719b1c](https://github.com/alexeev-prog/nadzoring/commit/9719b1cbcf20422e0bbe1f1ea314550a22cb80ea))
+- Build(deps-dev): bump types-tqdm from 4.67.3.20260303 to 4.67.3.20260402
+
+Bumps [types-tqdm](https://github.com/python/typeshed) from 4.67.3.20260303 to 4.67.3.20260402.
+- [Commits](https://github.com/python/typeshed/commits)
+
+---
+updated-dependencies:
+- dependency-name: types-tqdm
+  dependency-version: 4.67.3.20260402
+  dependency-type: direct:development
+  update-type: version-update:semver-patch
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>([3c68141](https://github.com/alexeev-prog/nadzoring/commit/3c68141220893f56d479b43356332d90ae5b776a))
+- Build(deps-dev): bump types-tqdm from 4.67.3.20260303 to 4.67.3.20260402 (#86)([c0b9428](https://github.com/alexeev-prog/nadzoring/commit/c0b94287b8713c0ff363c5b3550219e9ba68eb40))
+- Build(deps-dev): bump types-requests from 2.33.0.20260327 to 2.33.0.20260402 (#87)([db150e6](https://github.com/alexeev-prog/nadzoring/commit/db150e698fcd041d46196883533cb645fe93bcec))
+- Build(deps-dev): bump ruff from 0.15.8 to 0.15.9 (#88)([ff81db4](https://github.com/alexeev-prog/nadzoring/commit/ff81db432f3f7dfbb545d10568dc1ffe572a1dbe))
+
+### Dependencies
+
+- Bump dev-version([b8190cd](https://github.com/alexeev-prog/nadzoring/commit/b8190cdb2ff9df80274a2d2c1dc81319c30d8f71))
+
+### Documentation
+
+- Docs: update CHANGELOG.md for v0.2.0 [skip ci]([9f5d4ca](https://github.com/alexeev-prog/nadzoring/commit/9f5d4ca96f3c5cb58d4af38f7c39275151f02b20))
+- Docs: update readme for bumb versions to 0.2.1([333437c](https://github.com/alexeev-prog/nadzoring/commit/333437c735960a6ee385f3f52ab750cd35fe1ef3))
+
+### Features
+
+- Add completions command group, tests and documentation([82f21ee](https://github.com/alexeev-prog/nadzoring/commit/82f21ee48a34adfd29c7440df1c64cc142b8c169))
+- Add completions command group, tests and documentation (#89)([1283e3b](https://github.com/alexeev-prog/nadzoring/commit/1283e3b2d27f939f68b378bb3f6a2e8ec66fdf11))
+
+### Other Changes
+
+- Update docs/index([e63e0d5](https://github.com/alexeev-prog/nadzoring/commit/e63e0d5bbe62200f166cadfa5514b895a88455d0))
+- Update docs/index([3a0e26a](https://github.com/alexeev-prog/nadzoring/commit/3a0e26a91968145cc4d241e6d026d89424217b88))
+- Update community files([b841c6d](https://github.com/alexeev-prog/nadzoring/commit/b841c6d3687308cef1b44145865c1b2595504513))
+- Update deps and github conf([07574c6](https://github.com/alexeev-prog/nadzoring/commit/07574c6e61c290bf3340a81a0bbbc2f6d6289ff0))
+- Feature/dockerize (#83)([69a6c6b](https://github.com/alexeev-prog/nadzoring/commit/69a6c6bd4dbb14a2f3fcb57c0b4b2c95c99a11fe))
+- Update gitignore([728bd68](https://github.com/alexeev-prog/nadzoring/commit/728bd68faadca5d1d954bcb3275906666f8cd5a7))
+- Update src/nadzoring/commands/completions_commands.py
+
+Co-authored-by: devin-ai-integration[bot] <158243242+devin-ai-integration[bot]@users.noreply.github.com>([7868315](https://github.com/alexeev-prog/nadzoring/commit/78683150683bd6688f4e04d699214f7671546c5d))
+- Update src/nadzoring/cli.py
+
+Co-authored-by: devin-ai-integration[bot] <158243242+devin-ai-integration[bot]@users.noreply.github.com>([ad893f3](https://github.com/alexeev-prog/nadzoring/commit/ad893f32333037d42feac32a7b3db4073d88af9e))
+
+### Testing
+
+- Test files([b84eced](https://github.com/alexeev-prog/nadzoring/commit/b84eced926b7353fb20947a4a4c1aa06836fe64a))
 ## [0.2.0](https://github.com/alexeev-prog/nadzoring/releases/tag/v0.2.0) - 2026-04-02
 
 ### Bug Fixes
