@@ -132,8 +132,11 @@ class CertificateInfo:
             self._cert = x509.load_der_x509_certificate(der_cert, default_backend())
 
             self._chain = []
-            for der in ssock.get_verified_chain():
-                self._chain.append(x509.load_der_x509_certificate(der, default_backend()))
+            if hasattr(ssock, "get_verified_chain"):
+                for der in ssock.get_verified_chain():
+                    self._chain.append(x509.load_der_x509_certificate(der, default_backend()))
+            else:
+                self._chain.append(self._cert)
 
     def fetch_unverified(self) -> None:
         """

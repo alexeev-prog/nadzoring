@@ -1,9 +1,7 @@
 import nox
 
-python_versions = ["3.12", "3.13", "3.14"]
 
-
-@nox.session(python=python_versions, venv_backend="uv")
+@nox.session(venv_backend="uv")
 def test(session):
     """Run tests on specified Python versions with coverage."""
     session.run_always("uv", "sync", "--all-groups", external=True)

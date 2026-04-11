@@ -66,6 +66,15 @@ Beyond its technical strengths, Nadzoring is supported by an extensive, versione
     - [Installation](#installation)
   - [Usage](#usage)
     - [Global Options](#global-options)
+    - [Shell Completions](#shell-completions)
+      - [Bash](#bash)
+      - [Zsh](#zsh)
+      - [Fish](#fish)
+      - [PowerShell](#powershell)
+      - [Testing Completions](#testing-completions)
+      - [Manual Activation (without saving to profile)](#manual-activation-without-saving-to-profile)
+      - [Troubleshooting Completions](#troubleshooting-completions)
+      - [Completions Commands Reference](#completions-commands-reference)
     - [DNS Commands](#dns-commands)
       - [dns resolve](#dns-resolve)
       - [dns reverse](#dns-reverse)
@@ -207,6 +216,154 @@ These options work with every command:
 2. Generic `--timeout` (applies to both phases when phase-specific not set)
 3. Module-level defaults (shown above)
 
+### Shell Completions
+
+Nadzoring provides tab-completion support for **bash**, **zsh**, **fish**, and **PowerShell**. Enable it for your preferred shell using the commands below.
+
+#### Bash
+
+Add to `~/.bashrc` (or `~/.bash_profile` on macOS):
+
+```bash
+echo 'eval "$(nadzoring completion bash)"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+Alternative — save to a file and source it:
+
+```bash
+nadzoring completion bash > ~/.nadzoring-complete.bash
+echo 'source ~/.nadzoring-complete.bash' >> ~/.bashrc
+```
+
+#### Zsh
+
+Add to `~/.zshrc`:
+
+```bash
+echo 'eval "$(nadzoring completion zsh)"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+Or save to a file in your `fpath`:
+
+```bash
+nadzoring completion zsh > "${fpath[1]}/_nadzoring"
+```
+
+#### Fish
+
+Save directly to Fish completions directory:
+
+```bash
+nadzoring completion fish > ~/.config/fish/completions/nadzoring.fish
+```
+
+Or source it temporarily:
+
+```bash
+nadzoring completion fish | source
+```
+
+#### PowerShell
+
+Add to your PowerShell profile (`$PROFILE`):
+
+```powershell
+nadzoring completion powershell >> $PROFILE
+```
+
+To reload the profile immediately:
+
+```powershell
+. $PROFILE
+```
+
+Or use it in the current session only:
+
+```powershell
+nadzoring completion powershell | Invoke-Expression
+```
+
+#### Testing Completions
+
+After installation, type `nadzoring ` followed by **TAB** to see available commands:
+
+```bash
+nadzoring [TAB]
+# Should show: arp  completion  dns  network-base  security
+```
+
+Type a command followed by space and **TAB** to see options:
+
+```bash
+nadzoring dns [TAB]
+# Should show: resolve  reverse  check  trace  compare  health  benchmark  poisoning  monitor
+```
+
+#### Manual Activation (without saving to profile)
+
+If you don't want to modify your shell profile, you can activate completions manually:
+
+```bash
+# Bash / Zsh
+source <(nadzoring completion bash)
+
+# Fish
+nadzoring completion fish | source
+
+# PowerShell
+nadzoring completion powershell | Invoke-Expression
+```
+
+#### Troubleshooting Completions
+
+**Completions not working?** Check these common issues:
+
+1. **Shell not reloaded** — restart your terminal or run `source ~/.bashrc` (bash) / `source ~/.zshrc` (zsh)
+2. **Wrong shell** — ensure you're using the correct completion command for your shell
+3. **PATH issue** — verify `nadzoring` is in your PATH: `which nadzoring`
+4. **Completion not registered** — run the activation command directly to see if there are any errors
+
+**Debugging bash completions:**
+
+```bash
+# Enable debug output
+set -x
+nadzoring [TAB]
+set +x
+```
+
+**Check if completion is registered:**
+
+```bash
+# Bash
+complete -p | grep nadzoring
+# Should output: complete -o nosort -F _nadzoring_completion nadzoring
+
+# Zsh
+echo $fpath | grep nadzoring
+```
+
+**Show installation hints:**
+
+```bash
+nadzoring completion hints bash      # For bash
+nadzoring completion hints zsh       # For zsh
+nadzoring completion hints fish      # For fish
+nadzoring completion hints powershell  # For PowerShell
+```
+
+#### Completions Commands Reference
+
+| Command | Description |
+|---------|-------------|
+| `nadzoring completion bash` | Generate bash completion script |
+| `nadzoring completion zsh` | Generate zsh completion script |
+| `nadzoring completion fish` | Generate fish completion script |
+| `nadzoring completion powershell` | Generate PowerShell completion script |
+| `nadzoring completion hints <shell>` | Show detailed installation hints |
+
 ---
 
 ### DNS Commands
@@ -262,17 +419,18 @@ if result["error"]:
     # "Query timeout"          — nameserver did not respond
     print("DNS error:", result["error"])
 else:
-    print(result["records"])       # ['93.184.216.34']
-    print(result["response_time"]) # milliseconds
+    print(result["records"])  # ['93.184.216.34']
+    print(result["response_time"])  # milliseconds
 
 # With TTL and custom nameserver
 result = resolve_with_timer(
-    "example.com", "MX",
+    "example.com",
+    "MX",
     nameserver="8.8.8.8",
     include_ttl=True,
 )
 print(result["records"])  # ['10 mail.example.com']
-print(result["ttl"])      # e.g. 3600
+print(result["ttl"])  # e.g. 3600
 
 # Custom timeout configuration
 config = TimeoutConfig(connect=3.0, read=8.0, lifetime=20.0)
@@ -323,7 +481,7 @@ if result["error"]:
     # "Invalid IP address: …"  — malformed input
     print("Lookup failed:", result["error"])
 else:
-    print(result["hostname"])       # 'dns.google'
+    print(result["hostname"])  # 'dns.google'
     print(result["response_time"])  # milliseconds
 
 # IPv6 reverse lookup
@@ -383,10 +541,10 @@ result = check_dns(
     validate_txt=True,
     timeout_config=config,
 )
-print(result["records"])        # {'MX': ['10 mail.example.com']}
-print(result["errors"])         # {'AAAA': 'No AAAA records'} — only failed types
-print(result["response_times"]) # per-type timing in ms
-print(result["validations"])    # {'mx': {'valid': True, 'issues': [], 'warnings': []}}
+print(result["records"])  # {'MX': ['10 mail.example.com']}
+print(result["errors"])  # {'AAAA': 'No AAAA records'} — only failed types
+print(result["response_times"])  # per-type timing in ms
+print(result["validations"])  # {'mx': {'valid': True, 'issues': [], 'warnings': []}}
 ```
 
 ---
@@ -737,12 +895,7 @@ from statistics import mean
 
 cycles = load_log("dns_monitor.jsonl")
 
-rts = [
-    s["avg_response_time_ms"]
-    for c in cycles
-    for s in c["samples"]
-    if s["avg_response_time_ms"] is not None
-]
+rts = [s["avg_response_time_ms"] for c in cycles for s in c["samples"] if s["avg_response_time_ms"] is not None]
 alerts = [a for c in cycles for a in c.get("alerts", [])]
 
 print(f"Cycles      : {len(cycles)}")
@@ -773,9 +926,9 @@ nadzoring network-base ping -o json github.com
 ```python
 from nadzoring.network_base.ping_address import ping_addr
 
-print(ping_addr("8.8.8.8"))            # True
-print(ping_addr("https://google.com")) # True — URLs are normalised automatically
-print(ping_addr("192.0.2.1"))          # False — unreachable
+print(ping_addr("8.8.8.8"))  # True
+print(ping_addr("https://google.com"))  # True — URLs are normalised automatically
+print(ping_addr("192.0.2.1"))  # False — unreachable
 
 # Note: ICMP may be blocked by firewalls even for reachable hosts
 ```
@@ -858,13 +1011,14 @@ else:
 # Validate IP format before resolving
 from nadzoring.utils.validators import validate_ip, validate_ipv4, validate_ipv6
 
-validate_ip("8.8.8.8")    # True
-validate_ipv4("::1")      # False
-validate_ipv6("::1")      # True
+validate_ip("8.8.8.8")  # True
+validate_ipv4("::1")  # False
+validate_ipv6("::1")  # True
 
 # Get router/gateway IP
 from nadzoring.network_base.router_ip import router_ip
-gateway = router_ip()         # '192.168.1.1' on most home networks
+
+gateway = router_ip()  # '192.168.1.1' on most home networks
 gateway6 = router_ip(ipv6=True)
 ```
 
@@ -889,14 +1043,14 @@ nadzoring network-base parse-url "postgresql://user:pass@localhost:5432/db"
 from nadzoring.network_base.parse_url import parse_url
 
 result = parse_url("https://user:pass@example.com:8080/path?key=value#frag")
-print(result["protocol"])   # 'https'
-print(result["hostname"])   # 'example.com'
-print(result["port"])       # 8080
-print(result["username"])   # 'user'
-print(result["password"])   # 'pass'
-print(result["path"])       # '/path'
+print(result["protocol"])  # 'https'
+print(result["hostname"])  # 'example.com'
+print(result["port"])  # 8080
+print(result["username"])  # 'user'
+print(result["password"])  # 'pass'
+print(result["path"])  # '/path'
 print(result["query_params"])  # [('key', 'value')]
-print(result["fragment"])   # 'frag'
+print(result["fragment"])  # 'frag'
 ```
 
 ---
@@ -957,10 +1111,10 @@ nadzoring network-base params -o json --save net_params.json
 from nadzoring.network_base.network_params import network_param
 
 info = network_param()
-print(info["IPv4 address"])        # '192.168.1.42'
-print(info["Router ip-address"])   # '192.168.1.1'
-print(info["MAC-address"])         # '00:11:22:33:44:55'
-print(info["Public IP address"])   # your external IP
+print(info["IPv4 address"])  # '192.168.1.42'
+print(info["Router ip-address"])  # '192.168.1.1'
+print(info["MAC-address"])  # '00:11:22:33:44:55'
+print(info["Public IP address"])  # your external IP
 ```
 
 ---
@@ -1083,9 +1237,9 @@ nadzoring network-base port-service -o json 8080 5432 27017
 ```python
 from nadzoring.network_base.service_on_port import get_service_on_port
 
-print(get_service_on_port(80))    # 'http'
-print(get_service_on_port(443))   # 'https'
-print(get_service_on_port(22))    # 'ssh'
+print(get_service_on_port(80))  # 'http'
+print(get_service_on_port(443))  # 'https'
+print(get_service_on_port(22))  # 'ssh'
 print(get_service_on_port(9999))  # 'unknown'
 ```
 
@@ -1116,7 +1270,7 @@ nadzoring network-base whois -o json --save whois_data.json github.com
 from nadzoring.network_base.whois_lookup import whois_lookup
 
 result = whois_lookup("example.com")
-print(result["registrar"])      # 'RESERVED-Internet Assigned Numbers Authority'
+print(result["registrar"])  # 'RESERVED-Internet Assigned Numbers Authority'
 print(result["creation_date"])  # '1995-08-14T04:00:00Z'
 print(result["expiry_date"])
 print(result["name_servers"])
@@ -1153,8 +1307,8 @@ print(info["whois"]["creation_date"])
 print(info["whois"]["expiry_date"])
 
 # Resolved IP addresses
-print(info["dns"]["ipv4"])    # '93.184.216.34'
-print(info["dns"]["ipv6"])    # '2606:2800:220:1:248:1893:25c8:1946'
+print(info["dns"]["ipv4"])  # '93.184.216.34'
+print(info["dns"]["ipv6"])  # '2606:2800:220:1:248:1893:25c8:1946'
 
 # DNS records by type
 for rtype, records in info["dns"]["records"].items():
@@ -1166,7 +1320,7 @@ if geo:
     print(f"{geo['city']}, {geo['country']}  ({geo['lat']}, {geo['lon']})")
 
 # Reverse DNS for the primary IP
-print(info["reverse_dns"])    # 'example.com' or None
+print(info["reverse_dns"])  # 'example.com' or None
 ```
 
 ---
@@ -1345,46 +1499,46 @@ config = TimeoutConfig(connect=3.0, read=8.0)
 # Verified check (full certificate chain validation)
 result = check_ssl_certificate("example.com", days_before=14, timeout_config=config)
 
-print(result["status"])          # 'valid' | 'warning' | 'expired' | 'error'
+print(result["status"])  # 'valid' | 'warning' | 'expired' | 'error'
 print(result["remaining_days"])  # e.g. 142
-print(result["expiry_date"])     # '2025-10-15T12:00:00+00:00'
-print(result["verification"])    # 'verified' | 'unverified' | 'failed'
+print(result["expiry_date"])  # '2025-10-15T12:00:00+00:00'
+print(result["verification"])  # 'verified' | 'unverified' | 'failed'
 
 # Subject and issuer dicts
-print(result["subject"]["CN"])   # 'example.com'
-print(result["issuer"]["CN"])    # 'DigiCert TLS RSA SHA256 2020 CA1'
-print(result["issuer"]["O"])     # 'DigiCert Inc'
+print(result["subject"]["CN"])  # 'example.com'
+print(result["issuer"]["CN"])  # 'DigiCert TLS RSA SHA256 2020 CA1'
+print(result["issuer"]["O"])  # 'DigiCert Inc'
 
 # Subject Alternative Names
 for san in result.get("san", []):
-    print(san)                   # 'DNS:example.com', 'DNS:www.example.com', ...
+    print(san)  # 'DNS:example.com', 'DNS:www.example.com', ...
 
 # Domain matching
-print(result["domain_match"])       # True
-print(result["matched_names"])      # ['DNS:example.com']
+print(result["domain_match"])  # True
+print(result["matched_names"])  # ['DNS:example.com']
 
 # Public key info
 key = result["public_key"]
-print(key["algorithm"])             # 'RSA' | 'EC' | 'Ed25519' | ...
-print(key.get("key_size"))          # 2048 (RSA/DSA)
-print(key.get("curve"))             # 'secp256r1' (EC)
-print(key["strength"])              # 'weak' | 'good' | 'strong'
+print(key["algorithm"])  # 'RSA' | 'EC' | 'Ed25519' | ...
+print(key.get("key_size"))  # 2048 (RSA/DSA)
+print(key.get("curve"))  # 'secp256r1' (EC)
+print(key["strength"])  # 'weak' | 'good' | 'strong'
 
 # Protocol support (TLSv1.0 – TLSv1.3)
 protos = result["protocols"]
-print(protos["supported"])          # ['TLSv1.2', 'TLSv1.3']
-print(protos["has_outdated"])       # False
+print(protos["supported"])  # ['TLSv1.2', 'TLSv1.3']
+print(protos["has_outdated"])  # False
 
 # Chain info (only when verify=True)
-print(result.get("chain_length"))   # 3
-print(result.get("chain_valid"))    # True
+print(result.get("chain_length"))  # 3
+print(result.get("chain_valid"))  # True
 
 # Simplified expiry-only check
 result = check_ssl_expiry("example.com")
 
 # Automatic fallback to unverified mode if chain check fails
 result = check_ssl_expiry_with_fallback("self-signed.badssl.com")
-print(result["verification"])       # 'unverified' when fallback was used
+print(result["verification"])  # 'unverified' when fallback was used
 ```
 
 ---
@@ -1446,9 +1600,9 @@ from nadzoring.utils.timeout import TimeoutConfig
 config = TimeoutConfig(connect=5.0, read=15.0)
 result = check_http_security_headers("https://example.com", timeout_config=config)
 
-print(result["url"])          # final URL after redirects
+print(result["url"])  # final URL after redirects
 print(result["status_code"])  # 200
-print(result["score"])        # 0–100 coverage score
+print(result["score"])  # 0–100 coverage score
 
 # Present security headers
 for header, value in result["present"].items():
@@ -1510,16 +1664,16 @@ print(result["overall_score"])  # e.g. 3
 
 # SPF analysis
 spf = result["spf"]
-print(spf["found"])             # True
-print(spf["record"])            # 'v=spf1 include:_spf.example.com ~all'
-print(spf["mechanisms"])        # ['include:_spf.example.com']
-print(spf["all_qualifier"])     # '~'  (softfail — recommended minimum)
+print(spf["found"])  # True
+print(spf["record"])  # 'v=spf1 include:_spf.example.com ~all'
+print(spf["mechanisms"])  # ['include:_spf.example.com']
+print(spf["all_qualifier"])  # '~'  (softfail — recommended minimum)
 for issue in spf["issues"]:
     print("  SPF issue:", issue)
 
 # DKIM analysis
 dkim = result["dkim"]
-print(dkim["found"])            # True
+print(dkim["found"])  # True
 print(dkim["selectors_checked"])  # list of 13 common selectors probed
 for selector, record in dkim["records"].items():
     print(f"  DKIM selector '{selector}': {record[:60]}...")
@@ -1528,13 +1682,13 @@ for issue in dkim["issues"]:
 
 # DMARC analysis
 dmarc = result["dmarc"]
-print(dmarc["found"])           # True
-print(dmarc["record"])          # 'v=DMARC1; p=reject; rua=mailto:...'
-print(dmarc["policy"])          # 'none' | 'quarantine' | 'reject'
+print(dmarc["found"])  # True
+print(dmarc["record"])  # 'v=DMARC1; p=reject; rua=mailto:...'
+print(dmarc["policy"])  # 'none' | 'quarantine' | 'reject'
 print(dmarc["subdomain_policy"])  # sp= tag value or None
-print(dmarc["pct"])             # percentage of messages the policy applies to
-print(dmarc["rua"])             # aggregate report addresses
-print(dmarc["ruf"])             # forensic report addresses
+print(dmarc["pct"])  # percentage of messages the policy applies to
+print(dmarc["rua"])  # aggregate report addresses
+print(dmarc["ruf"])  # forensic report addresses
 for issue in dmarc["issues"]:
     print("  DMARC issue:", issue)
 
@@ -1623,8 +1777,8 @@ results = scan_subdomains(
 )
 
 # Source values: 'ct_log' | 'brute_force'
-ct_found     = [r for r in results if r["source"] == "ct_log"]
-brute_found  = [r for r in results if r["source"] == "brute_force"]
+ct_found = [r for r in results if r["source"] == "ct_log"]
+brute_found = [r for r in results if r["source"] == "brute_force"]
 print(f"CT log: {len(ct_found)}  Brute-force: {len(brute_found)}")
 ```
 
@@ -1690,15 +1844,17 @@ config = TimeoutConfig(connect=3.0, read=10.0)
 # Create monitor for multiple domains
 monitor = SSLMonitor(
     domains=["example.com", "github.com", "cloudflare.com"],
-    interval=3600,   # seconds between cycles
+    interval=3600,  # seconds between cycles
     days_before=14,  # alert when fewer than 14 days remain
     timeout_config=config,
 )
+
 
 # Custom alert handler
 def on_alert(domain: str, message: str) -> None:
     print(f"ALERT  {domain}: {message}")
     # send to Slack, PagerDuty, email, etc.
+
 
 monitor.set_alert_callback(on_alert)
 
@@ -1746,12 +1902,7 @@ except ARPCacheRetrievalError as exc:
     print("Cannot read ARP cache:", exc)
 else:
     for entry in entries:
-        print(
-            f"{entry.ip_address}  "
-            f"{entry.mac_address or '(incomplete)'}  "
-            f"{entry.interface}  "
-            f"{entry.state.value}"
-        )
+        print(f"{entry.ip_address}  {entry.mac_address or '(incomplete)'}  {entry.interface}  {entry.state.value}")
 ```
 
 ---
@@ -1832,10 +1983,12 @@ for alert in alerts:
 stats = detector.get_stats()
 print(f"Processed: {stats['packets_processed']}  Alerts: {stats['alerts_generated']}")
 
+
 # Custom callback for integration with external systems
 def on_packet(packet, alert):
     if alert:
         print("ALERT:", alert)  # integrate with your alerting pipeline here
+
 
 detector.monitor(interface=None, count=0, timeout=0, packet_callback=on_packet)
 ```
@@ -1923,9 +2076,9 @@ from nadzoring.utils.timeout import TimeoutConfig, OperationTimeoutError, with_l
 
 # Create configuration
 config = TimeoutConfig(
-    connect=3.0,   # connection phase
-    read=8.0,      # read operations
-    lifetime=30.0, # total operation limit
+    connect=3.0,  # connection phase
+    read=8.0,  # read operations
+    lifetime=30.0,  # total operation limit
 )
 
 # Apply to a socket
@@ -1938,6 +2091,7 @@ try:
         result = long_running_operation()
 except OperationTimeoutError:
     print("Operation exceeded lifetime timeout")
+
 
 # Decorator for lifetime timeout
 @with_lifetime_timeout(config)
@@ -2031,9 +2185,9 @@ result = resolve_with_timer("example.com", "MX", include_ttl=True, timeout_confi
 if result["error"]:
     print("Error:", result["error"])
 else:
-    print(result["records"])       # ['10 mail.example.com']
-    print(result["ttl"])           # 3600
-    print(result["response_time"]) # 45.2
+    print(result["records"])  # ['10 mail.example.com']
+    print(result["ttl"])  # 3600
+    print(result["response_time"])  # 45.2
 
 # List built-in public servers
 servers = get_public_dns_servers()  # ['8.8.8.8', '1.1.1.1', ...]
@@ -2144,24 +2298,24 @@ config = TimeoutConfig(connect=3.0, read=10.0)
 # SSL/TLS certificate check
 result = check_ssl_certificate("example.com", days_before=14, timeout_config=config)
 print(result["status"], result["remaining_days"])
-print(result["protocols"]["supported"])   # ['TLSv1.2', 'TLSv1.3']
-print(result["public_key"]["strength"])   # 'good'
+print(result["protocols"]["supported"])  # ['TLSv1.2', 'TLSv1.3']
+print(result["public_key"]["strength"])  # 'good'
 
 # Fallback mode for self-signed / problematic certs
 result = check_ssl_expiry_with_fallback("self-signed.example.com")
 
 # HTTP security header audit
 headers = check_http_security_headers("https://example.com", timeout_config=config)
-print(headers["score"])     # 0–100
-print(headers["missing"])   # list of absent recommended headers
-print(headers["leaking"])   # {'Server': 'nginx/1.18.0'}
+print(headers["score"])  # 0–100
+print(headers["missing"])  # list of absent recommended headers
+print(headers["leaking"])  # {'Server': 'nginx/1.18.0'}
 
 # Email security (SPF / DKIM / DMARC)
 email = check_email_security("example.com")
-print(email["overall_score"])           # 0–3
-print(email["spf"]["all_qualifier"])    # '~' (softfail)
-print(email["dmarc"]["policy"])         # 'reject'
-print(email["all_issues"])              # aggregated issue list
+print(email["overall_score"])  # 0–3
+print(email["spf"]["all_qualifier"])  # '~' (softfail)
+print(email["dmarc"]["policy"])  # 'reject'
+print(email["all_issues"])  # aggregated issue list
 
 # Subdomain discovery
 subdomains = scan_subdomains(
@@ -2641,12 +2795,7 @@ config = MonitorConfig(
 monitor = DNSMonitor(config)
 history = monitor.run_cycles(6)
 
-rts = [
-    s.avg_response_time_ms
-    for c in history
-    for s in c.samples
-    if s.avg_response_time_ms is not None
-]
+rts = [s.avg_response_time_ms for c in history for s in c.samples if s.avg_response_time_ms is not None]
 print(f"Mean RT: {mean(rts):.1f}ms")
 print(monitor.report())
 ```
@@ -2658,12 +2807,7 @@ from nadzoring.dns_lookup.monitor import load_log
 from statistics import mean
 
 cycles = load_log("dns_monitor.jsonl")
-rts = [
-    s["avg_response_time_ms"]
-    for c in cycles
-    for s in c["samples"]
-    if s["avg_response_time_ms"] is not None
-]
+rts = [s["avg_response_time_ms"] for c in cycles for s in c["samples"] if s["avg_response_time_ms"] is not None]
 alerts = [a for c in cycles for a in c.get("alerts", [])]
 print(f"Cycles: {len(cycles)}  Mean RT: {mean(rts):.1f}ms  Alerts: {len(alerts)}")
 ```
