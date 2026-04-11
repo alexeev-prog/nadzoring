@@ -23,8 +23,11 @@ Versions
    * - `main </nadzoring/main/>`_
      - Latest development version from the main branch
      - **Latest**
+   * - `v0.2.1 </nadzoring/v0.2.1/>`_
+     - Stable release — add dockerfile
+     - Stable
    * - `v0.2.0 </nadzoring/v0.2.0/>`_
-     - Stable release — add unified timeout configuration, improve python api and abstractions, fix bugs
+     - Stable 0.2 release — add unified timeout configuration, improve python api and abstractions, fix bugs
      - Stable
    * - `v0.1.9 </nadzoring/v0.1.9/>`_
      - Legacy release — add more commands, add asyncio support, improve codestyle and python API

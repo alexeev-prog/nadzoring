@@ -2,7 +2,13 @@
 
 import click
 
-from nadzoring.commands import arp_group, completion_group, dns_group, network_group, security_group
+from nadzoring.commands import (
+    arp_group,
+    completion_group,
+    dns_group,
+    network_group,
+    security_group,
+)
 
 
 @click.group()

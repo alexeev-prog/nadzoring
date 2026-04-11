@@ -1,3 +1,4 @@
+
 <a id="readme-top"></a>
 
 <div align="center">
@@ -5,7 +6,7 @@
     <img src="https://raw.githubusercontent.com/alexeev-prog/nadzoring/refs/heads/main/docs/logo.png" width=300>
     <h2>Nadzoring</h2>
     <p>An open source tool and python library for detecting website blocks, downdetecting and network analysis</p>
-    <a href="https://alexeev-prog.github.io/nadzoring/v0.2.0"><strong>Explore the docs »</strong></a>
+    <a href="https://alexeev-prog.github.io/nadzoring/v0.2.1"><strong>Explore the docs »</strong></a>
   </p>
   <p align="center">
     <a href="#-getting-started">Getting Started</a>
@@ -64,6 +65,7 @@ Beyond its technical strengths, Nadzoring is supported by an extensive, versione
 - [Getting Started](#getting-started)
     - [Prerequisites](#prerequisites)
     - [Installation](#installation)
+    - [Running with Docker](#running-with-docker)
   - [Usage](#usage)
     - [Global Options](#global-options)
     - [Shell Completions](#shell-completions)
@@ -188,6 +190,53 @@ nadzoring --help
 ```bash
 pip install git+https://github.com/alexeev-prog/nadzoring.git
 ```
+
+### Running with Docker
+
+For Linux users, Docker provides the easiest and most stable way to run Nadzoring without system dependency issues. The container comes with all necessary network capabilities pre-configured.
+
+> **📘 Detailed Docker Guide:** See [Docker.md](Docker.md) for complete Docker setup instructions, including native Windows alternatives, development tips, and troubleshooting.
+
+**Quick start with Docker:**
+
+```bash
+# Clone the repository
+git clone https://github.com/alexeev-prog/nadzoring.git
+cd nadzoring
+
+# Build the Docker image
+docker build -t nadzoring:latest .
+
+# Create a convenient alias (add to ~/.bashrc or ~/.zshrc)
+alias nadzoring='docker run --rm -it \
+  --network host \
+  --cap-add=NET_ADMIN \
+  --cap-add=NET_RAW \
+  nadzoring:latest'
+
+# Now use Nadzoring normally
+nadzoring --help
+nadzoring dns resolve google.com
+nadzoring network-base port-scan 192.168.1.0/24
+nadzoring arp detect-spoofing
+```
+
+**Benefits of using Docker:**
+- ✅ **Isolated environment** — No Python version conflicts or dependency issues
+- ✅ **Easy updates** — Just rebuild the image with `git pull && docker build`
+- ✅ **No system modifications** — Leaves your host system untouched
+- ✅ **Consistent behavior** — Works the same across different Linux distributions
+- ✅ **Network capabilities** — Pre-configured with NET_ADMIN and NET_RAW for full functionality
+
+**Platform recommendation:**
+
+| Platform | Recommended Method | Best For |
+|----------|-------------------|----------|
+| **Linux** | Docker (with alias) | Most users, servers, CI/CD |
+| **Linux** | Native (pipx) | Performance, development |
+| **Windows** | Native (pipx) | Best networking compatibility |
+
+> **Note for Windows users:** Docker on Windows has limitations with raw sockets and local network access. Native installation via pipx is strongly recommended for Windows. See [Docker.md](Docker.md) for Windows-specific guidance.
 
 ---
 
@@ -2861,7 +2910,8 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 | Version | Link | Status |
 |---------|------|--------|
 | **main** | [Latest (development)](https://alexeev-prog.github.io/nadzoring/main) | 🟡 Development |
-| **v0.2.0** | [Release](https://alexeev-prog.github.io/nadzoring/v0.2.0) | 🟢 Stable |
+| **v0.2.1** | [Release](https://alexeev-prog.github.io/nadzoring/v0.2.1) | 🟢 Stable |
+| v0.2.0 | [Release](https://alexeev-prog.github.io/nadzoring/v0.2.0) | 🟢 Stable |
 | v0.1.9 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.9) | ⚪ Legacy |
 | v0.1.8 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.8) | ⚪ Legacy |
 | v0.1.7 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.7) | ⚪ Legacy |
