@@ -1,14 +1,12 @@
 """Shell completion support for the nadzoring CLI."""
 
-
 from __future__ import annotations
 
+import os
+
 import click
-from click.shell_completion import (
-    ShellComplete,
-    add_completion_class,
-    get_completion_class,
-)
+from click.parser import split_arg_string
+from click.shell_completion import CompletionItem, ShellComplete, add_completion_class, get_completion_class
 
 _SOURCE_POWERSHELL: str = """\
 Register-ArgumentCompleter -Native -CommandName %(prog_name)s -ScriptBlock {
@@ -58,8 +56,40 @@ class PowerShellComplete(ShellComplete):
         """
         return self.prog_name.replace("-", "_")
 
+    def get_completion_args(self) -> tuple[list[str], str]:
+        """Extract completion arguments from PowerShell environment.
 
-# Register the custom PowerShell completion class
+        Parses COMP_WORDS and COMP_CWORD environment variables set by the
+        PowerShell completion script to reconstruct the command line state.
+
+        Returns:
+            A tuple containing (args, incomplete) where args is the list of
+            completed arguments and incomplete is the current word being completed.
+        """
+        cwords_str = os.environ.get("COMP_WORDS", "")
+        cwords = split_arg_string(cwords_str)
+        cword = int(os.environ.get("COMP_CWORD", "0"))
+
+        args = cwords[1:cword]
+        incomplete = cwords[cword] if cword < len(cwords) else ""
+        return args, incomplete
+
+    def format_completion(self, item: CompletionItem) -> str:
+        """Format a completion item for PowerShell consumption.
+
+        Formats completions as comma-separated values where the first element
+        is the completion type and the second is the value. This matches the
+        parsing logic in the PowerShell completion script.
+
+        Args:
+            item: The completion item to format.
+
+        Returns:
+            A comma-separated string in the format "type,value".
+        """
+        return f"{item.type},{item.value}"
+
+
 add_completion_class(PowerShellComplete, name="powershell")
 
 

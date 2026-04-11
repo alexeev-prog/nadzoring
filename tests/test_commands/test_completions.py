@@ -38,6 +38,87 @@ class TestPowerShellComplete:
         completer = PowerShellComplete(cli=MagicMock(), ctx_args={}, prog_name="", complete_var="TEST_VAR")
         assert completer.func_name == ""
 
+    def test_get_completion_args_basic(self):
+        completer = PowerShellComplete(
+            cli=MagicMock(),
+            ctx_args={},
+            prog_name="test",
+            complete_var="TEST_VAR",
+        )
+        with patch.dict("os.environ", {"COMP_WORDS": "test command --flag value", "COMP_CWORD": "3"}):
+            args, incomplete = completer.get_completion_args()
+            assert args == ["command", "--flag"]
+            assert incomplete == "value"
+
+    def test_get_completion_args_incomplete_word(self):
+        completer = PowerShellComplete(
+            cli=MagicMock(),
+            ctx_args={},
+            prog_name="test",
+            complete_var="TEST_VAR",
+        )
+        with patch.dict("os.environ", {"COMP_WORDS": "test command --flag val", "COMP_CWORD": "4"}):
+            args, incomplete = completer.get_completion_args()
+            assert args == ["command", "--flag", "val"]
+            assert incomplete == ""
+
+    def test_get_completion_args_empty(self):
+        completer = (
+            PowerShellComplete(
+                cli=MagicMock(),
+                ctx_args={},
+                prog_name="test",
+                complete_var="TEST_VAR",
+            ),
+            {},
+        )
+        with patch.dict("os.environ", {"COMP_WORDS": "test", "COMP_CWORD": "1"}):
+            completer = PowerShellComplete(
+                cli=MagicMock(),
+                ctx_args={},
+                prog_name="test",
+                complete_var="TEST_VAR",
+            )
+            args, incomplete = completer.get_completion_args()
+            assert args == []
+            assert incomplete == ""
+
+    def test_get_completion_args_missing_env_vars(self):
+        completer = PowerShellComplete(
+            cli=MagicMock(),
+            ctx_args={},
+            prog_name="test",
+            complete_var="TEST_VAR",
+        )
+        with patch.dict("os.environ", {}, clear=True):
+            args, incomplete = completer.get_completion_args()
+            assert args == []
+            assert incomplete == ""
+
+    def test_format_completion_plain(self):
+        completer = PowerShellComplete(
+            cli=MagicMock(),
+            ctx_args={},
+            prog_name="test",
+            complete_var="TEST_VAR",
+        )
+        from click.shell_completion import CompletionItem
+
+        item = CompletionItem("test_value", type="plain")
+        assert completer.format_completion(item) == "plain,test_value"
+
+    def test_format_completion_other_types(self):
+        completer = PowerShellComplete(
+            cli=MagicMock(),
+            ctx_args={},
+            prog_name="test",
+            complete_var="TEST_VAR",
+        )
+        from click.shell_completion import CompletionItem
+
+        item = CompletionItem("flag_value", type="flag")
+        assert completer.format_completion(item) == "flag,flag_value"
+
 
 class TestGetRootCliAndProgName:
     def test_single_level_context(self):
