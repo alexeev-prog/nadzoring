@@ -51,7 +51,15 @@ Nadzoring (from Russian "надзор" — supervision/oversight + the English "
 
 Built from the ground up with AI-friendliness in mind, Nadzoring is fully type-annotated, enforces a strict zero-warnings linter policy, and is architected according to SOLID principles with a strong emphasis on modularity and the Single Responsibility Principle (SRP). This architectural clarity ensures that the codebase remains maintainable, testable, and easy to extend. The project's high-quality typing and well-structured domain logic make it equally suitable for use as a reliable Python library in your own applications, as well as a powerful standalone CLI tool.
 
-Beyond its technical strengths, Nadzoring is supported by an extensive, versioned documentation site, complete with an integrated AI chat powered by Context7 for interactive help, and is featured on DeepWiki and Pitchhut for broader discovery. The project maintains a clean separation between its CLI layer and domain logic, allowing the same core functionality to be used seamlessly from the command line or programmatically. With an active development cycle, comprehensive CI/CD pipelines, and a focus on code quality, Nadzoring is built to be a trustworthy foundation for network analysis and security auditing.
+## Star History
+
+<a href="https://www.star-history.com/?repos=alexeev-prog%2Fnadzoring&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=alexeev-prog/nadzoring&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=alexeev-prog/nadzoring&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=alexeev-prog/nadzoring&type=date&legend=top-left" />
+ </picture>
+</a>
 
 <p align="center">
     <a href="https://deepwiki.com/alexeev-prog/nadzoring"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
