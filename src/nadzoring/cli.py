@@ -3,6 +3,7 @@
 import click
 
 from nadzoring.commands import arp_group, dns_group, network_group, security_group
+from nadzoring.commands.completions_commands import completion_group
 
 
 @click.group()
@@ -14,6 +15,7 @@ cli.add_command(network_group)
 cli.add_command(dns_group)
 cli.add_command(arp_group)
 cli.add_command(security_group)
+cli.add_command(completion_group)
 
 
 def main() -> None:

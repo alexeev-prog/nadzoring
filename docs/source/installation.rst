@@ -169,8 +169,185 @@ Use one of the following approaches:
 
 ----
 
+Shell Completions
+-----------------
+
+Nadzoring provides tab-completion support for **bash**, **zsh**, **fish**, and
+**PowerShell**. Enable it for your preferred shell using the commands below.
+
+Bash
+~~~~
+
+Add to ``~/.bashrc`` (or ``~/.bash_profile`` on macOS):
+
+.. code-block:: bash
+
+   echo 'eval "$(nadzoring completion bash)"' >> ~/.bashrc
+   source ~/.bashrc
+
+Alternative — save to a file and source it:
+
+.. code-block:: bash
+
+   nadzoring completion bash > ~/.nadzoring-complete.bash
+   echo 'source ~/.nadzoring-complete.bash' >> ~/.bashrc
+
+Zsh
+~~~
+
+Add to ``~/.zshrc``:
+
+.. code-block:: bash
+
+   echo 'eval "$(nadzoring completion zsh)"' >> ~/.zshrc
+   source ~/.zshrc
+
+Or save to a file in your ``fpath``:
+
+.. code-block:: bash
+
+   nadzoring completion zsh > "${fpath[1]}/_nadzoring"
+
+Fish
+~~~~
+
+Save directly to Fish completions directory:
+
+.. code-block:: bash
+
+   nadzoring completion fish > ~/.config/fish/completions/nadzoring.fish
+
+Or source it temporarily:
+
+.. code-block:: bash
+
+   nadzoring completion fish | source
+
+PowerShell
+~~~~~~~~~~
+
+Add to your PowerShell profile (``$PROFILE``):
+
+.. code-block:: powershell
+
+   nadzoring completion powershell >> $PROFILE
+
+To reload the profile immediately:
+
+.. code-block:: powershell
+
+   . $PROFILE
+
+Or use it in the current session only:
+
+.. code-block:: powershell
+
+   nadzoring completion powershell | Invoke-Expression
+
+Testing Completions
+~~~~~~~~~~~~~~~~~~~
+
+After installation, type ``nadzoring `` followed by **TAB** to see available
+commands:
+
+.. code-block:: bash
+
+   nadzoring [TAB]
+   # Should show: arp  completion  dns  network-base  security
+
+Type a command followed by space and **TAB** to see options:
+
+.. code-block:: bash
+
+   nadzoring dns [TAB]
+   # Should show: resolve  reverse  check  trace  compare  health  benchmark  poisoning  monitor
+
+Manual Activation (without saving to profile)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you don't want to modify your shell profile, you can activate completions
+manually:
+
+.. code-block:: bash
+
+   # Bash / Zsh
+   source <(nadzoring completion bash)
+
+   # Fish
+   nadzoring completion fish | source
+
+   # PowerShell
+   nadzoring completion powershell | Invoke-Expression
+
+Troubleshooting Completions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Completions not working?** Check these common issues:
+
+1. **Shell not reloaded** — restart your terminal or run
+   ``source ~/.bashrc`` (bash) / ``source ~/.zshrc`` (zsh)
+
+2. **Wrong shell** — ensure you're using the correct completion command for
+   your shell
+
+3. **PATH issue** — verify ``nadzoring`` is in your PATH: ``which nadzoring``
+
+4. **Completion not registered** — run the activation command directly to see
+   if there are any errors
+
+**Debugging bash completions:**
+
+.. code-block:: bash
+
+   # Enable debug output
+   set -x
+   nadzoring [TAB]
+   set +x
+
+**Check if completion is registered:**
+
+.. code-block:: bash
+
+   # Bash
+   complete -p | grep nadzoring
+   # Should output: complete -o nosort -F _nadzoring_completion nadzoring
+
+   # Zsh
+   echo $fpath | grep nadzoring
+
+**Show installation hints:**
+
+.. code-block:: bash
+
+   nadzoring completion hints bash      # For bash
+   nadzoring completion hints zsh       # For zsh
+   nadzoring completion hints fish      # For fish
+   nadzoring completion hints powershell  # For PowerShell
+
+Completions Commands Reference
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Command
+     - Description
+   * - ``nadzoring completion bash``
+     - Generate bash completion script
+   * - ``nadzoring completion zsh``
+     - Generate zsh completion script
+   * - ``nadzoring completion fish``
+     - Generate fish completion script
+   * - ``nadzoring completion powershell``
+     - Generate PowerShell completion script
+   * - ``nadzoring completion hints <shell>``
+     - Show detailed installation hints
+
+----
+
 Verifying the Installation
-----------------------------
+--------------------------
 
 Run a quick smoke test after installing:
 
@@ -202,3 +379,6 @@ Run a quick smoke test after installing:
 
    # Test timeout configuration (slow operation will abort)
    nadzoring dns resolve --timeout 2 google.com
+
+   # Test shell completions (if enabled)
+   nadzoring [TAB]

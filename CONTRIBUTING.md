@@ -120,8 +120,11 @@ The codebase follows strict conventions — study the existing source before wri
 # ✅ correct
 def resolve_hostname(hostname: str) -> str | None: ...
 
+
 # ❌ wrong
 from typing import Optional
+
+
 def resolve_hostname(hostname: str) -> Optional[str]: ...
 ```
 
@@ -166,6 +169,7 @@ Boolean flags and optional parameters must be keyword-only (after `*`):
 ```python
 # ✅ correct
 def run(target: str, *, max_hops: int = 30, timeout: float = 5.0) -> list[TraceHop]: ...
+
 
 # ❌ wrong
 def run(target: str, max_hops: int = 30, timeout: float = 5.0) -> list[TraceHop]: ...
@@ -221,6 +225,7 @@ When adding a new network or DNS function that may block, use `TimeoutConfig` fr
 ```python
 from nadzoring.utils.timeout import TimeoutConfig, timeout_context
 
+
 def my_network_operation(
     target: str,
     *,
@@ -250,7 +255,7 @@ Suppress ruff rules only where unavoidable, always with an inline comment explai
 
 ```python
 raw = check_output(  # noqa: S602
-    "ip route",     # noqa: S607
+    "ip route",  # noqa: S607
     shell=True,
     stderr=PIPE,
 )
