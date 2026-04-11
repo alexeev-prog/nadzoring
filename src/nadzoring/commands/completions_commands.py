@@ -1,15 +1,5 @@
-"""Shell completion support for the nadzoring CLI.
+"""Shell completion support for the nadzoring CLI."""
 
-Provides completion commands for bash, zsh, fish, and PowerShell shells.
-Each shell has its own dedicated command that emits the appropriate shell
-integration script.
-
-Typical usage (end-user):
-    nadzoring completion bash >> ~/.bashrc
-    nadzoring completion zsh >> ~/.zshrc
-    nadzoring completion fish > ~/.config/fish/completions/nadzoring.fish
-    nadzoring completion powershell >> $PROFILE
-"""
 
 from __future__ import annotations
 
