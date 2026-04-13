@@ -18,7 +18,7 @@ load(globals())
 
 project = "nadzoring"
 author = "Alexeev Bronislav"
-version = "0.2.1"
+version = "0.2.2"
 release = "0.2"
 project_copyright = "2025, Alexeev Bronislaw"
 
