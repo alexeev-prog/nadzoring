@@ -67,6 +67,18 @@ def test_normalize_with_www_and_https():
 def test_normalize_www_stripped_when_split_returns_three_parts():
     class _FakeStr(str):
         def split(self, sep=None, maxsplit=-1):
+            """
+            Return a split list, with a test-specific override when splitting on "." once.
+            
+            If called with sep == "." and maxsplit == 1, returns ["www", "sub", "example.com"]; otherwise delegates to the superclass implementation.
+            
+            Parameters:
+                sep (str | None): Separator to use for splitting.
+                maxsplit (int): Maximum number of splits to perform.
+            
+            Returns:
+                list: Substrings produced by the split.
+            """
             if sep == "." and maxsplit == 1:
                 return ["www", "sub", "example.com"]
             return super().split(sep, maxsplit)
