@@ -135,7 +135,7 @@ def test_parse_linux_empty_parts_after_split(mocker):
         def split(self, sep=None, maxsplit=-1):
             """
             Split the sequence into a list of substrings using the given separator.
-            
+
             Returns:
                 list: List of substrings resulting from the split.
             """
@@ -164,13 +164,13 @@ def test_parse_linux_rtt_value_error_in_float_conversion(mocker):
     def patched_float(x):
         """
         Wrapper around the built-in `float` that raises `ValueError` on its first invocation and delegates to `float` thereafter.
-        
+
         Parameters:
             x: Value to convert to a floating-point number.
-        
+
         Returns:
             The floating-point representation of `x`.
-        
+
         Raises:
             ValueError: On the first call (message "mocked float error").
         """
@@ -261,15 +261,15 @@ def test_parse_windows_rtt_value_error(mocker):
         def patched_float(x):
             """
             Convert the input to a float while injecting a mocked failure on the first invocation for the specific token "999".
-            
+
             Increments the shared counter stored in `call_count["n"]` each time it is called. On the first call when `x` is the string `"999"`, raises a `ValueError` with message `"mocked"`. Otherwise returns the result of `original_float(x)`.
-            
+
             Parameters:
                 x: The value to convert to a float (passed through to `original_float`).
-            
+
             Returns:
                 The floating-point value produced by `original_float(x)`.
-            
+
             Raises:
                 ValueError: If this is the first invocation and `x == "999"`.
             """

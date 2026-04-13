@@ -139,7 +139,9 @@ def test_check_ipv4_with_valid_ipv4_but_non_digit_octets(mocker):
     mock.assert_called_once_with("192.168.1.abc")
 
 
-def test_check_ipv4_returns_hostname_when_is_valid_ipv4_true_but_not_four_digit_parts(mocker):
+def test_check_ipv4_returns_hostname_when_is_valid_ipv4_true_but_not_four_digit_parts(
+    mocker,
+):
     mocker.patch(
         "nadzoring.network_base.router_ip._is_valid_ipv4",
         return_value=True,
