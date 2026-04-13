@@ -1,5 +1,4 @@
 # tests/test_network_base/test_route_table.py
-"""Tests for nadzoring.network_base.route_table — 100% coverage."""
 
 from subprocess import CalledProcessError
 
@@ -86,6 +85,14 @@ def test_linux_route_with_extra_fields():
     assert entries[0].gateway == "10.0.0.1"
     assert entries[0].interface == "eth0"
     assert entries[0].metric == "100"
+
+
+def test_linux_whitespace_only_line_skipped():
+    raw = "default via 10.0.0.1 dev eth0\n   \ndefault via 10.0.0.2 dev eth1\n"
+    entries = _parse_linux_ip_route(raw)
+    assert len(entries) == 2
+    assert entries[0].gateway == "10.0.0.1"
+    assert entries[1].gateway == "10.0.0.2"
 
 
 WINDOWS_SAMPLE = (
@@ -214,10 +221,8 @@ def test_get_linux_routes_with_multiple_entries(mocker):
 
 
 def test_get_linux_routes_decode_error(mocker):
-    """Test that decode errors are handled gracefully."""
     mock_output = b"\xff\xff\xff"
     mocker.patch("nadzoring.network_base.route_table.check_output", return_value=mock_output)
-    # This should not raise an exception
     result = _get_linux_routes()
     assert isinstance(result, list)
 
@@ -258,7 +263,6 @@ def test_get_windows_routes_file_not_found(mocker):
 
 
 def test_get_windows_routes_decode_error(mocker):
-    """Test that decode errors with cp866 are handled."""
     mocker.patch(
         "nadzoring.network_base.route_table.check_output",
         return_value=b"\xff\xff\xff",

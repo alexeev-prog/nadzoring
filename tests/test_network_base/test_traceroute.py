@@ -1,7 +1,7 @@
 # tests/test_network_base/test_traceroute.py
-"""Tests for nadzoring.network_base.traceroute — 100% coverage."""
 
 from subprocess import CalledProcessError, TimeoutExpired
+from unittest.mock import patch
 
 import pytest
 
@@ -100,7 +100,6 @@ def test_parse_linux_precision():
 
 
 def test_parse_linux_ip_only_no_host():
-    """Test parsing line with IP only, no hostname."""
     raw = " 1  192.168.1.1  1.0 ms\n"
     hops = _parse_linux_traceroute(raw)
     assert hops[0].hop == 1
@@ -114,6 +113,65 @@ def test_parse_linux_extra_whitespace():
     assert hops[0].hop == 1
     assert hops[0].host == "router.example.com"
     assert hops[0].ip == "10.0.0.1"
+
+
+def test_parse_linux_whitespace_only_line_skipped():
+    raw = " 1  gw (10.0.0.1)  1.0 ms\n   \n 2  8.8.8.8 (8.8.8.8)  5.0 ms\n"
+    hops = _parse_linux_traceroute(raw)
+    assert len(hops) == 2
+    assert hops[0].hop == 1
+    assert hops[1].hop == 2
+
+
+def test_parse_linux_non_matching_line_skipped():
+    raw = "traceroute to 8.8.8.8 (8.8.8.8), 30 hops max\n 1  gw (10.0.0.1)  1.0 ms\n"
+    hops = _parse_linux_traceroute(raw)
+    assert len(hops) == 1
+    assert hops[0].hop == 1
+
+
+def test_parse_linux_empty_parts_after_split(mocker):
+    class _EmptyStr(str):
+        def split(self, sep=None, maxsplit=-1):
+            return []
+
+    mock_match = mocker.MagicMock()
+    mock_match.group.side_effect = lambda n: {1: "1", 2: _EmptyStr("test")}[n]
+
+    with patch("nadzoring.network_base.traceroute.re.match") as mock_re_match:
+        mock_re_match.side_effect = [mock_match, None, None]
+        with patch("nadzoring.network_base.traceroute.re.finditer", return_value=iter([])):
+            hops = _parse_linux_traceroute(" 1  test\n")
+            assert len(hops) == 1
+            assert hops[0].hop == 1
+            assert hops[0].host is None
+            assert hops[0].ip is None
+            assert hops[0].rtt_ms == [None]
+
+
+def test_parse_linux_rtt_value_error_in_float_conversion(mocker):
+    import builtins
+
+    original_float = builtins.float
+    call_count = {"n": 0}
+
+    def patched_float(x):
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            raise ValueError("mocked float error")
+        return original_float(x)
+
+    with patch("nadzoring.network_base.traceroute.re.finditer") as mock_finditer:
+        mock_m = mocker.MagicMock()
+        mock_m.group.return_value = "bad"
+        mock_finditer.return_value = iter([mock_m])
+
+        with patch("builtins.float", side_effect=patched_float):
+            raw = " 1  host (1.2.3.4)  bad ms\n"
+            hops = _parse_linux_traceroute(raw)
+
+    assert len(hops) == 1
+    assert None in hops[0].rtt_ms
 
 
 def test_parse_windows_empty():
@@ -169,6 +227,31 @@ def test_parse_windows_varied_rtt_count():
     raw = "  1     5 ms   10 ms   15 ms   20 ms  8.8.8.8\n"
     hops = _parse_windows_tracert(raw)
     assert len(hops[0].rtt_ms) == 4
+
+
+def test_parse_windows_rtt_value_error(mocker):
+    with patch("nadzoring.network_base.traceroute.re.finditer") as mock_finditer:
+        mock_m = mocker.MagicMock()
+        mock_m.group.return_value = "999"
+        mock_finditer.return_value = iter([mock_m])
+
+        import builtins
+
+        original_float = builtins.float
+        call_count = {"n": 0}
+
+        def patched_float(x):
+            call_count["n"] += 1
+            if call_count["n"] == 1 and x == "999":
+                raise ValueError("mocked")
+            return original_float(x)
+
+        with patch("builtins.float", side_effect=patched_float):
+            raw = "  1    999 ms  10.0.0.1\n"
+            hops = _parse_windows_tracert(raw)
+
+    assert len(hops) == 1
+    assert None in hops[0].rtt_ms
 
 
 def test_stream_process_success(mocker):
@@ -339,14 +422,12 @@ def test_run_windows_tracert_timeout_returns_partial(mocker):
 
 
 def test_run_windows_tracert_exception_handling(mocker):
-    """Test that exceptions during Popen are handled."""
     mocker.patch("nadzoring.network_base.traceroute.Popen", side_effect=Exception("Popen failed"))
     result = _run_windows_tracert("8.8.8.8", max_hops=5, per_hop_timeout=2.0)
     assert result == []
 
 
 def test_run_windows_tracert_called_process_error(mocker):
-    """Test CalledProcessError handling."""
     mock_proc = mocker.MagicMock()
     mock_proc.communicate.side_effect = CalledProcessError(1, "tracert")
     mock_proc.__enter__ = mocker.MagicMock(return_value=mock_proc)
