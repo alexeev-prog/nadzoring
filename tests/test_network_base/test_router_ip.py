@@ -1,5 +1,4 @@
 # tests/test_network_base/test_router_ip.py
-"""Tests for nadzoring.network_base.router_ip — 100% coverage."""
 
 from socket import gaierror
 
@@ -135,10 +134,18 @@ def test_check_ipv4_empty_string(mocker):
 
 
 def test_check_ipv4_with_valid_ipv4_but_non_digit_octets(mocker):
-    """Test that IP with valid format but non-digit parts is resolved."""
     mock = mocker.patch("nadzoring.network_base.router_ip.get_ip_from_host", return_value="1.2.3.4")
     result = check_ipv4("192.168.1.abc")
     mock.assert_called_once_with("192.168.1.abc")
+
+
+def test_check_ipv4_returns_hostname_when_is_valid_ipv4_true_but_not_four_digit_parts(mocker):
+    mocker.patch(
+        "nadzoring.network_base.router_ip._is_valid_ipv4",
+        return_value=True,
+    )
+    result = check_ipv4("1.2.3.abc")
+    assert result == "1.2.3.abc"
 
 
 def test_check_ipv6_compressed():
@@ -289,7 +296,6 @@ def test_linux_router_gateway_as_hostname(mocker):
 
 
 def test_linux_router_with_check_ipv4_returning_different_value(mocker):
-    """Test that the returned value from check_ipv4 is used."""
     mocker.patch(
         "nadzoring.network_base.router_ip.check_output",
         return_value=_make_route_bytes(mocker, "default        gateway.local    0.0.0.0         UG\n"),
