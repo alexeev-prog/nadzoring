@@ -4,6 +4,7 @@
 <div align="center">
   <p align="center">
     <img src="https://raw.githubusercontent.com/alexeev-prog/nadzoring/refs/heads/main/docs/nadzoring-long-preview.png">
+    <h2>Nadzoring</h2>
     <p>An open source tool and python library for detecting website blocks, downdetecting and network analysis</p>
     <a href="https://alexeev-prog.github.io/nadzoring/v0.2.1"><strong>Explore the docs »</strong></a>
   </p>
