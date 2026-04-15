@@ -66,6 +66,9 @@ Built from the ground up with AI-friendliness in mind, Nadzoring is fully type-a
     <a href="https://sloprank.io/repo/alexeev-prog/nadzoring"><img src="https://sloprank.io/badge/alexeev-prog/nadzoring.svg" alt="sloprank"></a>
     <a href='https://coveralls.io/github/alexeev-prog/nadzoring?branch=main'><img src='https://coveralls.io/repos/github/alexeev-prog/nadzoring/badge.svg?branch=main' alt='Coverage' /></a>
     <img src="https://img.shields.io/coderabbit/prs/github/alexeev-prog/nadzoring?utm_source=oss&utm_medium=github&utm_campaign=alexeev-prog%2Fnadzoring&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews" alt="CodeRabbit Pull Request Reviews">
+    <img src="https://sloc.xyz/github/mutating/suby/?category=code" alt="Code lines">
+    <img src="http://www.mypy-lang.org/static/mypy_badge.svg" alt="MyPy Badge">
+    <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="ruff badge">
 </p>
 
 ## Table of Contents
