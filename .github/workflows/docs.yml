@@ -40,7 +40,7 @@ jobs:
         echo '<meta http-equiv="refresh" content="0; url=main/">' > docs/_build/html/index.html
 
     - name: Upload pages artifact
-      uses: actions/upload-pages-artifact@v4
+      uses: actions/upload-pages-artifact@v5
       with:
         path: docs/_build/html
 
