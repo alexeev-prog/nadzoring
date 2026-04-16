@@ -647,6 +647,13 @@ def check_ssl_certificate(  # noqa: C901
             "error": "Connection timeout",
             "verification": "failed" if verify else "unverified",
         })
+    except ssl.SSLError:
+        result.update({
+            "remaining_days": None,
+            "status": "error",
+            "error": "SSL handshake failed",
+            "verification": "failed" if verify else "unverified",
+        })
     except (ConnectionError, OSError):
         result.update({
             "remaining_days": None,
