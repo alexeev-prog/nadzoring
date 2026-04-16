@@ -34,6 +34,7 @@ from nadzoring.dns_lookup.types import (
     DNSResult,
     PoisoningCheckResult,
     RecordType,
+    ReverseDNSResult,
 )
 from nadzoring.logger import get_logger
 from nadzoring.network_base.whois_lookup import whois_domain_lookup
@@ -473,7 +474,7 @@ def reverse_command(
     results: list[dict[str, Any]] = []
 
     for ip in ip_addresses:
-        result: dict[str, Any] = reverse_dns(ip, nameserver)
+        result: ReverseDNSResult = reverse_dns(ip, nameserver)
         results.append({
             "ip_address": result["ip_address"],
             "hostname": result["hostname"] or "Not found",
