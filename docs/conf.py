@@ -48,14 +48,6 @@ extensions: list[str] = [
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx.ext.linkcode",
-    "myst_parser",
-]
-
-myst_heading_anchors = 4
-myst_enable_extensions = [
-    "colon_fence",
-    "deflist",
-    "html_image",
 ]
 
 pygments_style = "gruvbox-dark"
