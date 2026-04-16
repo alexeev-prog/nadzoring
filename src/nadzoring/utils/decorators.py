@@ -12,12 +12,7 @@ import click
 import yaml
 
 from nadzoring.logger import setup_cli_logging
-from nadzoring.utils.formatters import (
-    print_csv_table,
-    print_html_table,
-    print_results_table,
-    save_results,
-)
+from nadzoring.utils.formatters import print_csv_table, print_html_table, print_results_table, save_results
 from nadzoring.utils.timeout import TimeoutConfig
 
 F = TypeVar("F", bound=Callable[..., Any])

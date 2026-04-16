@@ -1294,6 +1294,23 @@ wheels = [
 ]
 
 [[package]]
+name = "myst-parser"
+version = "5.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "docutils" },
+    { name = "jinja2" },
+    { name = "markdown-it-py" },
+    { name = "mdit-py-plugins" },
+    { name = "pyyaml" },
+    { name = "sphinx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/33/fa/7b45eef11b7971f0beb29d27b7bfe0d747d063aa29e170d9edd004733c8a/myst_parser-5.0.0.tar.gz", hash = "sha256:f6f231452c56e8baa662cc352c548158f6a16fcbd6e3800fc594978002b94f3a", size = 98535, upload-time = "2026-01-15T09:08:18.036Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d3/ac/686789b9145413f1a61878c407210e41bfdb097976864e0913078b24098c/myst_parser-5.0.0-py3-none-any.whl", hash = "sha256:ab31e516024918296e169139072b81592336f2fef55b8986aa31c9f04b5f7211", size = 84533, upload-time = "2026-01-15T09:08:16.788Z" },
+]
+
+[[package]]
 name = "nadzoring"
 version = "0.2.2"
 source = { editable = "." }
@@ -1327,6 +1344,7 @@ dev = [
     { name = "import-linter", extra = ["ui"] },
     { name = "mutmut" },
     { name = "mypy" },
+    { name = "myst-parser" },
     { name = "nox" },
     { name = "pyrefly" },
     { name = "pytest" },
@@ -1376,6 +1394,7 @@ dev = [
     { name = "import-linter", extras = ["ui"], specifier = ">=2.11" },
     { name = "mutmut", specifier = ">=3.5.0" },
     { name = "mypy", specifier = ">=1.19.1" },
+    { name = "myst-parser", specifier = ">=5.0.0" },
     { name = "nox", specifier = ">=2026.2.9" },
     { name = "pyrefly", specifier = ">=0.56.0" },
     { name = "pytest", specifier = ">=9.0.2" },

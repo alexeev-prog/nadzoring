@@ -16,24 +16,10 @@ from nadzoring.network_base.ipv4_local_cli import get_local_ipv4
 from nadzoring.network_base.network_params import network_param
 from nadzoring.network_base.parse_url import parse_url
 from nadzoring.network_base.ping_address import ping_addr
-from nadzoring.network_base.port_scanner import (
-    ScanConfig,
-    ScanMode,
-    ScanResult,
-    get_ports_from_mode,
-    scan_ports,
-)
+from nadzoring.network_base.port_scanner import ScanConfig, ScanMode, ScanResult, get_ports_from_mode, scan_ports
 from nadzoring.network_base.route_table import RouteEntry, get_route_table
-from nadzoring.network_base.router_ip import (
-    check_ipv4,
-    check_ipv6,
-    get_ip_from_host,
-    router_ip,
-)
-from nadzoring.network_base.service_detector import (
-    ServiceDetectionResult,
-    detect_service_on_host,
-)
+from nadzoring.network_base.router_ip import check_ipv4, check_ipv6, get_ip_from_host, router_ip
+from nadzoring.network_base.service_detector import ServiceDetectionResult, detect_service_on_host
 from nadzoring.network_base.service_on_port import get_service_on_port
 from nadzoring.network_base.traceroute import traceroute
 from nadzoring.network_base.whois_lookup import whois_lookup

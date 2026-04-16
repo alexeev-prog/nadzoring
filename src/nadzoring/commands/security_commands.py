@@ -8,10 +8,7 @@ import click
 from tqdm import tqdm
 
 from nadzoring.logger import get_logger
-from nadzoring.security.check_website_ssl_cert import (
-    check_ssl_certificate,
-    check_ssl_expiry_with_fallback,
-)
+from nadzoring.security.check_website_ssl_cert import check_ssl_certificate, check_ssl_expiry_with_fallback
 from nadzoring.security.email_security import check_email_security
 from nadzoring.security.http_headers import check_http_security_headers
 from nadzoring.security.ssl_monitor import SSLMonitor

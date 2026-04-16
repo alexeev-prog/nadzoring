@@ -2,11 +2,7 @@
 
 from requests import RequestException
 
-from nadzoring.network_base.geolocation_ip import (
-    _fetch_geo_data,
-    _parse_geo_response,
-    geo_ip,
-)
+from nadzoring.network_base.geolocation_ip import _fetch_geo_data, _parse_geo_response, geo_ip
 
 # ---------------------------------------------------------------------------
 # _fetch_geo_data

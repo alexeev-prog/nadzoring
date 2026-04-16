@@ -8,11 +8,7 @@ from urllib.parse import ParseResult, urlparse
 from requests import Session
 from requests.exceptions import RequestException
 
-from nadzoring.utils.timeout import (
-    OperationTimeoutError,
-    TimeoutConfig,
-    timeout_context,
-)
+from nadzoring.utils.timeout import OperationTimeoutError, TimeoutConfig, timeout_context
 
 
 @dataclass

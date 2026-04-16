@@ -29,11 +29,7 @@ from dns.resolver import Answer, Resolver
 
 from nadzoring.dns_lookup.types import DNSResult, RecordType
 from nadzoring.logger import get_logger
-from nadzoring.utils.timeout import (
-    OperationTimeoutError,
-    TimeoutConfig,
-    timeout_context,
-)
+from nadzoring.utils.timeout import OperationTimeoutError, TimeoutConfig, timeout_context
 
 logger: Logger = get_logger(__name__)
 

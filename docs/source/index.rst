@@ -1,5 +1,11 @@
 .. nadzoring documentation master file
 
+.. image:: nadzoring-logo.png
+   :alt: Nadzoring Logo
+   :width: 200px
+   :align: center
+   :class: no-scaled-link
+
 Welcome to Nadzoring's Documentation!
 ======================================
 
@@ -42,10 +48,7 @@ Key Features
    :maxdepth: 3
    :caption: Command Reference
 
-   commands/dns
-   commands/network
-   commands/security
-   commands/arp
+   commands/all_commands
 
 .. toctree::
    :maxdepth: 2
@@ -56,6 +59,13 @@ Key Features
    api/security
    api/arp
    api/utils
+   api_examples
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Examples
+
+   code_examples
 
 .. toctree::
    :maxdepth: 1

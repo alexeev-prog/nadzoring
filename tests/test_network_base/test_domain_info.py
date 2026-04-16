@@ -2,11 +2,7 @@
 
 import socket
 
-from nadzoring.network_base.domain_info import (
-    _get_dns_records,
-    _resolve_domain,
-    get_domain_info,
-)
+from nadzoring.network_base.domain_info import _get_dns_records, _resolve_domain, get_domain_info
 
 # ---------------------------------------------------------------------------
 # _resolve_domain
