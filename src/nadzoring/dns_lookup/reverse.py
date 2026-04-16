@@ -1,9 +1,9 @@
-"""
-Reverse DNS lookup: IP address → hostname (PTR record).
+"""Reverse DNS lookup: IP address → hostname (PTR record).
 
 Typical usage::
 
     from nadzoring.dns_lookup.reverse import reverse_dns
+    from nadzoring.utils.result import unwrap
 
     result = reverse_dns("8.8.8.8")
     if result["error"]:
@@ -12,6 +12,9 @@ Typical usage::
         print("Hostname:", result["hostname"])
         print("RTT:", result["response_time"], "ms")
 
+    # Or raise on error:
+    safe_result = unwrap(result)
+    print(safe_result["hostname"])
 """
 
 from logging import Logger
@@ -23,6 +26,7 @@ import dns.reversename
 from dns.name import Name
 from dns.resolver import Answer, Resolver
 
+from nadzoring.dns_lookup.types import ReverseDNSResult
 from nadzoring.dns_lookup.utils import create_resolver
 from nadzoring.logger import get_logger
 from nadzoring.utils.timeout import TimeoutConfig
@@ -30,7 +34,7 @@ from nadzoring.utils.timeout import TimeoutConfig
 logger: Logger = get_logger(__name__)
 
 
-def _make_result(ip_address: str) -> dict[str, str | float | None]:
+def _make_result(ip_address: str) -> ReverseDNSResult:
     """Return a zeroed reverse-lookup result dict."""
     return {
         "ip_address": ip_address,
@@ -44,47 +48,32 @@ def reverse_dns(
     ip_address: str,
     nameserver: str | None = None,
     timeout_config: TimeoutConfig | None = None,
-) -> dict[str, str | float | None]:
-    """
-    Perform a reverse DNS lookup to resolve an IP address to a hostname.
+) -> ReverseDNSResult:
+    """Perform a reverse DNS lookup to resolve an IP address to a hostname.
 
     Queries the PTR record for *ip_address* using
     :func:`dns.reversename.from_address` for automatic ``in-addr.arpa`` /
-    ``ip6.arpa`` name construction.  Both IPv4 and IPv6 are supported.
+    ``ip6.arpa`` name construction. Both IPv4 and IPv6 are supported.
 
     The function never raises; all failures are returned in the ``"error"``
-    field so that callers can handle them uniformly::
-
-        result = reverse_dns("192.168.1.1")
-        hostname = result["hostname"] or f"[{result['error']}]"
+    field so that callers can handle them uniformly. Error strings are
+    defined in :data:`nadzoring.dns_lookup.errors.DNSReverseError`.
 
     Args:
         ip_address: IPv4 or IPv6 address to look up (e.g. ``"8.8.8.8"``).
-        nameserver: Optional nameserver IP address.  ``None`` uses the
+        nameserver: Optional nameserver IP address. ``None`` uses the
             system default resolvers.
         timeout_config: Unified timeout configuration. If None, uses default.
 
     Returns:
-        Dict with the following keys:
+        :class:`~.types.ReverseDNSResult` dict with the following keys:
 
-        ``ip_address``
-            The original address queried (always present).
-        ``hostname``
-            Resolved hostname with trailing dot stripped, or ``None``
-            when the lookup failed.
-        ``error``
-            Error message string on failure; ``None`` on success.
-            Possible values:
-
-            - ``"No PTR record"`` — the IP has no reverse entry
-            - ``"No reverse DNS"`` — NXDOMAIN on the reverse zone
-            - ``"Query timeout"`` — resolver timed out
-            - ``"Invalid IP address: …"`` — *ip_address* is malformed
-            - arbitrary string — unexpected resolver error
-
-        ``response_time``
-            Query round-trip time in milliseconds (2 d.p.), or ``None``
-            when the query timed out.
+        - ``ip_address``: The original address queried (always present).
+        - ``hostname``: Resolved hostname with trailing dot stripped, or
+          ``None`` when the lookup failed.
+        - ``error``: Error message string on failure; ``None`` on success.
+        - ``response_time``: Query round-trip time in milliseconds (2 d.p.),
+          or ``None`` when the query timed out.
 
     Examples:
         Successful lookup::
@@ -108,11 +97,20 @@ def reverse_dns(
 
             result = reverse_dns("8.8.8.8", nameserver="1.1.1.1")
 
+        Type-safe error handling::
+
+            from nadzoring.dns_lookup.errors import DNSReverseError
+
+            result = reverse_dns("10.0.0.1")
+            if result["error"] == "No PTR record":
+                print("No reverse DNS configured")
+            elif result["error"] == "Query timeout":
+                print("Nameserver did not respond")
     """
     if timeout_config is None:
         timeout_config = TimeoutConfig()
 
-    result: dict[str, float | str | None] = _make_result(ip_address)
+    result: ReverseDNSResult = _make_result(ip_address)
 
     try:
         resolver: Resolver = create_resolver(nameserver, timeout_config)
@@ -132,11 +130,11 @@ def reverse_dns(
     except dns.exception.Timeout:
         result["error"] = "Query timeout"
         logger.debug("Reverse DNS timeout for %s", ip_address)
-    except ValueError as exc:
-        result["error"] = f"Invalid IP address: {exc}"
+    except ValueError:
+        result["error"] = "Invalid IP address"
         logger.debug("Invalid IP for reverse lookup: %s", ip_address)
-    except Exception as exc:
-        result["error"] = str(exc)
-        logger.debug("Reverse DNS failed for %s: %s", ip_address, exc)
+    except Exception:
+        result["error"] = "Resolver error"
+        logger.debug("Reverse DNS failed for %s", ip_address)
 
     return result

@@ -8,7 +8,12 @@ import pytest
 import yaml
 from click.testing import CliRunner
 
-from nadzoring.utils.decorators import _handle_output, _handle_save, _show_completion_time, common_cli_options
+from nadzoring.utils.decorators import (
+    _handle_output,
+    _handle_save,
+    _show_completion_time,
+    common_cli_options,
+)
 from nadzoring.utils.timeout import TimeoutConfig
 
 

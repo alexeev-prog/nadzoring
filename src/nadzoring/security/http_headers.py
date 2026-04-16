@@ -5,9 +5,10 @@ from logging import Logger
 from typing import Any
 
 import requests
-from requests import RequestException, Response
+from requests import Response
 
 from nadzoring.logger import get_logger
+from nadzoring.security.errors import HTTPHeaderError
 from nadzoring.utils.timeout import TimeoutConfig
 
 logger: Logger = get_logger(__name__)
@@ -42,8 +43,7 @@ _LEAK_HEADERS: frozenset[str] = frozenset({
 
 @dataclass
 class HeaderAnalysis:
-    """
-    Result of analysing HTTP security headers for a single URL.
+    """Result of analysing HTTP security headers for a single URL.
 
     Attributes:
         url: The final (post-redirect) URL that was probed.
@@ -56,7 +56,6 @@ class HeaderAnalysis:
             values.
         score: Integer score from 0-100 reflecting header coverage.
         error: Error message when the request itself failed.
-
     """
 
     url: str
@@ -66,12 +65,11 @@ class HeaderAnalysis:
     deprecated: list[str] = field(default_factory=list)
     leaking: dict[str, str] = field(default_factory=dict)
     score: int = 0
-    error: str | None = None
+    error: HTTPHeaderError | None = None
 
 
 def _score_headers(present: dict[str, str], missing: list[str]) -> int:
-    """
-    Calculate a simple coverage score for security headers.
+    """Calculate a simple coverage score for security headers.
 
     Args:
         present: Headers that were found in the response.
@@ -81,7 +79,6 @@ def _score_headers(present: dict[str, str], missing: list[str]) -> int:
     Returns:
         Integer between 0 and 100 representing the percentage of recommended
         security headers present in the response.
-
     """
     total: int = len(_SECURITY_HEADERS)
     if total == 0:
@@ -90,8 +87,7 @@ def _score_headers(present: dict[str, str], missing: list[str]) -> int:
 
 
 def _analyse_response(url: str, response: Response) -> HeaderAnalysis:
-    """
-    Parse a ``requests`` response object into a ``HeaderAnalysis``.
+    """Parse a ``requests`` response object into a ``HeaderAnalysis``.
 
     Args:
         url: The original request URL.
@@ -99,7 +95,6 @@ def _analyse_response(url: str, response: Response) -> HeaderAnalysis:
 
     Returns:
         Populated ``HeaderAnalysis`` instance.
-
     """
     headers_lower: dict[str, str] = {k.lower(): v for k, v in response.headers.items()}
 
@@ -136,12 +131,14 @@ def check_http_security_headers(
     timeout_config: TimeoutConfig | None = None,
     verify_ssl: bool = True,
 ) -> dict[str, Any]:
-    """
-    Analyse HTTP security headers for the given URL.
+    """Analyse HTTP security headers for the given URL.
 
     Sends a HEAD request (falling back to GET on failure) to the target
     URL and evaluates the response headers against a list of recommended
     security headers.
+
+    The returned dictionary's ``"error"`` field, if present, contains one of
+    the literals defined in :data:`nadzoring.security.errors.HTTPHeaderError`.
 
     Args:
         url: The target URL, with or without scheme. ``http://`` is
@@ -169,7 +166,6 @@ def check_http_security_headers(
         40
         >>> "Strict-Transport-Security" in result["present"]
         True
-
     """
     if timeout_config is None:
         timeout_config = TimeoutConfig()
@@ -185,9 +181,21 @@ def check_http_security_headers(
             allow_redirects=True,
         )
         analysis: HeaderAnalysis = _analyse_response(url, response)
-    except RequestException as exc:
+    except requests.exceptions.Timeout:
+        logger.warning("Request timeout for %s", url)
+        analysis = HeaderAnalysis(url=url, error="Request timeout")
+    except requests.exceptions.ConnectionError:
+        logger.warning("Connection refused for %s", url)
+        analysis = HeaderAnalysis(url=url, error="Connection refused")
+    except requests.exceptions.SSLError:
+        logger.warning("SSL verification failed for %s", url)
+        analysis = HeaderAnalysis(url=url, error="SSL verification failed")
+    except requests.exceptions.TooManyRedirects:
+        logger.warning("Too many redirects for %s", url)
+        analysis = HeaderAnalysis(url=url, error="Too many redirects")
+    except requests.exceptions.RequestException as exc:
         logger.warning("Request failed for %s: %s", url, exc)
-        analysis = HeaderAnalysis(url=url, error=str(exc))
+        analysis = HeaderAnalysis(url=url, error="Invalid URL")
 
     return {
         "url": analysis.url,

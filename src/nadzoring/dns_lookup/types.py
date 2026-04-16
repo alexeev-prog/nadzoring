@@ -1,5 +1,4 @@
-"""
-Type definitions for the DNS lookup module.
+"""Type definitions for the DNS lookup module.
 
 All public ``TypedDict`` classes and type aliases used across
 ``nadzoring.dns_lookup`` are defined here so that consumers can import
@@ -8,6 +7,7 @@ types from a single stable location.
 Usage example::
 
     from nadzoring.dns_lookup.types import DNSResult, RecordType
+    from nadzoring.dns_lookup.errors import DNSResolveError
 
     result: DNSResult = {
         "domain": "example.com",
@@ -17,13 +17,26 @@ Usage example::
         "error": None,
         "response_time": 45.67,
     }
-
 """
 
 from typing import Any, Literal, TypedDict
 
+from nadzoring.dns_lookup.errors import DNSResolveError, DNSReverseError
+
 type RecordType = Literal["A", "AAAA", "CNAME", "MX", "NS", "TXT", "PTR", "SOA", "DNSKEY"]
-"""Supported DNS record types for queries and validation."""
+"""Supported DNS record types for queries and validation.
+
+Values:
+    - ``A``: IPv4 address record
+    - ``AAAA``: IPv6 address record
+    - ``CNAME``: Canonical name (alias)
+    - ``MX``: Mail exchange record
+    - ``NS``: Nameserver record
+    - ``TXT``: Text record (including SPF, DKIM, DMARC)
+    - ``PTR``: Pointer record (reverse DNS)
+    - ``SOA``: Start of authority record
+    - ``DNSKEY``: DNSSEC key record
+"""
 
 RECORD_TYPES: list[str] = [
     "A",
@@ -36,65 +49,66 @@ RECORD_TYPES: list[str] = [
     "SOA",
     "DNSKEY",
 ]
-"""List of all supported DNS record type strings."""
+"""List of all supported DNS record type strings.
+
+This list excludes ``"ALL"`` (a CLI convenience token) and includes only
+concrete record types that can be queried directly.
+"""
 
 
 class DNSResult(TypedDict, total=False):
-    """
-    DNS resolution result for a single query.
+    """DNS resolution result for a single query.
 
     All fields are optional to accommodate partial results from failed queries.
+    The ``error`` field uses a Literal type for type-safe error handling.
 
     Attributes:
         domain: The domain name that was queried.
         record_type: The type of DNS record that was requested.
-        records: List of resolved record strings.  Format varies by type:
-
-            - ``A`` / ``AAAA`` — IP address strings
-            - ``MX`` — ``"priority mailserver"`` strings
-            - ``TXT`` — concatenated text chunks
-            - ``SOA`` — space-joined SOA fields
-            - others — ``str()`` with trailing dot stripped
-
+        records: List of resolved record strings. Format varies by type:
+            - ``A`` / ``AAAA``: IP address strings
+            - ``MX``: ``"priority mailserver"`` strings
+            - ``TXT``: Concatenated text chunks
+            - ``SOA``: Space-joined SOA fields
+            - Others: ``str()`` with trailing dot stripped
         ttl: Time To Live in seconds, or ``None`` when not requested or
             unavailable.
         error: Human-readable error message if resolution failed;
-            ``None`` on success.  Possible values:
-
-            - ``"Domain does not exist"`` — NXDOMAIN
-            - ``"No <type> records"`` — no records of this type
-            - ``"Query timeout"`` — per-query timeout exceeded
-            - arbitrary string — unexpected resolver error
-
+            ``None`` on success. Error strings are defined in
+            :data:`DNSResolveError`.
         response_time: Query round-trip time in milliseconds (2 d.p.), or
             ``None`` on timeout.
-
-    Examples:
-        Check for errors before using records::
-
-            from nadzoring.dns_lookup.utils import resolve_with_timer
-
-            result = resolve_with_timer("example.com", "A")
-            if result["error"]:
-                print("DNS error:", result["error"])
-            else:
-                for record in result["records"]:
-                    print(record)
-                print(f"RTT: {result['response_time']} ms")
-
     """
 
     domain: str
     record_type: str
     records: list[str]
     ttl: int | None
-    error: str | None
+    error: DNSResolveError | None
+    response_time: float | None
+
+
+class ReverseDNSResult(TypedDict, total=False):
+    """Reverse DNS lookup result for an IP address.
+
+    Attributes:
+        ip_address: The original IP address that was queried.
+        hostname: Resolved hostname with trailing dot stripped, or ``None``
+            when the lookup failed.
+        error: Error message if resolution failed; ``None`` on success.
+            Error strings are defined in :data:`DNSReverseError`.
+        response_time: Query round-trip time in milliseconds (2 d.p.), or
+            ``None`` when the query timed out.
+    """
+
+    ip_address: str
+    hostname: str | None
+    error: DNSReverseError | None
     response_time: float | None
 
 
 class BenchmarkResult(TypedDict):
-    """
-    DNS benchmark statistics for a single nameserver.
+    """DNS benchmark statistics for a single nameserver.
 
     Attributes:
         server: IP address of the tested DNS server.
@@ -105,19 +119,6 @@ class BenchmarkResult(TypedDict):
         total_queries: Total number of queries attempted.
         failed_queries: Number of queries that failed or timed out.
         responses: Individual response times for successful queries.
-
-    Examples:
-        Iterate over benchmark results sorted fastest-first::
-
-            from nadzoring.dns_lookup.benchmark import benchmark_dns_servers
-
-            results = benchmark_dns_servers(
-                servers=["8.8.8.8", "1.1.1.1"],
-                queries=5,
-            )
-            for r in results:
-                print(f"{r['server']}: avg={r['avg_response_time']:.1f}ms  ok={r['success_rate']}%")
-
     """
 
     server: str
@@ -131,8 +132,7 @@ class BenchmarkResult(TypedDict):
 
 
 class PoisoningCheckResult(TypedDict, total=False):
-    """
-    DNS cache poisoning detection result.
+    """DNS cache poisoning detection result.
 
     Comprehensive analysis comparing responses from multiple resolvers
     against a trusted control server to detect poisoning, censorship, or
@@ -171,26 +171,6 @@ class PoisoningCheckResult(TypedDict, total=False):
         anycast_likely: ``True`` when anycast routing is probable.
         cdn_likely: ``True`` when CDN usage is probable.
         poisoning_likely: ``True`` when deliberate poisoning pattern found.
-
-    Examples:
-        Interpreting severity levels::
-
-            from nadzoring.dns_lookup.poisoning import check_dns_poisoning
-
-            result = check_dns_poisoning("example.com")
-
-            level = result.get("poisoning_level", "NONE")
-            # NONE     — everything looks consistent
-            # LOW      — minor variations, likely CDN/anycast
-            # MEDIUM   — notable inconsistencies, worth investigating
-            # HIGH     — strong signs of manipulation
-            # CRITICAL — near-certain poisoning or censorship
-            # SUSPICIOUS — unusual patterns that don't fit CDN
-
-            if result.get("poisoned"):
-                for inc in result.get("inconsistencies", []):
-                    print(inc)
-
     """
 
     domain: str

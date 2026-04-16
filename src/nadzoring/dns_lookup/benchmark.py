@@ -8,7 +8,11 @@ from logging import Logger
 from time import sleep
 
 from nadzoring.dns_lookup.types import BenchmarkResult, DNSResult, RecordType
-from nadzoring.dns_lookup.utils import get_public_dns_servers, resolve_with_timer, resolve_with_timer_async
+from nadzoring.dns_lookup.utils import (
+    get_public_dns_servers,
+    resolve_with_timer,
+    resolve_with_timer_async,
+)
 from nadzoring.logger import get_logger
 from nadzoring.utils.timeout import TimeoutConfig
 

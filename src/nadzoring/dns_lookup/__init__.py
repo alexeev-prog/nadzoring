@@ -1,6 +1,9 @@
 """DNS lookup module for domain name resolution and DNS record checking."""
 
-from nadzoring.dns_lookup.benchmark import benchmark_dns_servers, benchmark_dns_servers_async
+from nadzoring.dns_lookup.benchmark import (
+    benchmark_dns_servers,
+    benchmark_dns_servers_async,
+)
 from nadzoring.dns_lookup.compare import compare_dns_servers
 from nadzoring.dns_lookup.health import check_dns, health_check_dns
 from nadzoring.dns_lookup.poisoning import check_dns_poisoning

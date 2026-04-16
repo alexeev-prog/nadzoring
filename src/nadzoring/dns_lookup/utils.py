@@ -1,5 +1,4 @@
-"""
-Utility functions for the DNS lookup module.
+"""Utility functions for the DNS lookup module.
 
 This module provides the low-level building blocks used by the rest of
 ``nadzoring.dns_lookup``:
@@ -13,8 +12,11 @@ This module provides the low-level building blocks used by the rest of
 
 None of the functions in this module raise on DNS errors; all failures are
 surfaced through the ``"error"`` field of the returned :class:`~.types.DNSResult`
-dict.  Callers that prefer exceptions should wrap the result themselves or
-use :mod:`nadzoring.utils.errors`.
+dict. Error strings are defined in :mod:`nadzoring.dns_lookup.errors` and
+are Literal types for type-safe handling.
+
+Callers that prefer exceptions should wrap the result themselves or
+use :mod:`nadzoring.utils.result` helpers like :func:`~nadzoring.utils.result.unwrap`.
 """
 
 from collections.abc import Callable
@@ -29,7 +31,11 @@ from dns.resolver import Answer, Resolver
 
 from nadzoring.dns_lookup.types import DNSResult, RecordType
 from nadzoring.logger import get_logger
-from nadzoring.utils.timeout import OperationTimeoutError, TimeoutConfig, timeout_context
+from nadzoring.utils.timeout import (
+    OperationTimeoutError,
+    TimeoutConfig,
+    timeout_context,
+)
 
 logger: Logger = get_logger(__name__)
 
@@ -54,11 +60,10 @@ def create_resolver(
     nameserver: str | None = None,
     timeout_config: TimeoutConfig | None = None,
 ) -> Resolver:
-    """
-    Create and configure a ``dnspython`` resolver instance.
+    """Create and configure a ``dnspython`` resolver instance.
 
     Args:
-        nameserver: Optional nameserver IP address.  When ``None`` the
+        nameserver: Optional nameserver IP address. When ``None`` the
             system default resolvers are used.
         timeout_config: Unified timeout configuration. When ``None`` uses default.
 
@@ -68,7 +73,6 @@ def create_resolver(
     Examples:
         >>> resolver = create_resolver("8.8.8.8", timeout_config)
         >>> answers = resolver.resolve("example.com", "A")
-
     """
     if timeout_config is None:
         timeout_config = TimeoutConfig(connect=5.0, read=5.0, lifetime=10.0)
@@ -86,8 +90,7 @@ def create_async_resolver(
     nameserver: str | None = None,
     timeout_config: TimeoutConfig | None = None,
 ) -> AsyncResolver:
-    """
-    Create and configure an async ``dnspython`` resolver instance.
+    """Create and configure an async ``dnspython`` resolver instance.
 
     Args:
         nameserver: Optional nameserver IP address. When ``None`` the
@@ -105,7 +108,6 @@ def create_async_resolver(
         ...     print(len(answers) > 0)
         >>> asyncio.run(_run())
         True
-
     """
     if timeout_config is None:
         timeout_config = TimeoutConfig(connect=5.0, read=5.0, lifetime=10.0)
@@ -153,8 +155,7 @@ _EXTRACTORS: dict[str, Callable[[Answer], list[str]]] = {
 
 
 def extract_records(answers: Answer, record_type: str) -> list[str]:
-    """
-    Extract and format DNS records from a resolver answer.
+    """Extract and format DNS records from a resolver answer.
 
     Applies record-type-specific formatting:
 
@@ -175,7 +176,6 @@ def extract_records(answers: Answer, record_type: str) -> list[str]:
         >>> answers = resolver.resolve("example.com", "MX")
         >>> extract_records(answers, "MX")
         ['10 mail.example.com', '20 backup.example.com']
-
     """
     extractor: Callable[[Answer], list[str]] = _EXTRACTORS.get(record_type, _extract_default_records)
     return extractor(answers)
@@ -204,38 +204,28 @@ def resolve_with_timer(
     *,
     include_ttl: bool = False,
 ) -> DNSResult:
-    """
-    Perform DNS resolution with timing and structured error handling.
+    """Perform DNS resolution with timing and structured error handling.
 
     Resolves *domain* for *record_type*, measuring response time and
-    optionally capturing TTL.  All DNS errors are surfaced through the
+    optionally capturing TTL. All DNS errors are surfaced through the
     ``"error"`` field rather than raised as exceptions, making this safe
     to call in automated scripts without try/except.
 
+    Error strings returned in the ``"error"`` field are defined in
+    :data:`nadzoring.dns_lookup.errors.DNSResolveError` and are Literal
+    types for type-safe handling.
+
     Args:
         domain: Domain name to resolve (e.g. ``"example.com"``).
-        record_type: DNS record type to query.  Defaults to ``"A"``.
-        timeout_config: Unified timeout configuration.
+        record_type: DNS record type to query. Defaults to ``"A"``.
         nameserver: Optional nameserver IP; ``None`` uses the system
             default.
-        include_ttl: Include TTL value in result.  Defaults to
-            ``False``.
+        timeout_config: Unified timeout configuration. If None, uses default.
+        include_ttl: Include TTL value in result. Defaults to ``False``.
 
     Returns:
-        :class:`~.types.DNSResult` dict.  Always check
-        ``result["error"]`` before using ``result["records"]``::
-
-            result = resolve_with_timer("example.com", "A")
-            if result["error"]:
-                # Possible values:
-                # "Domain does not exist"  — NXDOMAIN
-                # "No A records"           — NoAnswer
-                # "Query timeout"          — Timeout
-                # <arbitrary string>       — unexpected error
-                print("DNS error:", result["error"])
-            else:
-                print(result["records"])  # ['93.184.216.34']
-                print(result["response_time"])  # e.g. 42.5
+        :class:`~.types.DNSResult` dict. Always check ``result["error"]``
+        before using ``result["records"]``.
 
     Examples:
         Basic A record lookup::
@@ -254,6 +244,15 @@ def resolve_with_timer(
 
             result = resolve_with_timer("example.com", nameserver="1.1.1.1")
 
+        Type-safe error handling::
+
+            from nadzoring.dns_lookup.errors import DNSResolveError
+
+            result = resolve_with_timer("nonexistent.example.com", "A")
+            if result["error"] == "Domain does not exist":
+                print("The domain does not exist")
+            elif result["error"] == "Query timeout":
+                print("The nameserver did not respond")
     """
     result: DNSResult = _make_empty_result(domain, record_type)
 
@@ -274,14 +273,14 @@ def resolve_with_timer(
                 result["records"] = extract_records(answers, record_type)
 
             except dns.resolver.NoAnswer:
-                result["error"] = f"No {record_type} records"
+                result["error"] = "No records of requested type"
             except dns.resolver.NXDOMAIN:
                 result["error"] = "Domain does not exist"
             except dns.exception.Timeout:
                 result["error"] = "Query timeout"
                 logger.debug("DNS query timeout for %s %s", domain, record_type)
             except Exception as exc:
-                result["error"] = str(exc)
+                result["error"] = "Resolver error"
                 logger.debug("DNS resolution failed for %s %s: %s", domain, record_type, exc)
     except OperationTimeoutError:
         result["error"] = "Operation exceeded lifetime timeout"
@@ -297,16 +296,18 @@ async def resolve_with_timer_async(
     include_ttl: bool = False,
     timeout_config: TimeoutConfig | None = None,
 ) -> DNSResult:
-    """
-    Async variant of :func:`resolve_with_timer` with identical output shape.
+    """Async variant of :func:`resolve_with_timer` with identical output shape.
+
+    Error strings returned in the ``"error"`` field are defined in
+    :data:`nadzoring.dns_lookup.errors.DNSResolveError` and are Literal
+    types for type-safe handling.
 
     Args:
         domain: Domain name to resolve (e.g. ``"example.com"``).
         record_type: DNS record type to query. Defaults to ``"A"``.
         nameserver: Optional nameserver IP; ``None`` uses the system
             default.
-        include_ttl: Include TTL value in result. Defaults to
-            ``False``.
+        include_ttl: Include TTL value in result. Defaults to ``False``.
         timeout_config: Unified timeout configuration. If None, uses default.
 
     Returns:
@@ -341,7 +342,6 @@ async def resolve_with_timer_async(
 
 
             asyncio.run(_run())
-
     """
     if timeout_config is None:
         timeout_config = TimeoutConfig(connect=5.0, read=5.0, lifetime=10.0)
@@ -360,22 +360,21 @@ async def resolve_with_timer_async(
         result["records"] = extract_records(answers, record_type)
 
     except dns.resolver.NoAnswer:
-        result["error"] = f"No {record_type} records"
+        result["error"] = "No records of requested type"
     except dns.resolver.NXDOMAIN:
         result["error"] = "Domain does not exist"
     except dns.exception.Timeout:
         result["error"] = "Query timeout"
         logger.debug("DNS query timeout for %s %s", domain, record_type)
     except Exception as exc:
-        result["error"] = str(exc)
+        result["error"] = "Resolver error"
         logger.debug("DNS resolution failed for %s %s: %s", domain, record_type, exc)
 
     return result
 
 
 def get_public_dns_servers() -> list[str]:
-    """
-    Return a list of well-known public DNS server IP addresses.
+    """Return a list of well-known public DNS server IP addresses.
 
     Includes resolvers from Google, Cloudflare, OpenDNS, Quad9, and
     Verisign.
@@ -390,6 +389,5 @@ def get_public_dns_servers() -> list[str]:
         True
         >>> "1.1.1.1" in servers
         True
-
     """
     return list(_PUBLIC_DNS_SERVERS)

@@ -144,7 +144,6 @@ def test_parse_updated_date():
 
 
 def test_parse_name_servers_first_only():
-    # Only first occurrence captured
     assert _parse_whois_output(SAMPLE_WHOIS)["name_servers"] == "ns1.example.com"
 
 
@@ -192,7 +191,22 @@ def test_parse_hash_comment_ignored():
 
 def test_parse_empty_input_all_none():
     result = _parse_whois_output("")
-    assert all(v is None for v in result.values())
+    for key in [
+        "registrar",
+        "creation_date",
+        "expiry_date",
+        "updated_date",
+        "name_servers",
+        "status",
+        "registrant_org",
+        "country",
+        "abuse_email",
+        "netrange",
+        "org_name",
+        "cidr",
+        "asn",
+    ]:
+        assert result[key] is None
 
 
 def test_parse_missing_field_is_none():
@@ -206,13 +220,11 @@ def test_parse_unknown_key_not_in_result():
 
 
 def test_parse_empty_value_not_captured():
-    # Field present but value is empty after prefix → should not be set
     result = _parse_whois_output("Registrar:\n")
     assert result["registrar"] is None
 
 
 def test_parse_case_insensitive_prefix():
-    # _WHOIS_FIELD_MAP uses lower() comparison
     result = _parse_whois_output("REGISTRAR: CaseTest\n")
     assert result["registrar"] == "CaseTest"
 
@@ -220,6 +232,27 @@ def test_parse_case_insensitive_prefix():
 def test_parse_blank_lines_skipped():
     result = _parse_whois_output("\n\nRegistrar: Blanklines\n\n")
     assert result["registrar"] == "Blanklines"
+
+
+def test_parse_no_fields_extracted_all_none():
+    raw = "Some random output\nwith no known fields\n"
+    result = _parse_whois_output(raw)
+    for key in [
+        "registrar",
+        "creation_date",
+        "expiry_date",
+        "updated_date",
+        "name_servers",
+        "status",
+        "registrant_org",
+        "country",
+        "abuse_email",
+        "netrange",
+        "org_name",
+        "cidr",
+        "asn",
+    ]:
+        assert result[key] is None
 
 
 # ---------------------------------------------------------------------------
@@ -327,7 +360,16 @@ def test_whois_lookup_error_includes_type_ip(mocker):
 def test_whois_lookup_error_message_mentions_whois(mocker):
     mocker.patch("nadzoring.network_base.whois_lookup._run_whois_command", return_value=None)
     result = whois_lookup("example.com")
-    assert "whois" in result["error"].lower()
+    assert "command not found" in result["error"].lower()
+
+
+def test_whois_lookup_no_fields_parsed_adds_error(mocker):
+    mocker.patch(
+        "nadzoring.network_base.whois_lookup._run_whois_command",
+        return_value="Random output without any known fields\n",
+    )
+    result = whois_lookup("example.com")
+    assert result.get("error") == "No information found"
 
 
 # ---------------------------------------------------------------------------

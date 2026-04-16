@@ -1,5 +1,4 @@
-"""
-SSL/TLS Certificate Analysis and Validation Module.
+"""SSL/TLS Certificate Analysis and Validation Module.
 
 This module provides comprehensive functionality for analyzing SSL/TLS certificates,
 checking certificate validity, expiration, and security configurations of HTTPS servers.
@@ -35,7 +34,9 @@ from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
 from cryptography.hazmat.primitives.asymmetric.ed448 import Ed448PublicKey
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
-from cryptography.hazmat.primitives.asymmetric.types import CertificateIssuerPublicKeyTypes
+from cryptography.hazmat.primitives.asymmetric.types import (
+    CertificateIssuerPublicKeyTypes,
+)
 from cryptography.x509 import (
     Certificate,
     DNSName,
@@ -53,8 +54,7 @@ from nadzoring.utils.timeout import TimeoutConfig
 
 
 class CertificateInfo:
-    """
-    A class for fetching and storing SSL/TLS certificate information from a server.
+    """A class for fetching and storing SSL/TLS certificate information from a server.
 
     This class handles the connection to a server and retrieval of its SSL/TLS
     certificates, supporting both full chain verification and unverified fetching.
@@ -63,13 +63,6 @@ class CertificateInfo:
         hostname (str): The domain name or IP address of the target server.
         port (int): The port number to connect to (default: 443 for HTTPS).
         timeout (int): Connection timeout in seconds (default: 10).
-
-    Examples:
-        >>> cert_info = CertificateInfo("example.com")
-        >>> cert_info.fetch_full_chain()
-        >>> cert = cert_info.cert
-        >>> print(f"Certificate issuer: {get_issuer_info(cert)}")
-
     """
 
     def __init__(
@@ -78,14 +71,12 @@ class CertificateInfo:
         port: int = 443,
         timeout_config: TimeoutConfig | None = None,
     ) -> None:
-        """
-        Initialize CertificateInfo instance.
+        """Initialize CertificateInfo instance.
 
         Args:
             hostname: The domain name or IP address to connect to.
             port: The port number for SSL/TLS connection. Defaults to 443.
             timeout_config: Unified timeout configuration. If None, uses default TimeoutConfig.
-
         """
         self.hostname = hostname
         self.port = port
@@ -95,8 +86,7 @@ class CertificateInfo:
         self._chain: list[Certificate] = []
 
     def fetch_full_chain(self) -> None:
-        """
-        Fetch the complete verified certificate chain from the server.
+        """Fetch the complete verified certificate chain from the server.
 
         Establishes a secure connection to the server and retrieves:
         - The peer certificate in both DER and parsed formats
@@ -113,7 +103,6 @@ class CertificateInfo:
 
         Note:
             This method populates _cert, _peercert, and _chain attributes.
-
         """
         context: SSLContext = ssl.create_default_context()
         context.load_verify_locations(certifi.where())
@@ -137,8 +126,7 @@ class CertificateInfo:
                 self._chain.append(self._cert)
 
     def fetch_unverified(self) -> None:
-        """
-        Fetch the certificate without performing validation.
+        """Fetch the certificate without performing validation.
 
         Establishes a connection to the server but disables certificate
         validation and hostname checking. Useful for:
@@ -154,7 +142,6 @@ class CertificateInfo:
         Warning:
             This method disables security checks and should only be used
             in controlled environments or for diagnostic purposes.
-
         """
         context: SSLContext = ssl.create_default_context()
         context.check_hostname = False
@@ -172,15 +159,13 @@ class CertificateInfo:
 
     @property
     def cert(self) -> Certificate:
-        """
-        Get the fetched certificate.
+        """Get the fetched certificate.
 
         Returns:
             The parsed X.509 certificate object.
 
         Raises:
             RuntimeError: If certificate hasn't been fetched yet.
-
         """
         if self._cert is None:
             msg = "Certificate not fetched. Call fetch_full_chain() first."
@@ -189,8 +174,7 @@ class CertificateInfo:
 
     @property
     def chain(self) -> list[Certificate]:
-        """
-        Get the complete certificate chain.
+        """Get the complete certificate chain.
 
         Returns:
             List of X.509 certificate objects representing the chain,
@@ -198,7 +182,6 @@ class CertificateInfo:
 
         Raises:
             RuntimeError: If chain hasn't been fetched yet.
-
         """
         if not self._chain and self._cert is None:
             msg = "Certificate chain not fetched. Call fetch_full_chain() first."
@@ -209,8 +192,7 @@ class CertificateInfo:
 def get_key_info(
     public_key: CertificateIssuerPublicKeyTypes,
 ) -> dict[str, str | int]:
-    """
-    Extract detailed information about a public key.
+    """Extract detailed information about a public key.
 
     Analyzes the public key to determine its algorithm, key size, and
     cryptographic strength based on current industry standards.
@@ -224,19 +206,6 @@ def get_key_info(
             - key_size: Key size in bits (for RSA, DSA, EC)
             - curve: Curve name (for EC keys)
             - strength: Security assessment ("weak", "good", "strong", "unknown")
-
-    Examples:
-        >>> key_info = get_key_info(cert.public_key())
-        >>> print(f"Algorithm: {key_info['algorithm']}, Strength: {key_info['strength']}")
-
-    Note:
-        Strength assessment:
-        - RSA < 2048 bits: weak
-        - RSA 2048-4095 bits: good
-        - RSA >= 4096 bits: strong
-        - DSA < 2048 bits: weak, >= 2048 bits: good
-        - EC, Ed25519, Ed448: strong
-
     """
     if isinstance(public_key, rsa.RSAPublicKey):
         return {
@@ -264,8 +233,7 @@ def get_key_info(
 
 
 def check_domain_match(cert: Certificate, hostname: str) -> tuple[bool, list[str]]:
-    """
-    Verify if a certificate matches a given hostname.
+    """Verify if a certificate matches a given hostname.
 
     Checks both Subject Alternative Names (SAN) and Common Name (CN) fields
     to determine if the certificate is valid for the specified hostname.
@@ -279,17 +247,6 @@ def check_domain_match(cert: Certificate, hostname: str) -> tuple[bool, list[str
         A tuple containing:
             - bool: True if hostname matches any SAN or CN, False otherwise.
             - list[str]: List of matched names with their types (DNS: or CN:).
-
-    Examples:
-        >>> matches, matched_names = check_domain_match(cert, "example.com")
-        >>> if matches:
-        ...     print(f"Certificate valid for: {', '.join(matched_names)}")
-
-    Note:
-        - Wildcard matching only supports patterns like "*.example.com"
-        - The function checks SAN first, then falls back to CN
-        - IP addresses in SAN are also checked if hostname is an IP
-
     """
     cn_match = False
     san_match = False
@@ -322,8 +279,7 @@ def check_domain_match(cert: Certificate, hostname: str) -> tuple[bool, list[str
 
 
 def _match_wildcard(pattern: str, hostname: str) -> bool:
-    """
-    Match a wildcard pattern against a hostname.
+    """Match a wildcard pattern against a hostname.
 
     Internal helper function to check if a hostname matches a wildcard pattern.
     Supports only patterns like "*.example.com".
@@ -334,13 +290,6 @@ def _match_wildcard(pattern: str, hostname: str) -> bool:
 
     Returns:
         True if the hostname matches the pattern, False otherwise.
-
-    Examples:
-        >>> _match_wildcard("*.example.com", "www.example.com")
-        True
-        >>> _match_wildcard("*.example.com", "example.com")
-        False
-
     """
     if not pattern.startswith("*."):
         return False
@@ -349,8 +298,7 @@ def _match_wildcard(pattern: str, hostname: str) -> bool:
 
 
 def get_subject_info(cert: Certificate) -> dict[str, str]:
-    """
-    Extract subject information from a certificate.
+    """Extract subject information from a certificate.
 
     Retrieves common subject fields including Common Name (CN),
     Organization (O), Organizational Unit (OU), Country (C),
@@ -362,11 +310,6 @@ def get_subject_info(cert: Certificate) -> dict[str, str]:
     Returns:
         Dictionary mapping field names to their values.
         Only fields present in the certificate are included.
-
-    Examples:
-        >>> subject = get_subject_info(cert)
-        >>> print(f"Common Name: {subject.get('CN', 'Not found')}")
-
     """
     subject: Name = cert.subject
     info: dict[str, str] = {}
@@ -390,8 +333,7 @@ def get_subject_info(cert: Certificate) -> dict[str, str]:
 
 
 def get_issuer_info(cert: Certificate) -> dict[str, str]:
-    """
-    Extract issuer information from a certificate.
+    """Extract issuer information from a certificate.
 
     Retrieves common issuer fields including Common Name (CN),
     Organization (O), Organizational Unit (OU), and Country (C).
@@ -402,11 +344,6 @@ def get_issuer_info(cert: Certificate) -> dict[str, str]:
     Returns:
             Dictionary mapping field names to their values.
             Only fields present in the certificate are included.
-
-    Examples:
-        >>> issuer = get_issuer_info(cert)
-        >>> print(f"Issued by: {issuer.get('CN', 'Unknown')}")
-
     """
     issuer: Name = cert.issuer
     info: dict[str, str] = {}
@@ -427,8 +364,7 @@ def get_issuer_info(cert: Certificate) -> dict[str, str]:
 
 
 def get_san_list(cert: Certificate) -> list[str]:
-    """
-    Extract Subject Alternative Names (SAN) from a certificate.
+    """Extract Subject Alternative Names (SAN) from a certificate.
 
     Retrieves all DNS names and IP addresses listed in the certificate's
     Subject Alternative Name extension.
@@ -439,12 +375,6 @@ def get_san_list(cert: Certificate) -> list[str]:
     Returns:
         List of SAN entries, each prefixed with "DNS:" or "IP:".
         Returns empty list if no SAN extension exists.
-
-    Examples:
-        >>> sans = get_san_list(cert)
-        >>> for san in sans:
-        ...     print(f"Alternative name: {san}")
-
     """
     sans: list[str] = []
     try:
@@ -467,8 +397,7 @@ def _probe_tls_version(
     max_version: ssl.TLSVersion,
     timeout_config: TimeoutConfig,
 ) -> bool:
-    """
-    Probe whether a server accepts a specific TLS version range.
+    """Probe whether a server accepts a specific TLS version range.
 
     Creates a client context constrained to exactly one protocol version
     (by setting both minimum and maximum to the same value) and attempts
@@ -485,7 +414,6 @@ def _probe_tls_version(
     Returns:
         ``True`` if the server accepted the connection, ``False``
         if it refused or an error occurred.
-
     """
     try:
         context: SSLContext = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
@@ -507,8 +435,7 @@ def check_protocols_and_ciphers(
     port: int = 443,
     timeout_config: TimeoutConfig | None = None,
 ) -> dict[str, list[str] | bool]:
-    """
-    Check which TLS protocol versions are accepted by a server.
+    """Check which TLS protocol versions are accepted by a server.
 
     Probes TLSv1.0 through TLSv1.3 by constraining each connection to
     exactly one version.  SSLv2 and SSLv3 are marked as not supported
@@ -527,14 +454,6 @@ def check_protocols_and_ciphers(
         - ``failed`` (list[str]): Protocol versions the server rejected.
         - ``has_outdated`` (bool): ``True`` when TLSv1.0 or TLSv1.1 is
           supported, indicating a security risk.
-
-    Examples:
-        >>> result = check_protocols_and_ciphers("example.com")
-        >>> result["has_outdated"]
-        False
-        >>> "TLSv1.2" in result["supported"]
-        True
-
     """
     if timeout_config is None:
         timeout_config = TimeoutConfig()
@@ -565,8 +484,7 @@ def check_protocols_and_ciphers(
 
 
 def _cert_expiry(cert: Certificate) -> datetime:
-    """
-    Return the certificate's expiry datetime as a timezone-aware UTC value.
+    """Return the certificate's expiry datetime as a timezone-aware UTC value.
 
     Prefers ``not_valid_after_utc`` (cryptography >= 42) and falls back to
     ``not_valid_after`` with an explicit UTC tag for older versions.
@@ -576,7 +494,6 @@ def _cert_expiry(cert: Certificate) -> datetime:
 
     Returns:
         Timezone-aware :class:`datetime` in UTC.
-
     """
     if hasattr(cert, "not_valid_after_utc"):
         date: datetime = cert.not_valid_after_utc
@@ -586,8 +503,7 @@ def _cert_expiry(cert: Certificate) -> datetime:
 
 
 def _oid_name(oid: ObjectIdentifier) -> str:
-    """
-    Return a human-readable name for an OID, falling back to dotted string.
+    """Return a human-readable name for an OID, falling back to dotted string.
 
     Uses the private ``_name`` attribute that exists in the Rust-backed
     cryptography implementation. Falls back to :attr:`dotted_string` when
@@ -598,24 +514,25 @@ def _oid_name(oid: ObjectIdentifier) -> str:
 
     Returns:
         Human-readable name string or dotted OID string.
-
     """
     return getattr(oid, "_name", None) or oid.dotted_string
 
 
-def check_ssl_certificate(
+def check_ssl_certificate(  # noqa: C901
     domain: str,
     days_before: int = 7,
     *,
     verify: bool = True,
     timeout_config: TimeoutConfig | None = None,
 ) -> dict[str, Any]:
-    """
-    Comprehensive SSL certificate check for a domain.
+    """Comprehensive SSL certificate check for a domain.
 
     Performs a complete analysis of a domain's SSL/TLS certificate including
     expiration, issuer information, subject details, domain matching,
     key strength, and protocol support.
+
+    The returned dictionary's ``"error"`` field, if present, contains one of
+    the literals defined in :data:`nadzoring.security.errors.SSLCertError`.
 
     Args:
         domain: The domain name to check.
@@ -647,16 +564,8 @@ def check_ssl_certificate(
             - chain_valid: Boolean indicating if the certificate chain is properly
                           constructed and valid (only meaningful when verification
                           succeeded)
-            - error: Error message if status is "error"
+            - error: Error message if status is "error" (type SSLCertError | None)
             - warning: Warning message if verification disabled
-
-    Examples:
-        >>> result = check_ssl_certificate("example.com")
-        >>> if result["status"] == "valid":
-        ...     print(f"Certificate expires in {result['remaining_days']} days")
-        >>> elif result["status"] == "warning":
-        ...     print(f"Certificate expires soon: {result['remaining_days']} days")
-
     """
     if timeout_config is None:
         timeout_config = TimeoutConfig()
@@ -724,11 +633,47 @@ def check_ssl_certificate(
                 result["chain_length"] = 0
                 result["chain_valid"] = False
 
-    except Exception as e:
+    except ssl.SSLCertVerificationError:
         result.update({
             "remaining_days": None,
             "status": "error",
-            "error": str(e),
+            "error": "Certificate verification failed",
+            "verification": "failed" if verify else "unverified",
+        })
+    except TimeoutError:
+        result.update({
+            "remaining_days": None,
+            "status": "error",
+            "error": "Connection timeout",
+            "verification": "failed" if verify else "unverified",
+        })
+    except (ConnectionError, OSError):
+        result.update({
+            "remaining_days": None,
+            "status": "error",
+            "error": "Connection timeout",
+            "verification": "failed" if verify else "unverified",
+        })
+    except RuntimeError as e:
+        if "did not return a certificate" in str(e):
+            result.update({
+                "remaining_days": None,
+                "status": "error",
+                "error": "No certificate returned",
+                "verification": "failed" if verify else "unverified",
+            })
+        else:
+            result.update({
+                "remaining_days": None,
+                "status": "error",
+                "error": "Resolver error",
+                "verification": "failed" if verify else "unverified",
+            })
+    except Exception:
+        result.update({
+            "remaining_days": None,
+            "status": "error",
+            "error": "Resolver error",
             "verification": "failed" if verify else "unverified",
         })
 
@@ -740,8 +685,7 @@ def check_ssl_expiry(
     days_before: int = 7,
     timeout_config: TimeoutConfig | None = None,
 ) -> dict[str, Any]:
-    """
-    Check SSL certificate expiration with full verification.
+    """Check SSL certificate expiration with full verification.
 
     Simplified function specifically focused on certificate expiration
     checking with full verification enabled. Equivalent to calling
@@ -755,11 +699,6 @@ def check_ssl_expiry(
 
     Returns:
         Same as check_ssl_certificate() with verify=True.
-
-    Examples:
-        >>> result = check_ssl_expiry("example.com")
-        >>> print(f"Certificate expires in {result['remaining_days']} days")
-
     """
     return check_ssl_certificate(domain, days_before, verify=True, timeout_config=timeout_config)
 
@@ -769,8 +708,7 @@ def check_ssl_expiry_with_fallback(
     days_before: int = 7,
     timeout_config: TimeoutConfig | None = None,
 ) -> dict[str, Any]:
-    """
-    Check SSL certificate with automatic fallback to unverified mode.
+    """Check SSL certificate with automatic fallback to unverified mode.
 
     Attempts verified certificate check first; if that fails, falls back to
     unverified mode. Useful for monitoring systems that need to continue
@@ -788,19 +726,6 @@ def check_ssl_expiry_with_fallback(
 
     Raises:
         ssl.SSLCertVerificationError: If both verified and unverified checks fail.
-
-    Examples:
-        >>> try:
-        ...     result = check_ssl_expiry_with_fallback("example.com")
-        ...     print(f"Verification mode: {result['verification']}")
-        ... except ssl.SSLCertVerificationError as e:
-        ...     print(f"Certificate check completely failed: {e}")
-
-    Note:
-        The fallback mode disables security checks and should be used
-        cautiously. The returned result will indicate "unverified" when
-        fallback was used.
-
     """
     errors: list[str] = []
     try:

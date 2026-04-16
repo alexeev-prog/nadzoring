@@ -234,6 +234,14 @@ class TestPrintResultsTable:
         out = capsys.readouterr().out
         assert "x" in out
 
+    def test_tabulate_exception_fallback(self, capsys, mocker):
+        data = [{"domain": "example.com"}]
+        with patch("nadzoring.utils.formatters.tabulate.tabulate") as mock_tabulate:
+            mock_tabulate.side_effect = [Exception("tabulate error"), "fallback table"]
+            print_results_table(data)
+        out = capsys.readouterr().out
+        assert "fallback table" in out
+
 
 class TestPrintCsvTable:
     def test_empty_data_prints_message(self, capsys):
@@ -321,12 +329,20 @@ class TestCalculateColumnWidths:
         widths = _calculate_column_widths(headers, min_w, max_w, 30)
         assert widths[0] <= 50
 
-    def test_overflow_trimming(self):
-        headers = ["a", "b"]
-        min_w = {"a": 10, "b": 10}
-        max_w = {"a": 100, "b": 100}
-        widths = _calculate_column_widths(headers, min_w, max_w, 25)
-        assert sum(widths) <= 25 or all(w >= 10 for w in widths)
+    def test_overflow_trimming_loop_coverage(self):
+        headers = ["a", "b", "c"]
+        min_w = {"a": 20, "b": 20, "c": 20}
+        max_w = {"a": 50, "b": 50, "c": 50}
+        widths = _calculate_column_widths(headers, min_w, max_w, 65)
+        assert sum(widths) <= 65
+        assert all(w >= 20 for w in widths)
+
+    def test_overflow_trimming_reduces_widest_first(self):
+        headers = ["a", "b", "c"]
+        min_w = {"a": 10, "b": 10, "c": 10}
+        max_w = {"a": 100, "b": 50, "c": 30}
+        widths = _calculate_column_widths(headers, min_w, max_w, 40)
+        assert sum(widths) <= 40
 
     def test_available_negative_returns_min_widths(self):
         headers = ["a", "b"]
@@ -341,14 +357,6 @@ class TestCalculateColumnWidths:
         max_w = {"a": 20, "b": 20, "c": 20}
         widths = _calculate_column_widths(headers, min_w, max_w, 50)
         assert sum(widths) <= 50
-
-    def test_overflow_trimming_reduces_widest_first(self):
-        headers = ["a", "b", "c"]
-        min_w = {"a": 10, "b": 10, "c": 10}
-        max_w = {"a": 100, "b": 50, "c": 30}
-        # Give more space than min but less than sum of maxes
-        widths = _calculate_column_widths(headers, min_w, max_w, 40)
-        assert sum(widths) <= 40
 
 
 class TestFormatDnsRecord:
@@ -615,7 +623,6 @@ class TestFormatDnsTrace:
         hop = {"nameserver": "ns1", "response_time": 1.0, "records": ["a"]}
         trace = {"hops": [hop], "final_answer": hop}
         result = format_dns_trace(trace)
-        # Should not add duplicate
         assert len(result) == 1
 
 
@@ -998,6 +1005,20 @@ class TestFormatDnsPoisoning:
         result = format_dns_poisoning(_base_poisoning(consensus_top=[]))
         assert "CONSENSUS" not in [r["section"] for r in result]
 
+    def test_inconsistency_cdn_variation_type_coverage(self):
+        inc = {
+            "server": "1.2.3.4",
+            "server_name": "Test NS",
+            "server_country": "US",
+            "type": "cdn_variation",
+            "severity": "info",
+            "owner": "Cloudflare",
+        }
+        result = format_dns_poisoning(_base_poisoning(inconsistencies=[inc]))
+        details_rows = [r for r in result if r["section"].startswith("  ->")]
+        assert len(details_rows) == 1
+        assert "CDN node variation" in details_rows[0]["note"]
+
 
 class TestBuildHtmlPage:
     def test_contains_doctype(self):
@@ -1074,28 +1095,6 @@ class TestSaveResults:
     def test_save_empty_csv(self, tmp_path):
         fp = str(tmp_path / "empty.csv")
         save_results([], fp, "csv")
-        assert Path(fp).exists()
-
-    def test_save_json_unicode(self, tmp_path):
-        data = [{"text": "привет мир"}]
-        fp = str(tmp_path / "unicode.json")
-        save_results(data, fp, "json")
-        loaded = json.loads(Path(fp).read_text(encoding="utf-8"))
-        assert loaded[0]["text"] == "привет мир"
-
-    def test_permission_error_does_not_raise(self, tmp_path):
-        fp = str(tmp_path / "out.json")
-        with patch("pathlib.Path.open", side_effect=PermissionError("denied")):
-            save_results([{"a": 1}], fp, "json")
-
-    def test_os_error_does_not_raise(self, tmp_path):
-        fp = str(tmp_path / "out.json")
-        with patch("pathlib.Path.mkdir", side_effect=OSError("disk full")):
-            save_results([{"a": 1}], fp, "json")
-
-    def test_save_empty_data_csv(self, tmp_path):
-        fp = str(tmp_path / "empty.csv")
-        save_results([], fp, "csv")
         content = Path(fp).read_text()
         assert content == ""
 
@@ -1113,3 +1112,24 @@ class TestSaveResults:
         save_results(data, fp, "yaml")
         loaded = yaml.safe_load(Path(fp).read_text(encoding="utf-8"))
         assert loaded[0]["text"] == "привет мир"
+
+    def test_save_permission_error_caught(self, tmp_path, capsys):
+        fp = str(tmp_path / "protected.json")
+        with patch("pathlib.Path.open", side_effect=PermissionError("Permission denied")):
+            save_results([{"a": 1}], fp, "json")
+        out = capsys.readouterr().err
+        assert "Permission denied" in out
+
+    def test_save_os_error_caught(self, tmp_path, capsys):
+        fp = str(tmp_path / "oserror.json")
+        with patch("pathlib.Path.open", side_effect=OSError("Disk full")):
+            save_results([{"a": 1}], fp, "json")
+        out = capsys.readouterr().err
+        assert "OS error" in out
+
+    def test_save_general_exception_caught(self, tmp_path, capsys):
+        fp = str(tmp_path / "error.json")
+        with patch("pathlib.Path.open", side_effect=RuntimeError("Unexpected error")):
+            save_results([{"a": 1}], fp, "json")
+        out = capsys.readouterr().err
+        assert "Failed to save results" in out

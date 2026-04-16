@@ -3,8 +3,12 @@ from pathlib import Path
 
 from sphinx_polyversion.api import apply_overrides  # type: ignore
 from sphinx_polyversion.driver import DefaultDriver  # type: ignore
-from sphinx_polyversion.git import (Git, GitRef, GitRefType,  # type: ignore
-                                    file_predicate)
+from sphinx_polyversion.git import (
+    Git,
+    GitRef,
+    GitRefType,  # type: ignore
+    file_predicate,
+)
 from sphinx_polyversion.pyvenv import Pip, VenvWrapper  # type: ignore
 from sphinx_polyversion.sphinx import SphinxBuilder  # type: ignore
 

@@ -2,7 +2,10 @@
 
 import pytest
 
-from nadzoring.network_base.service_on_port import _FALLBACK_SERVICES, get_service_on_port
+from nadzoring.network_base.service_on_port import (
+    _FALLBACK_SERVICES,
+    get_service_on_port,
+)
 
 # ---------------------------------------------------------------------------
 # System getservbyport succeeds
