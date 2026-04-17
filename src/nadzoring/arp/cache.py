@@ -84,7 +84,7 @@ class ARPCache:
         except subprocess.CalledProcessError as exc:
             if b"ermission" in (exc.stderr or b""):
                 raise ARPCacheRetrievalError("Permission denied (needs root)") from exc
-            raise ARPCacheRetrievalError("Command execution failed") from exc
+            raise ARPCacheRetrievalError("Failed to parse ARP cache output") from exc
 
     def _get_windows_cache(self) -> list[ARPEntry]:
         """Get ARP cache on Windows using ``arp -a``.
