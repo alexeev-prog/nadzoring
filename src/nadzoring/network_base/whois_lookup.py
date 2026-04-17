@@ -65,6 +65,7 @@ def _run_whois_command(target: str) -> str:
     return check_output(
         ["whois", target],
         stderr=PIPE,
+        timeout=15,
     ).decode(encoding, errors="replace")
 
 
