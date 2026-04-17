@@ -1,15 +1,15 @@
 """WHOIS information lookup for domains and IP addresses."""
 
-import shlex
 from ipaddress import ip_address
 from logging import Logger
 from platform import system
-from subprocess import PIPE, CalledProcessError, check_output
+from subprocess import PIPE, CalledProcessError, TimeoutExpired, check_output
 from typing import Literal
 
 import whois  # type: ignore
 
 from nadzoring.logger import get_logger
+from nadzoring.utils.timeout import OperationTimeoutError
 
 logger: Logger = get_logger(__name__)
 
@@ -45,42 +45,39 @@ def _is_ip(target: str) -> bool:
 
 
 def _run_whois_command(target: str) -> str | None:
-    """
-    Execute the system whois command for the given target.
+    """Execute the system whois command for the given target.
 
     Args:
         target: Domain or IP address to query.
 
     Returns:
-        Raw WHOIS output string, or None if the command failed.
+        Raw WHOIS output string, or None if the command fails.
 
+    Raises:
+        None - all exceptions are caught and logged.
     """
     os_name: str = system()
     encoding: Literal["cp866", "utf-8"] = "cp866" if os_name == "Windows" else "utf-8"
 
     try:
         return check_output(
-            shlex.split(f"whois {target}"),
+            ["whois", target],
             stderr=PIPE,
             timeout=15,
         ).decode(encoding, errors="replace")
-    except (CalledProcessError, FileNotFoundError, TimeoutError):
-        logger.exception(
-            "WHOIS lookup failed for %s.\n\n"
-            "Possible fixes:\n"
-            "  • Ensure 'whois' is installed:\n"
-            "    - Ubuntu/Debian: sudo apt install whois\n"
-            "    - macOS: brew install whois\n"
-            "    - RHEL/Fedora: sudo dnf install whois\n"
-            "  • Check internet connectivity",
-            target,
-        )
+    except (
+        FileNotFoundError,
+        TimeoutError,
+        CalledProcessError,
+        TimeoutExpired,
+        OperationTimeoutError,
+    ):
+        logger.exception("WHOIS command failed for %s", target)
         return None
 
 
 def _parse_whois_output(raw: str) -> dict[str, str | None]:
-    """
-    Parse raw WHOIS text into a structured dictionary.
+    """Parse raw WHOIS text into a structured dictionary.
 
     Extracts known fields from the WHOIS output by matching line prefixes
     against a predefined field mapping. Only the first occurrence of each
@@ -91,7 +88,6 @@ def _parse_whois_output(raw: str) -> dict[str, str | None]:
 
     Returns:
         Dictionary mapping field names to extracted values.
-
     """
     result: dict[str, str | None] = dict.fromkeys(_WHOIS_FIELD_MAP)
 
@@ -124,15 +120,13 @@ def _format_whois_value(value: object) -> str:
 
 
 def whois_domain_lookup(domain: str) -> list[dict[str, str]]:
-    """
-    Perform a structured WHOIS lookup for a domain using python-whois.
+    """Perform a structured WHOIS lookup for a domain using python-whois.
 
     Args:
         domain: Domain name to look up.
 
     Returns:
         List of field/value dictionaries formatted for CLI output handling.
-
     """
     try:
         info = whois.whois(domain)
@@ -143,11 +137,13 @@ def whois_domain_lookup(domain: str) -> list[dict[str, str]]:
 
 
 def whois_lookup(target: str) -> dict[str, str | None]:
-    """
-    Perform a WHOIS lookup for a domain or IP address.
+    """Perform a WHOIS lookup for a domain or IP address.
 
     Uses the system whois command to retrieve ownership and registration
     information, then parses the output into a structured dictionary.
+
+    The returned dictionary's ``"error"`` key, if present, contains one of
+    the literals defined in :data:`nadzoring.network_base.errors.WHOISError`.
 
     Args:
         target: Domain name or IP address to look up.
@@ -155,30 +151,47 @@ def whois_lookup(target: str) -> dict[str, str | None]:
     Returns:
         Dictionary with parsed WHOIS fields. Contains an 'error' key
         if the lookup failed (e.g., whois is not installed).
-
-    Examples:
-        >>> result = whois_lookup("example.com")
-        >>> result["registrar"]
-        'RESERVED-Internet Assigned Numbers Authority'
-
     """
-    raw: str | None = _run_whois_command(target)
-    if raw is None:
+    if not target or target.startswith("-"):
         return {
             "target": target,
-            "type": "ip" if _is_ip(target) else "domain",
-            "error": (
-                "WHOIS lookup failed.\n\n"
-                "Possible fixes:\n"
-                "  • Install 'whois':\n"
-                "    - Ubuntu/Debian: sudo apt install whois\n"
-                "    - macOS: brew install whois\n"
-                "    - RHEL/Fedora: sudo dnf install whois\n"
-                "  • Check internet connection"
-            ),
+            "type": "unknown",
+            "error": "Invalid target",
+        }
+
+    target_type: str = "ip" if _is_ip(target) else "domain"
+
+    try:
+        raw = _run_whois_command(target)
+
+        if raw is None:
+            return {
+                "target": target,
+                "type": target_type,
+                "error": "Command not found or query failed",
+            }
+
+        if not raw:
+            return {
+                "target": target,
+                "type": target_type,
+                "error": "No information found",
+            }
+    except Exception as e:
+        logger.exception("Unexpected error during WHOIS lookup for %s", target)
+        return {
+            "target": target,
+            "type": target_type,
+            "error": f"Unexpected error: {e}",
         }
 
     parsed: dict[str, str | None] = _parse_whois_output(raw)
     parsed["target"] = target
-    parsed["type"] = "ip" if _is_ip(target) else "domain"
+    parsed["type"] = target_type
+    parsed["error"] = None
+
+    whois_fields: dict[str, str | None] = {k: parsed[k] for k in _WHOIS_FIELD_MAP}
+    if not any(whois_fields.values()):
+        parsed["error"] = "No information found"
+
     return parsed

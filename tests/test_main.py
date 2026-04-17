@@ -2,7 +2,12 @@ import shlex
 from socket import gaierror
 from unittest.mock import MagicMock, patch
 
-from nadzoring.network_base.router_ip import check_ipv4, check_ipv6, get_ip_from_host, router_ip
+from nadzoring.network_base.router_ip import (
+    check_ipv4,
+    check_ipv6,
+    get_ip_from_host,
+    router_ip,
+)
 from nadzoring.network_base.service_on_port import get_service_on_port
 
 

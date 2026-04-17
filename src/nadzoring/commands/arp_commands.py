@@ -8,7 +8,13 @@ import click
 from scapy.all import ARP, Ether, sniff  # type: ignore
 from tqdm import tqdm
 
-from nadzoring.arp import ARPCache, ARPCacheRetrievalError, ARPEntry, ARPSpoofingDetector, SpoofingAlert
+from nadzoring.arp import (
+    ARPCache,
+    ARPCacheRetrievalError,
+    ARPEntry,
+    ARPSpoofingDetector,
+    SpoofingAlert,
+)
 from nadzoring.arp.realtime import ARPRealtimeDetector
 from nadzoring.logger import get_logger
 from nadzoring.utils.decorators import common_cli_options

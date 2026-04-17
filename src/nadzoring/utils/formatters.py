@@ -223,15 +223,6 @@ def _calculate_column_widths(
     extra: float = (available - total_min) / len(headers)
     col_widths: dict[str, int] = {h: min(int(min_widths[h] + extra), max_widths[h]) for h in headers}
 
-    overflow: int = sum(col_widths.values()) - available
-    if overflow > 0:
-        for h in sorted(headers, key=lambda h: col_widths[h], reverse=True):
-            if overflow <= 0:
-                break
-            reduction: int = min(overflow, col_widths[h] - min_widths[h])
-            col_widths[h] -= reduction
-            overflow -= reduction
-
     return [col_widths[h] for h in headers]
 
 

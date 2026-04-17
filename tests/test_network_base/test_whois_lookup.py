@@ -3,6 +3,7 @@
 import math
 
 from nadzoring.network_base.whois_lookup import (
+    _WHOIS_FIELD_MAP,
     _format_whois_value,
     _is_ip,
     _parse_whois_output,
@@ -144,7 +145,6 @@ def test_parse_updated_date():
 
 
 def test_parse_name_servers_first_only():
-    # Only first occurrence captured
     assert _parse_whois_output(SAMPLE_WHOIS)["name_servers"] == "ns1.example.com"
 
 
@@ -192,7 +192,22 @@ def test_parse_hash_comment_ignored():
 
 def test_parse_empty_input_all_none():
     result = _parse_whois_output("")
-    assert all(v is None for v in result.values())
+    for key in [
+        "registrar",
+        "creation_date",
+        "expiry_date",
+        "updated_date",
+        "name_servers",
+        "status",
+        "registrant_org",
+        "country",
+        "abuse_email",
+        "netrange",
+        "org_name",
+        "cidr",
+        "asn",
+    ]:
+        assert result[key] is None
 
 
 def test_parse_missing_field_is_none():
@@ -206,13 +221,11 @@ def test_parse_unknown_key_not_in_result():
 
 
 def test_parse_empty_value_not_captured():
-    # Field present but value is empty after prefix → should not be set
     result = _parse_whois_output("Registrar:\n")
     assert result["registrar"] is None
 
 
 def test_parse_case_insensitive_prefix():
-    # _WHOIS_FIELD_MAP uses lower() comparison
     result = _parse_whois_output("REGISTRAR: CaseTest\n")
     assert result["registrar"] == "CaseTest"
 
@@ -220,6 +233,27 @@ def test_parse_case_insensitive_prefix():
 def test_parse_blank_lines_skipped():
     result = _parse_whois_output("\n\nRegistrar: Blanklines\n\n")
     assert result["registrar"] == "Blanklines"
+
+
+def test_parse_no_fields_extracted_all_none():
+    raw = "Some random output\nwith no known fields\n"
+    result = _parse_whois_output(raw)
+    for key in [
+        "registrar",
+        "creation_date",
+        "expiry_date",
+        "updated_date",
+        "name_servers",
+        "status",
+        "registrant_org",
+        "country",
+        "abuse_email",
+        "netrange",
+        "org_name",
+        "cidr",
+        "asn",
+    ]:
+        assert result[key] is None
 
 
 # ---------------------------------------------------------------------------
@@ -327,7 +361,16 @@ def test_whois_lookup_error_includes_type_ip(mocker):
 def test_whois_lookup_error_message_mentions_whois(mocker):
     mocker.patch("nadzoring.network_base.whois_lookup._run_whois_command", return_value=None)
     result = whois_lookup("example.com")
-    assert "whois" in result["error"].lower()
+    assert "command not found" in result["error"].lower()
+
+
+def test_whois_lookup_no_fields_parsed_adds_error(mocker):
+    mocker.patch(
+        "nadzoring.network_base.whois_lookup._run_whois_command",
+        return_value="Random output without any known fields\n",
+    )
+    result = whois_lookup("example.com")
+    assert result.get("error") == "No information found"
 
 
 # ---------------------------------------------------------------------------
@@ -380,3 +423,106 @@ def test_whois_domain_lookup_exception_error_mentions_domain(mocker):
     )
     result = whois_domain_lookup("bad.domain")
     assert "bad.domain" in result[0]["error"]
+
+
+# Add these tests to test_whois_lookup.py after the existing whois_lookup tests
+
+# ---------------------------------------------------------------------------
+# Additional whois_lookup tests for 100% coverage
+# ---------------------------------------------------------------------------
+
+
+def test_whois_lookup_unexpected_exception(mocker):
+    """Test that unexpected exceptions are caught and handled (line 150)."""
+    mocker.patch(
+        "nadzoring.network_base.whois_lookup._run_whois_command",
+        side_effect=RuntimeError("Something unexpected happened"),
+    )
+    result = whois_lookup("example.com")
+    assert "error" in result
+    assert "Unexpected error" in result["error"]
+    assert result["target"] == "example.com"
+    assert result["type"] == "domain"
+
+
+def test_whois_lookup_no_fields_found_adds_error(mocker):
+    """Test that when no WHOIS fields are parsed, error is added (lines 169-176)."""
+    # This returns raw output that doesn't match any field patterns
+    mocker.patch(
+        "nadzoring.network_base.whois_lookup._run_whois_command",
+        return_value="Some arbitrary text\nthat doesn't match any\nof the WHOIS field patterns\n",
+    )
+    result = whois_lookup("example.com")
+    # All fields should be None, so error should be set
+    assert result["error"] == "No information found"
+    assert result["target"] == "example.com"
+    assert result["type"] == "domain"
+    # Verify all fields are None
+    for key in _WHOIS_FIELD_MAP:
+        assert result.get(key) is None
+
+
+def test_whois_lookup_partial_fields_no_error(mocker):
+    """Test that when at least one field is found, no error is added (lines 169-176)."""
+    mocker.patch(
+        "nadzoring.network_base.whois_lookup._run_whois_command",
+        return_value="Registrar: Test Registrar\nSome other text\n",
+    )
+    result = whois_lookup("example.com")
+    # At least one field was found, so error should be None
+    assert result["error"] is None
+    assert result["registrar"] == "Test Registrar"
+    assert result["target"] == "example.com"
+
+
+def test_whois_lookup_empty_raw_output(mocker):
+    """Test that empty raw output triggers 'No information found' error."""
+    mocker.patch(
+        "nadzoring.network_base.whois_lookup._run_whois_command",
+        return_value="",
+    )
+    result = whois_lookup("example.com")
+    assert result["error"] == "No information found"
+    # All fields should be None
+    for key in _WHOIS_FIELD_MAP:
+        assert result.get(key) is None
+
+
+def test_whois_lookup_invalid_target_dash_prefix(mocker):
+    """Test invalid target starting with dash (already covered but for completeness)."""
+    result = whois_lookup("-example.com")
+    assert result["error"] == "Invalid target"
+    assert result["type"] == "unknown"
+    assert result["target"] == "-example.com"
+
+
+def test_whois_lookup_none_target(mocker):
+    """Test None target (already covered but for completeness)."""
+    result = whois_lookup("")
+    assert result["error"] == "Invalid target"
+    assert result["type"] == "unknown"
+    assert result["target"] == ""
+
+
+def test_whois_lookup_command_failure_specific_error(mocker):
+    """Test that command failure returns the specific error message."""
+    mocker.patch(
+        "nadzoring.network_base.whois_lookup._run_whois_command",
+        return_value=None,
+    )
+    result = whois_lookup("example.com")
+    assert result["error"] == "Command not found or query failed"
+    assert result["target"] == "example.com"
+    assert result["type"] == "domain"
+
+
+def test_whois_lookup_ip_address_no_fields(mocker):
+    """Test IP lookup that returns no matching fields."""
+    mocker.patch(
+        "nadzoring.network_base.whois_lookup._run_whois_command",
+        return_value="Some random IP WHOIS output\nwith no matching fields\n",
+    )
+    result = whois_lookup("8.8.8.8")
+    assert result["error"] == "No information found"
+    assert result["type"] == "ip"
+    assert result["target"] == "8.8.8.8"

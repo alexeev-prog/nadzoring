@@ -275,7 +275,7 @@ def calculate_record_score(
 
     error: str | None = record_result.get("error")
     if error:
-        if error.startswith("No ") and error.endswith("records"):
+        if error == "No records of requested type":
             score -= _ERROR_MISSING_PENALTY
             accumulator["warnings"].append(f"No {rtype} records found")
         else:

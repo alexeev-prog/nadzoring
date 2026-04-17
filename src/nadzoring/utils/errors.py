@@ -1,8 +1,10 @@
-"""
-Centralized exception hierarchy for Nadzoring.
+"""Centralized exception hierarchy for Nadzoring.
 
 All public exceptions are defined here so that consumers can import
 from a single location and catch errors at the appropriate granularity.
+
+Exception messages should use the literal error strings defined in
+module-specific errors.py files where applicable.
 """
 
 
@@ -66,7 +68,11 @@ class ARPError(NadzoringError):
 
 
 class ARPCacheRetrievalError(ARPError):
-    """Raised when reading the ARP cache fails."""
+    """Raised when reading the ARP cache fails.
+
+    The exception message should be one of the strings defined in
+    :mod:`nadzoring.arp.errors`.
+    """
 
 
 # ---------------------------------------------------------------------------

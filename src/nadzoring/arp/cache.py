@@ -10,39 +10,26 @@ from shutil import which
 from subprocess import CompletedProcess
 
 from nadzoring.arp.models import ARPEntry, ARPEntryState
-
-
-class ARPCacheRetrievalError(Exception):
-    """Raised when ARP cache retrieval fails."""
+from nadzoring.utils.errors import ARPCacheRetrievalError
 
 
 class ARPCache:
-    """
-    ARP cache retrieval and parsing.
+    """ARP cache retrieval and parsing.
 
     Provides platform-specific methods to retrieve and parse ARP cache entries
     from Linux, Windows, and macOS systems. Automatically detects the current
     platform and uses the appropriate command and parser.
-
-    Examples:
-        >>> cache = ARPCache()
-        >>> entries = cache.get_cache()
-        >>> for entry in entries:
-        ...     print(f"{entry.ip_address} -> {entry.mac_address}")
-
     """
 
     @staticmethod
     def _get_platform() -> str:
-        """
-        Detect the current platform.
+        """Detect the current platform.
 
         Returns:
             Platform identifier: ``"linux"``, ``"windows"``, or ``"darwin"``.
 
         Raises:
             ARPCacheRetrievalError: If the platform is not supported.
-
         """
         if sys.platform.startswith("linux"):
             return "linux"
@@ -50,11 +37,10 @@ class ARPCache:
             return "windows"
         if sys.platform == "darwin":
             return "darwin"
-        raise ARPCacheRetrievalError(f"Unsupported platform: {sys.platform}")
+        raise ARPCacheRetrievalError("Unsupported platform")
 
     def get_cache(self) -> list[ARPEntry]:
-        """
-        Get ARP cache entries for the current platform.
+        """Get ARP cache entries for the current platform.
 
         Automatically selects the appropriate method based on the detected
         platform and returns parsed ARP entries.
@@ -65,7 +51,6 @@ class ARPCache:
         Raises:
             ARPCacheRetrievalError: If cache retrieval fails or platform is
                 unsupported.
-
         """
         platform: str = self._get_platform()
         dispatch: dict[str, Callable[[], list[ARPEntry]]] = {
@@ -76,25 +61,17 @@ class ARPCache:
         return dispatch[platform]()
 
     def _get_linux_cache(self) -> list[ARPEntry]:
-        """
-        Get ARP cache on Linux using ``ip neigh``.
+        """Get ARP cache on Linux using ``ip neigh``.
 
         Returns:
             List of :class:`ARPEntry` objects from the Linux ARP cache.
 
         Raises:
             ARPCacheRetrievalError: If ``ip`` command not found or fails.
-
         """
         ip_path: str | None = which("ip")
         if not ip_path:
-            raise ARPCacheRetrievalError(
-                "'ip' command not found.\n\n"
-                "Possible fixes:\n"
-                "  • Install iproute2 package:\n"
-                "    - Ubuntu/Debian: sudo apt install iproute2\n"
-                "    - RHEL/Fedora: sudo dnf install iproute\n"
-            )
+            raise ARPCacheRetrievalError("Command not found")
 
         try:
             result: CompletedProcess[str] = subprocess.run(
@@ -105,32 +82,22 @@ class ARPCache:
             )
             return self._parse_ip_neigh_output(result.stdout)
         except subprocess.CalledProcessError as exc:
-            raise ARPCacheRetrievalError(
-                f"Failed to get ARP cache: {exc}\n\n"
-                "Possible fixes:\n"
-                "  • Try running with sudo/root privileges\n"
-                "  • Ensure network interfaces are up\n"
-            ) from exc
+            if "ermission" in (exc.stderr or ""):
+                raise ARPCacheRetrievalError("Permission denied (needs root)") from exc
+            raise ARPCacheRetrievalError("Failed to parse ARP cache output") from exc
 
     def _get_windows_cache(self) -> list[ARPEntry]:
-        """
-        Get ARP cache on Windows using ``arp -a``.
+        """Get ARP cache on Windows using ``arp -a``.
 
         Returns:
             List of :class:`ARPEntry` objects from the Windows ARP cache.
 
         Raises:
             ARPCacheRetrievalError: If ``arp`` command not found or fails.
-
         """
         arp_path = which("arp")
         if not arp_path:
-            raise ARPCacheRetrievalError(
-                "'arp' command not found.\n\n"
-                "Possible fixes:\n"
-                "  • Ensure system networking tools are installed\n"
-                "  • On minimal systems, install net-tools\n"
-            )
+            raise ARPCacheRetrievalError("Command not found")
 
         try:
             result: CompletedProcess[str] = subprocess.run(
@@ -142,22 +109,20 @@ class ARPCache:
             )
             return self._parse_windows_arp_output(result.stdout)
         except subprocess.CalledProcessError as exc:
-            raise ARPCacheRetrievalError(f"Failed to get ARP cache: {exc}") from exc
+            raise ARPCacheRetrievalError("Permission denied (needs root)") from exc
 
     def _get_darwin_cache(self) -> list[ARPEntry]:
-        """
-        Get ARP cache on macOS using ``arp -a``.
+        """Get ARP cache on macOS using ``arp -a``.
 
         Returns:
             List of :class:`ARPEntry` objects from the macOS ARP cache.
 
         Raises:
             ARPCacheRetrievalError: If ``arp`` command not found or fails.
-
         """
         arp_path: str | None = which("arp")
         if not arp_path:
-            raise ARPCacheRetrievalError("'arp' command not found")
+            raise ARPCacheRetrievalError("Command not found")
 
         try:
             result: CompletedProcess[str] = subprocess.run(
@@ -168,18 +133,18 @@ class ARPCache:
             )
             return self._parse_darwin_arp_output(result.stdout)
         except subprocess.CalledProcessError as exc:
-            raise ARPCacheRetrievalError(f"Failed to get ARP cache: {exc}") from exc
+            if "ermission" in (exc.stderr or ""):
+                raise ARPCacheRetrievalError("Permission denied (needs root)") from exc
+            raise ARPCacheRetrievalError("Failed to parse ARP cache output") from exc
 
     def _parse_ip_neigh_output(self, output: str) -> list[ARPEntry]:
-        """
-        Parse ``ip neigh`` output on Linux.
+        """Parse ``ip neigh`` output on Linux.
 
         Args:
             output: Raw output from ``ip neigh show``.
 
         Returns:
             List of parsed :class:`ARPEntry` objects.
-
         """
         entries: list[ARPEntry] = []
         for line in output.splitlines():
@@ -225,15 +190,13 @@ class ARPCache:
         return entries
 
     def _parse_windows_arp_output(self, output: str) -> list[ARPEntry]:
-        """
-        Parse ``arp -a`` output on Windows.
+        """Parse ``arp -a`` output on Windows.
 
         Args:
             output: Raw output from Windows ``arp -a``.
 
         Returns:
             List of parsed :class:`ARPEntry` objects.
-
         """
         entries: list[ARPEntry] = []
         current_interface = None
@@ -269,15 +232,13 @@ class ARPCache:
         return entries
 
     def _parse_darwin_arp_output(self, output: str) -> list[ARPEntry]:
-        """
-        Parse ``arp -a`` output on macOS.
+        """Parse ``arp -a`` output on macOS.
 
         Args:
             output: Raw output from macOS ``arp -a``.
 
         Returns:
             List of parsed :class:`ARPEntry` objects.
-
         """
         entries: list[ARPEntry] = []
         pattern = r"\? \((\d+\.\d+\.\d+\.\d+)\) at ([\da-f:]+) on (\w+)"
@@ -299,15 +260,13 @@ class ARPCache:
 
 
 def _is_valid_ip(ip: str) -> bool:
-    """
-    Check whether *ip* is a valid IPv4 address string.
+    """Check whether *ip* is a valid IPv4 address string.
 
     Args:
         ip: String to validate.
 
     Returns:
         ``True`` if the string represents a valid IPv4 address.
-
     """
     try:
         return ipaddress.ip_address(ip).version == 4

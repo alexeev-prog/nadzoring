@@ -7,7 +7,7 @@ from logging import Logger
 from typing import Any
 
 from nadzoring.logger import get_logger
-from nadzoring.security.check_website_ssl_cert import check_ssl_certificate
+from nadzoring.security.check_website_ssl_cert import check_ssl_certificate_safe
 from nadzoring.utils.timeout import TimeoutConfig
 
 logger: Logger = get_logger(__name__)
@@ -91,7 +91,7 @@ class SSLMonitor:
 
         Returns:
             List of result dictionaries, each as returned by
-            :func:`~nadzoring.security.check_website_ssl_cert.check_ssl_certificate`,
+            :func:`~nadzoring.security.check_website_ssl_cert.check_ssl_certificate_safe`,
             augmented with a ``checked_at`` ISO timestamp.
 
         """
@@ -105,11 +105,11 @@ class SSLMonitor:
             domain: The domain to check.
 
         Returns:
-            Result dictionary from :func:`check_ssl_certificate` with an
+            Result dictionary from :func:`check_ssl_certificate_safe` with an
             added ``checked_at`` field.
 
         """
-        result: dict[str, Any] = check_ssl_certificate(
+        result: dict[str, Any] = check_ssl_certificate_safe(
             domain,
             self.days_before,
             timeout_config=self.timeout_config,
