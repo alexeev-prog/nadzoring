@@ -526,6 +526,10 @@ def check_ssl_certificate(
     expiration, issuer information, subject details, domain matching,
     key strength, and protocol support.
 
+    IMPORTANT: This function DOES NOT catch exceptions. It raises them directly
+    to allow callers like check_ssl_expiry_with_fallback() to implement retry
+    logic. For exception-safe version, use check_ssl_certificate_safe().
+
     The returned dictionary's ``"error"`` field, if present, contains one of
     the literals defined in :data:`nadzoring.security.errors.SSLCertError`.
 
@@ -649,6 +653,10 @@ def check_ssl_certificate_safe(
     into error result dictionaries. Use this when you need guaranteed
     dict return without exception handling.
 
+    NOTE: This function is the ONLY place where exceptions are caught and
+    converted to result dicts. This ensures that check_ssl_expiry_with_fallback()
+    can properly catch exceptions from check_ssl_certificate() and retry.
+
     Args:
         domain: The domain name to check.
         days_before: Number of days before expiry to trigger warning status.
@@ -751,6 +759,10 @@ def check_ssl_expiry_with_fallback(
     Attempts verified certificate check first; if that fails, falls back to
     unverified mode. Useful for monitoring systems that need to continue
     functioning even with problematic certificates.
+
+    IMPORTANT: This function relies on check_ssl_certificate() to raise
+    exceptions. It catches them and retries with verify=False. This pattern
+    works because check_ssl_certificate() DOES NOT catch exceptions internally.
 
     Args:
         domain: The domain name to check.

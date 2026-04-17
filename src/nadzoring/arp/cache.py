@@ -133,7 +133,9 @@ class ARPCache:
             )
             return self._parse_darwin_arp_output(result.stdout)
         except subprocess.CalledProcessError as exc:
-            raise ARPCacheRetrievalError("Permission denied (needs root)") from exc
+            if "ermission" in (exc.stderr or ""):
+                raise ARPCacheRetrievalError("Permission denied (needs root)") from exc
+            raise ARPCacheRetrievalError("Failed to parse ARP cache output") from exc
 
     def _parse_ip_neigh_output(self, output: str) -> list[ARPEntry]:
         """Parse ``ip neigh`` output on Linux.
