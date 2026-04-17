@@ -1,15 +1,15 @@
 """WHOIS information lookup for domains and IP addresses."""
 
-import shlex
 from ipaddress import ip_address
 from logging import Logger
 from platform import system
-from subprocess import PIPE, CalledProcessError, check_output
+from subprocess import PIPE, CalledProcessError, TimeoutExpired, check_output
 from typing import Literal
 
 import whois  # type: ignore
 
 from nadzoring.logger import get_logger
+from nadzoring.utils.timeout import TimeoutConfig, timeout_context
 
 logger: Logger = get_logger(__name__)
 
@@ -44,28 +44,32 @@ def _is_ip(target: str) -> bool:
     return True
 
 
-def _run_whois_command(target: str) -> str:
+def _run_whois_command(target: str, timeout_config: TimeoutConfig | None = None) -> str:
     """Execute the system whois command for the given target.
 
     Args:
         target: Domain or IP address to query.
+        timeout_config: Timeout configuration. If None, uses default TimeoutConfig().
 
     Returns:
         Raw WHOIS output string.
 
     Raises:
         FileNotFoundError: The 'whois' command is not installed.
-        TimeoutError: The WHOIS query exceeded the timeout period.
+        TimeoutExpired: The WHOIS query exceeded the timeout period.
         CalledProcessError: The whois command returned a non-zero exit code.
     """
+    if timeout_config is None:
+        timeout_config = TimeoutConfig()
+
     os_name: str = system()
     encoding: Literal["cp866", "utf-8"] = "cp866" if os_name == "Windows" else "utf-8"
 
-    return check_output(
-        shlex.split(f"whois {target}"),
-        stderr=PIPE,
-        timeout=15,
-    ).decode(encoding, errors="replace")
+    with timeout_context(timeout_config):
+        return check_output(
+            ["whois", target],
+            stderr=PIPE,
+        ).decode(encoding, errors="replace")
 
 
 def _parse_whois_output(raw: str) -> dict[str, str | None]:
@@ -144,10 +148,24 @@ def whois_lookup(target: str) -> dict[str, str | None]:
         Dictionary with parsed WHOIS fields. Contains an 'error' key
         if the lookup failed (e.g., whois is not installed).
     """
+    # Validate input early
+    if not target or target.startswith("-"):
+        return {
+            "target": target,
+            "type": "unknown",
+            "error": "Invalid target",
+        }
+
     target_type: str = "ip" if _is_ip(target) else "domain"
 
     try:
         raw: str = _run_whois_command(target)
+    except ValueError:
+        return {
+            "target": target,
+            "type": target_type,
+            "error": "Invalid target",
+        }
     except FileNotFoundError:
         logger.exception("WHOIS command not found. Please install whois.")
         return {
@@ -155,7 +173,7 @@ def whois_lookup(target: str) -> dict[str, str | None]:
             "type": target_type,
             "error": "Command not found",
         }
-    except TimeoutError:
+    except TimeoutExpired:
         logger.exception("WHOIS lookup timed out for %s", target)
         return {
             "target": target,
@@ -178,6 +196,13 @@ def whois_lookup(target: str) -> dict[str, str | None]:
             "error": "No information found",
         }
 
+    if not raw:
+        return {
+            "target": target,
+            "type": target_type,
+            "error": "No information found",
+        }
+
     parsed: dict[str, str | None] = _parse_whois_output(raw)
     parsed["target"] = target
     parsed["type"] = target_type
@@ -185,5 +210,7 @@ def whois_lookup(target: str) -> dict[str, str | None]:
     whois_fields: dict[str, str | None] = {k: parsed[k] for k in _WHOIS_FIELD_MAP}
     if not any(whois_fields.values()):
         parsed["error"] = "No information found"
+    else:
+        parsed["error"] = None
 
     return parsed
