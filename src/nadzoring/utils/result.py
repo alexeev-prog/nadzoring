@@ -27,14 +27,15 @@ Typical usage:
         print(f"Operation failed: {e}")
 """
 
-from typing import Any, TypeVar
+from collections.abc import Mapping
+from typing import TypeVar
 
 from nadzoring.utils.errors import NadzoringError
 
 T = TypeVar("T")
 
 
-def is_success(result: dict[str, Any]) -> bool:
+def is_success(result: Mapping[str, object]) -> bool:
     """Determine whether an operation result completed without errors.
 
     Checks the presence and value of the ``"error"`` key in the result
@@ -60,7 +61,7 @@ def is_success(result: dict[str, Any]) -> bool:
     return result.get("error") is None
 
 
-def unwrap(result: dict[str, Any]) -> dict[str, Any]:
+def unwrap[TResult: Mapping[str, object]](result: TResult) -> TResult:
     """Extract the result dictionary or raise an exception on error.
 
     If the result contains an error, raises a ``NadzoringError`` with the
@@ -98,7 +99,10 @@ def unwrap(result: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-def unwrap_or[T](result: dict[str, Any], default: T) -> dict[str, Any] | T:
+def unwrap_or[TResult: Mapping[str, object], TDefault](
+    result: TResult,
+    default: TDefault,
+) -> TResult | TDefault:
     """Return the result dictionary or a fallback value on error.
 
     When the result contains no error, returns the original result dictionary.

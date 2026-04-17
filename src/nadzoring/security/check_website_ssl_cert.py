@@ -29,11 +29,6 @@ import certifi
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import dsa, ec, ed448, ed25519, rsa
-from cryptography.hazmat.primitives.asymmetric.dsa import DSAPublicKey
-from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
-from cryptography.hazmat.primitives.asymmetric.ed448 import Ed448PublicKey
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 from cryptography.hazmat.primitives.asymmetric.types import (
     CertificateIssuerPublicKeyTypes,
 )
@@ -518,7 +513,7 @@ def _oid_name(oid: ObjectIdentifier) -> str:
     return getattr(oid, "_name", None) or oid.dotted_string
 
 
-def check_ssl_certificate(  # noqa: C901
+def check_ssl_certificate(
     domain: str,
     days_before: int = 7,
     *,
@@ -566,6 +561,14 @@ def check_ssl_certificate(  # noqa: C901
                           succeeded)
             - error: Error message if status is "error" (type SSLCertError | None)
             - warning: Warning message if verification disabled
+
+    Raises:
+        ssl.SSLCertVerificationError: If certificate validation fails.
+        TimeoutError: If connection timeout occurs.
+        ssl.SSLError: If SSL handshake fails.
+        ConnectionError: If connection cannot be established.
+        OSError: For other network-related errors.
+        RuntimeError: For certificate retrieval issues.
     """
     if timeout_config is None:
         timeout_config = TimeoutConfig()
@@ -576,115 +579,143 @@ def check_ssl_certificate(  # noqa: C901
         "days_before": days_before,
     }
 
-    try:
-        if verify:
-            cert_info.fetch_full_chain()
-            result["verification"] = "verified"
+    if verify:
+        cert_info.fetch_full_chain()
+        result["verification"] = "verified"
+    else:
+        cert_info.fetch_unverified()
+        result["verification"] = "unverified"
+        result["warning"] = "Certificate verification disabled"
+
+    cert: Certificate = cert_info.cert
+
+    expiry: datetime = _cert_expiry(cert)
+    remaining: int = (expiry - datetime.now(UTC)).days
+    result.update({
+        "remaining_days": remaining,
+        "expiry_date": expiry.isoformat(),
+        "status": ("expired" if remaining < 0 else "warning" if remaining <= days_before else "valid"),
+    })
+
+    subject: dict[str, str] = get_subject_info(cert)
+    if subject:
+        result["subject"] = subject
+
+    issuer: dict[str, str] = get_issuer_info(cert)
+    if issuer:
+        result["issuer"] = issuer
+
+    sans: list[str] = get_san_list(cert)
+    if sans:
+        result["san"] = sans
+
+    matches, matched_names = check_domain_match(cert, domain)
+    result["domain_match"] = matches
+    if matched_names:
+        result["matched_names"] = matched_names
+
+    public_key = cert.public_key()
+    key_info: dict[str, int | str] = get_key_info(public_key)
+    result["public_key"] = key_info
+
+    result["signature_algorithm"] = _oid_name(cert.signature_algorithm_oid)
+    result["serial_number"] = str(cert.serial_number)
+    result["version"] = cert.version.value
+
+    protocols: dict[str, bool | list[str]] = check_protocols_and_ciphers(domain, timeout_config=timeout_config)
+    result["protocols"] = protocols
+
+    if verify:
+        if cert_info.chain:
+            result["chain_length"] = len(cert_info.chain)
+            result["chain_valid"] = True
         else:
-            cert_info.fetch_unverified()
-            result["verification"] = "unverified"
-            result["warning"] = "Certificate verification disabled"
+            result["chain_length"] = 0
+            result["chain_valid"] = False
 
-        cert: Certificate = cert_info.cert
+    return result
 
-        expiry: datetime = _cert_expiry(cert)
-        remaining: int = (expiry - datetime.now(UTC)).days
-        result.update({
-            "remaining_days": remaining,
-            "expiry_date": expiry.isoformat(),
-            "status": ("expired" if remaining < 0 else "warning" if remaining <= days_before else "valid"),
-        })
 
-        subject: dict[str, str] = get_subject_info(cert)
-        if subject:
-            result["subject"] = subject
+def check_ssl_certificate_safe(
+    domain: str,
+    days_before: int = 7,
+    *,
+    verify: bool = True,
+    timeout_config: TimeoutConfig | None = None,
+) -> dict[str, Any]:
+    """Safe version of check_ssl_certificate that catches all exceptions.
 
-        issuer: dict[str, str] = get_issuer_info(cert)
-        if issuer:
-            result["issuer"] = issuer
+    This function wraps check_ssl_certificate and converts any exceptions
+    into error result dictionaries. Use this when you need guaranteed
+    dict return without exception handling.
 
-        sans: list[str] = get_san_list(cert)
-        if sans:
-            result["san"] = sans
+    Args:
+        domain: The domain name to check.
+        days_before: Number of days before expiry to trigger warning status.
+        verify: Whether to perform full certificate verification.
+        timeout_config: Unified timeout configuration.
 
-        matches, matched_names = check_domain_match(cert, domain)
-        result["domain_match"] = matches
-        if matched_names:
-            result["matched_names"] = matched_names
-
-        public_key: DSAPublicKey | Ed25519PublicKey | Ed448PublicKey | EllipticCurvePublicKey | RSAPublicKey = (
-            cert.public_key()
-        )
-        key_info: dict[str, int | str] = get_key_info(public_key)
-        result["public_key"] = key_info
-
-        result["signature_algorithm"] = _oid_name(cert.signature_algorithm_oid)
-        result["serial_number"] = str(cert.serial_number)
-        result["version"] = cert.version.value
-
-        protocols: dict[str, bool | list[str]] = check_protocols_and_ciphers(domain, timeout_config=timeout_config)
-        result["protocols"] = protocols
-
-        if verify:
-            if cert_info.chain:
-                result["chain_length"] = len(cert_info.chain)
-                result["chain_valid"] = True
-            else:
-                result["chain_length"] = 0
-                result["chain_valid"] = False
-
+    Returns:
+        Same as check_ssl_certificate, but with error field populated
+        instead of raising exceptions.
+    """
+    try:
+        return check_ssl_certificate(domain, days_before, verify=verify, timeout_config=timeout_config)
     except ssl.SSLCertVerificationError:
-        result.update({
+        return {
+            "domain": domain,
+            "days_before": days_before,
             "remaining_days": None,
             "status": "error",
             "error": "Certificate verification failed",
             "verification": "failed" if verify else "unverified",
-        })
+        }
     except TimeoutError:
-        result.update({
+        return {
+            "domain": domain,
+            "days_before": days_before,
             "remaining_days": None,
             "status": "error",
             "error": "Connection timeout",
             "verification": "failed" if verify else "unverified",
-        })
+        }
     except ssl.SSLError:
-        result.update({
+        return {
+            "domain": domain,
+            "days_before": days_before,
             "remaining_days": None,
             "status": "error",
             "error": "SSL handshake failed",
             "verification": "failed" if verify else "unverified",
-        })
+        }
     except (ConnectionError, OSError):
-        result.update({
+        return {
+            "domain": domain,
+            "days_before": days_before,
             "remaining_days": None,
             "status": "error",
-            "error": "Connection timeout",
+            "error": "Connection failed",
             "verification": "failed" if verify else "unverified",
-        })
+        }
     except RuntimeError as e:
-        if "did not return a certificate" in str(e):
-            result.update({
-                "remaining_days": None,
-                "status": "error",
-                "error": "No certificate returned",
-                "verification": "failed" if verify else "unverified",
-            })
-        else:
-            result.update({
-                "remaining_days": None,
-                "status": "error",
-                "error": "Resolver error",
-                "verification": "failed" if verify else "unverified",
-            })
-    except Exception:
-        result.update({
+        error_msg = "No certificate returned" if "did not return a certificate" in str(e) else "SSL handshake failed"
+        return {
+            "domain": domain,
+            "days_before": days_before,
             "remaining_days": None,
             "status": "error",
-            "error": "Resolver error",
+            "error": error_msg,
             "verification": "failed" if verify else "unverified",
-        })
-
-    return result
+        }
+    except Exception:
+        return {
+            "domain": domain,
+            "days_before": days_before,
+            "remaining_days": None,
+            "status": "error",
+            "error": "SSL handshake failed",
+            "verification": "failed" if verify else "unverified",
+        }
 
 
 def check_ssl_expiry(
@@ -730,19 +761,8 @@ def check_ssl_expiry_with_fallback(
     Returns:
         Same as check_ssl_certificate() with verification status indicated
         in the "verification" field.
-
-    Raises:
-        ssl.SSLCertVerificationError: If both verified and unverified checks fail.
     """
-    errors: list[str] = []
     try:
         return check_ssl_certificate(domain, days_before, verify=True, timeout_config=timeout_config)
-    except Exception as e:
-        errors.append(f"Verified check failed: {e}")
-
-    try:
+    except Exception:
         return check_ssl_certificate(domain, days_before, verify=False, timeout_config=timeout_config)
-    except Exception as e:
-        errors.append(f"Unverified check failed: {e}")
-
-    raise ssl.SSLCertVerificationError(f"All SSL checks failed: {'; '.join(errors)}")

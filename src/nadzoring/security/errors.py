@@ -28,6 +28,7 @@ SSLCertError = Literal[
     "SSL handshake failed",
     "Certificate verification failed",
     "No certificate returned",
+    "Connection failed",
 ]
 """Possible error strings for SSL/TLS certificate operations.
 
@@ -47,6 +48,7 @@ Values:
       not be verified against the system's CA bundle.
     - ``"No certificate returned"``: The server did not provide a certificate
       during the TLS handshake.
+    - ``"Connection failed"``: The connection attempt failed for other reasons.
 """
 
 HTTPHeaderError = Literal[
@@ -55,6 +57,7 @@ HTTPHeaderError = Literal[
     "SSL verification failed",
     "Too many redirects",
     "Invalid URL",
+    "Operation lifetime timeout",
 ]
 """Possible error strings for HTTP security header checks.
 

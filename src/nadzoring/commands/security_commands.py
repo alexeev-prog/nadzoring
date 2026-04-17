@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from nadzoring.logger import get_logger
 from nadzoring.security.check_website_ssl_cert import (
-    check_ssl_certificate,
+    check_ssl_certificate_safe,
     check_ssl_expiry_with_fallback,
 )
 from nadzoring.security.email_security import check_email_security
@@ -70,7 +70,7 @@ def check_ssl_command(
                     domain, days_before, timeout_config=timeout_config
                 )
             else:
-                result = check_ssl_certificate(domain, days_before, verify=True, timeout_config=timeout_config)
+                result = check_ssl_certificate_safe(domain, days_before, verify=True, timeout_config=timeout_config)
 
             if not full:
                 filtered: dict[str, Any] = {

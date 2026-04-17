@@ -163,11 +163,8 @@ def whois_lookup(target: str) -> dict[str, str | None]:
             "error": "Query timeout",
         }
     except CalledProcessError as e:
-        # whois command returned non-zero exit code
-        # This often means the target doesn't exist or isn't registered
         logger.exception("WHOIS lookup failed for %s with exit code %d", target, e.returncode)
 
-        # Try to extract meaningful error from stderr
         stderr = e.stderr.decode() if e.stderr else ""
         if "No match" in stderr or "NOT FOUND" in stderr:
             return {
@@ -178,7 +175,7 @@ def whois_lookup(target: str) -> dict[str, str | None]:
         return {
             "target": target,
             "type": target_type,
-            "error": "No information found",  # Default to no info for other errors
+            "error": "No information found",
         }
 
     parsed: dict[str, str | None] = _parse_whois_output(raw)

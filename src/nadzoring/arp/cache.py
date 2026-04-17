@@ -10,14 +10,7 @@ from shutil import which
 from subprocess import CompletedProcess
 
 from nadzoring.arp.models import ARPEntry, ARPEntryState
-
-
-class ARPCacheRetrievalError(Exception):
-    """Raised when ARP cache retrieval fails.
-
-    The exception message is one of the strings defined in
-    :data:`nadzoring.arp.errors.ARPCacheError`.
-    """
+from nadzoring.utils.errors import ARPCacheRetrievalError
 
 
 class ARPCache:
@@ -89,7 +82,9 @@ class ARPCache:
             )
             return self._parse_ip_neigh_output(result.stdout)
         except subprocess.CalledProcessError as exc:
-            raise ARPCacheRetrievalError("Permission denied (needs root)") from exc
+            if b"ermission" in (exc.stderr or b""):
+                raise ARPCacheRetrievalError("Permission denied (needs root)") from exc
+            raise ARPCacheRetrievalError("Command execution failed") from exc
 
     def _get_windows_cache(self) -> list[ARPEntry]:
         """Get ARP cache on Windows using ``arp -a``.

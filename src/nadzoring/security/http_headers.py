@@ -9,7 +9,11 @@ from requests import Response
 
 from nadzoring.logger import get_logger
 from nadzoring.security.errors import HTTPHeaderError
-from nadzoring.utils.timeout import TimeoutConfig
+from nadzoring.utils.timeout import (
+    OperationTimeoutError,
+    TimeoutConfig,
+    timeout_context,
+)
 
 logger: Logger = get_logger(__name__)
 
@@ -174,13 +178,18 @@ def check_http_security_headers(
         url = f"https://{url}"
 
     try:
-        response: Response = requests.get(
-            url,
-            timeout=(timeout_config.connect, timeout_config.read),
-            verify=verify_ssl,
-            allow_redirects=True,
-        )
+        # Wrap the network call with lifetime timeout
+        with timeout_context(timeout_config):
+            response: Response = requests.get(
+                url,
+                timeout=(timeout_config.connect, timeout_config.read),
+                verify=verify_ssl,
+                allow_redirects=True,
+            )
         analysis: HeaderAnalysis = _analyse_response(url, response)
+    except OperationTimeoutError:
+        logger.warning("Operation lifetime timeout exceeded for %s", url)
+        analysis = HeaderAnalysis(url=url, error="Operation lifetime timeout")
     except requests.exceptions.Timeout:
         logger.warning("Request timeout for %s", url)
         analysis = HeaderAnalysis(url=url, error="Request timeout")
@@ -189,6 +198,7 @@ def check_http_security_headers(
         analysis = HeaderAnalysis(url=url, error="SSL verification failed")
     except requests.exceptions.ConnectionError:
         logger.warning("Connection refused for %s", url)
+        analysis = HeaderAnalysis(url=url, error="Connection refused")
     except requests.exceptions.TooManyRedirects:
         logger.warning("Too many redirects for %s", url)
         analysis = HeaderAnalysis(url=url, error="Too many redirects")
