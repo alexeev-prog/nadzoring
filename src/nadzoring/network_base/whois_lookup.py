@@ -160,6 +160,13 @@ def whois_lookup(target: str) -> dict[str, str | None]:
 
     try:
         raw: str = _run_whois_command(target)
+
+        if not raw:
+            return {
+                "target": target,
+                "type": target_type,
+                "error": "No information found",
+            }
     except ValueError:
         return {
             "target": target,
@@ -196,21 +203,13 @@ def whois_lookup(target: str) -> dict[str, str | None]:
             "error": "No information found",
         }
 
-    if not raw:
-        return {
-            "target": target,
-            "type": target_type,
-            "error": "No information found",
-        }
-
     parsed: dict[str, str | None] = _parse_whois_output(raw)
     parsed["target"] = target
     parsed["type"] = target_type
+    parsed["error"] = None
 
     whois_fields: dict[str, str | None] = {k: parsed[k] for k in _WHOIS_FIELD_MAP}
     if not any(whois_fields.values()):
         parsed["error"] = "No information found"
-    else:
-        parsed["error"] = None
 
     return parsed
