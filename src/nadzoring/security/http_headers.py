@@ -184,12 +184,11 @@ def check_http_security_headers(
     except requests.exceptions.Timeout:
         logger.warning("Request timeout for %s", url)
         analysis = HeaderAnalysis(url=url, error="Request timeout")
-    except requests.exceptions.ConnectionError:
-        logger.warning("Connection refused for %s", url)
-        analysis = HeaderAnalysis(url=url, error="Connection refused")
     except requests.exceptions.SSLError:
         logger.warning("SSL verification failed for %s", url)
         analysis = HeaderAnalysis(url=url, error="SSL verification failed")
+    except requests.exceptions.ConnectionError:
+        logger.warning("Connection refused for %s", url)
     except requests.exceptions.TooManyRedirects:
         logger.warning("Too many redirects for %s", url)
         analysis = HeaderAnalysis(url=url, error="Too many redirects")
