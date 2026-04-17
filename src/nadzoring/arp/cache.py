@@ -82,7 +82,7 @@ class ARPCache:
             )
             return self._parse_ip_neigh_output(result.stdout)
         except subprocess.CalledProcessError as exc:
-            if b"ermission" in (exc.stderr or b""):
+            if "ermission" in (exc.stderr or ""):
                 raise ARPCacheRetrievalError("Permission denied (needs root)") from exc
             raise ARPCacheRetrievalError("Failed to parse ARP cache output") from exc
 
