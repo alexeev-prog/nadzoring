@@ -9,7 +9,7 @@ from typing import Literal
 import whois  # type: ignore
 
 from nadzoring.logger import get_logger
-from nadzoring.utils.timeout import TimeoutConfig, timeout_context
+from nadzoring.utils.timeout import OperationTimeoutError
 
 logger: Logger = get_logger(__name__)
 
@@ -44,12 +44,11 @@ def _is_ip(target: str) -> bool:
     return True
 
 
-def _run_whois_command(target: str, timeout_config: TimeoutConfig | None = None) -> str:
+def _run_whois_command(target: str) -> str:
     """Execute the system whois command for the given target.
 
     Args:
         target: Domain or IP address to query.
-        timeout_config: Timeout configuration. If None, uses default TimeoutConfig().
 
     Returns:
         Raw WHOIS output string.
@@ -58,18 +57,15 @@ def _run_whois_command(target: str, timeout_config: TimeoutConfig | None = None)
         FileNotFoundError: The 'whois' command is not installed.
         TimeoutExpired: The WHOIS query exceeded the timeout period.
         CalledProcessError: The whois command returned a non-zero exit code.
+        OperationTimeoutError: The WHOIS query exceeded the timeout period.
     """
-    if timeout_config is None:
-        timeout_config = TimeoutConfig()
-
     os_name: str = system()
     encoding: Literal["cp866", "utf-8"] = "cp866" if os_name == "Windows" else "utf-8"
 
-    with timeout_context(timeout_config):
-        return check_output(
-            ["whois", target],
-            stderr=PIPE,
-        ).decode(encoding, errors="replace")
+    return check_output(
+        ["whois", target],
+        stderr=PIPE,
+    ).decode(encoding, errors="replace")
 
 
 def _parse_whois_output(raw: str) -> dict[str, str | None]:
@@ -181,6 +177,13 @@ def whois_lookup(target: str) -> dict[str, str | None]:
             "error": "Command not found",
         }
     except TimeoutExpired:
+        logger.exception("WHOIS lookup timed out for %s", target)
+        return {
+            "target": target,
+            "type": target_type,
+            "error": "Query timeout",
+        }
+    except OperationTimeoutError:
         logger.exception("WHOIS lookup timed out for %s", target)
         return {
             "target": target,
