@@ -44,29 +44,36 @@ def _is_ip(target: str) -> bool:
     return True
 
 
-def _run_whois_command(target: str) -> str:
+def _run_whois_command(target: str) -> str | None:
     """Execute the system whois command for the given target.
 
     Args:
         target: Domain or IP address to query.
 
     Returns:
-        Raw WHOIS output string.
+        Raw WHOIS output string, or None if the command fails.
 
     Raises:
-        FileNotFoundError: The 'whois' command is not installed.
-        TimeoutExpired: The WHOIS query exceeded the timeout period.
-        CalledProcessError: The whois command returned a non-zero exit code.
-        OperationTimeoutError: The WHOIS query exceeded the timeout period.
+        None - all exceptions are caught and logged.
     """
     os_name: str = system()
     encoding: Literal["cp866", "utf-8"] = "cp866" if os_name == "Windows" else "utf-8"
 
-    return check_output(
-        ["whois", target],
-        stderr=PIPE,
-        timeout=15,
-    ).decode(encoding, errors="replace")
+    try:
+        return check_output(
+            ["whois", target],
+            stderr=PIPE,
+            timeout=15,
+        ).decode(encoding, errors="replace")
+    except (
+        FileNotFoundError,
+        TimeoutError,
+        CalledProcessError,
+        TimeoutExpired,
+        OperationTimeoutError,
+    ):
+        logger.exception("WHOIS command failed for %s", target)
+        return None
 
 
 def _parse_whois_output(raw: str) -> dict[str, str | None]:
@@ -145,7 +152,6 @@ def whois_lookup(target: str) -> dict[str, str | None]:
         Dictionary with parsed WHOIS fields. Contains an 'error' key
         if the lookup failed (e.g., whois is not installed).
     """
-    # Validate input early
     if not target or target.startswith("-"):
         return {
             "target": target,
@@ -156,7 +162,14 @@ def whois_lookup(target: str) -> dict[str, str | None]:
     target_type: str = "ip" if _is_ip(target) else "domain"
 
     try:
-        raw: str = _run_whois_command(target)
+        raw = _run_whois_command(target)
+
+        if raw is None:
+            return {
+                "target": target,
+                "type": target_type,
+                "error": "Command not found or query failed",
+            }
 
         if not raw:
             return {
@@ -164,47 +177,12 @@ def whois_lookup(target: str) -> dict[str, str | None]:
                 "type": target_type,
                 "error": "No information found",
             }
-    except ValueError:
+    except Exception as e:
+        logger.exception("Unexpected error during WHOIS lookup for %s", target)
         return {
             "target": target,
             "type": target_type,
-            "error": "Invalid target",
-        }
-    except FileNotFoundError:
-        logger.exception("WHOIS command not found. Please install whois.")
-        return {
-            "target": target,
-            "type": target_type,
-            "error": "Command not found",
-        }
-    except TimeoutExpired:
-        logger.exception("WHOIS lookup timed out for %s", target)
-        return {
-            "target": target,
-            "type": target_type,
-            "error": "Query timeout",
-        }
-    except OperationTimeoutError:
-        logger.exception("WHOIS lookup timed out for %s", target)
-        return {
-            "target": target,
-            "type": target_type,
-            "error": "Query timeout",
-        }
-    except CalledProcessError as e:
-        logger.exception("WHOIS lookup failed for %s with exit code %d", target, e.returncode)
-
-        stderr = e.stderr.decode() if e.stderr else ""
-        if "No match" in stderr or "NOT FOUND" in stderr:
-            return {
-                "target": target,
-                "type": target_type,
-                "error": "No information found",
-            }
-        return {
-            "target": target,
-            "type": target_type,
-            "error": "No information found",
+            "error": f"Unexpected error: {e}",
         }
 
     parsed: dict[str, str | None] = _parse_whois_output(raw)
