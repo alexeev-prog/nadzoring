@@ -2,6 +2,7 @@
 
 import functools
 import json
+import os
 import socket
 import urllib.request
 from collections.abc import Callable
@@ -109,7 +110,8 @@ def _setup_global_proxy(proxy: str | None) -> None:
     Setup global proxy for all socket connections.
 
     Supports SOCKS4, SOCKS5, HTTP, HTTPS proxies.
-    This patches the socket module globally.
+    For HTTP/HTTPS, sets environment variables (compatible with requests library)
+    and configures urllib. For SOCKS, patches the socket module globally.
 
     Args:
         proxy: Proxy URL (e.g., 'socks5://host:port', 'http://host:port') or None to disable.
@@ -117,6 +119,9 @@ def _setup_global_proxy(proxy: str | None) -> None:
     if not proxy:
         if hasattr(socket, "_original_socket"):
             socket.socket = socket._original_socket  # type: ignore  # noqa: SLF001
+
+        for env_var in ["HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"]:
+            os.environ.pop(env_var, None)
         return
 
     try:
@@ -132,9 +137,17 @@ def _setup_global_proxy(proxy: str | None) -> None:
             socket.socket = socks.socksocket  # type: ignore
 
         elif protocol in {"http", "https"}:
+            proxy_url_http = f"http://{host}:{port}"
+            proxy_url_https = f"https://{host}:{port}"
+
+            os.environ["HTTP_PROXY"] = proxy_url_http
+            os.environ["HTTPS_PROXY"] = proxy_url_https
+            os.environ["http_proxy"] = proxy_url_http
+            os.environ["https_proxy"] = proxy_url_https
+
             proxy_handler = urllib.request.ProxyHandler({
-                "http": f"http://{host}:{port}",
-                "https": f"https://{host}:{port}",
+                "http": proxy_url_http,
+                "https": proxy_url_https,
             })
             opener = urllib.request.build_opener(proxy_handler)
             urllib.request.install_opener(opener)
