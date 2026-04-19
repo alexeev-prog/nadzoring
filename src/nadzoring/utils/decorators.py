@@ -123,11 +123,14 @@ def _setup_global_proxy(proxy: str | None) -> None:
         protocol, host, port = _parse_proxy_url(proxy)
 
         if protocol == "socks5":
+            socket._original_socket = socket.socket  # type: ignore  # noqa: SLF001
             socks.set_default_proxy(socks.SOCKS5, host, port)
             socket.socket = socks.socksocket  # type: ignore
         elif protocol == "socks4":
+            socket._original_socket = socket.socket  # type: ignore  # noqa: SLF001
             socks.set_default_proxy(socks.SOCKS4, host, port)
             socket.socket = socks.socksocket  # type: ignore
+
         elif protocol in {"http", "https"}:
             proxy_handler = urllib.request.ProxyHandler({
                 "http": f"http://{host}:{port}",
