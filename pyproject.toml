@@ -1,11 +1,9 @@
 [project]
 name = "nadzoring"
-version = "0.2.2"
+version = "0.3.0"
 description = "Add your description here"
 readme = "README.md"
-authors = [
-    { name = "Alexeev Bronislav", email = "alexeev.dev@mail.ru" }
-]
+authors = [{ name = "Alexeev Bronislav", email = "alexeev.dev@mail.ru" }]
 requires-python = ">=3.12"
 dependencies = [
     "aiohttp>=3.13.3",
@@ -62,4 +60,3 @@ dev = [
     "import-linter[ui]>=2.11",
     "types-pysocks>=1.7.1.20260408",
 ]
-

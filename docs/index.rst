@@ -23,6 +23,9 @@ Versions
    * - `main </nadzoring/main/>`_
      - Latest development version from the main branch
      - **Latest**
+   * - `v0.2.2 </nadzoring/v0.2.2/>`_
+     - Stable release — add proxy support, update project design, enhance type safety
+     - Stable
    * - `v0.2.1 </nadzoring/v0.2.1/>`_
      - Stable release — add dockerfile
      - Stable

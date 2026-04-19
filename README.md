@@ -4,7 +4,7 @@
   <p align="center">
     <img src="https://raw.githubusercontent.com/alexeev-prog/nadzoring/refs/heads/main/docs/nadzoring-long-preview.png">
     <p>An open source tool and python library for detecting website blocks, downdetecting and network analysis</p>
-    <a href="https://alexeev-prog.github.io/nadzoring/v0.2.1"><strong>Explore the docs »</strong></a>
+    <a href="https://alexeev-prog.github.io/nadzoring/v0.2.2"><strong>Explore the docs »</strong></a>
   </p>
   <p align="center">
     <a href="#-getting-started">Getting Started</a>
@@ -61,7 +61,6 @@ Built from the ground up with AI-friendliness in mind, Nadzoring is fully type-a
 
 <p align="center">
     <a href="https://deepwiki.com/alexeev-prog/nadzoring"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
-    <img src="https://scrutinizer-ci.com/g/alexeev-prog/nadzoring/badges/quality-score.png?b=main">
     <a href='https://coveralls.io/github/alexeev-prog/nadzoring?branch=main'><img src='https://coveralls.io/repos/github/alexeev-prog/nadzoring/badge.svg?branch=main' alt='Coverage' /></a>
     <img src="https://img.shields.io/coderabbit/prs/github/alexeev-prog/nadzoring?utm_source=oss&utm_medium=github&utm_campaign=alexeev-prog%2Fnadzoring&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews" alt="CodeRabbit Pull Request Reviews">
     <img src="https://sloc.xyz/github/mutating/suby/?category=code" alt="Code lines">
@@ -355,31 +354,6 @@ nadzoring completion hints powershell  # For PowerShell
 | `nadzoring completion powershell` | Generate PowerShell completion script |
 | `nadzoring completion hints <shell>` | Show detailed installation hints |
 
-**Quick examples:**
-
-```bash
-# Resolve a hostname to IP
-nadzoring network-base host-to-ip example.com
-
-# Comprehensive domain information
-nadzoring network-base domain-info example.com
-
-# Reverse DNS lookup
-nadzoring dns reverse 8.8.8.8
-
-# Full DNS health check
-nadzoring dns health example.com
-
-# Detect DNS poisoning
-nadzoring dns poisoning example.com
-
-# Check SSL/TLS certificate
-nadzoring security check-ssl example.com
-
-# Real-time ARP spoofing monitor
-nadzoring arp monitor-spoofing --interface eth0
-```
-
 For complete command reference, Python API documentation, and advanced examples, see the **[full documentation](https://alexeev-prog.github.io/nadzoring/main)**.
 
 ---
@@ -389,7 +363,8 @@ For complete command reference, Python API documentation, and advanced examples,
 | Version | Link | Status |
 |---------|------|--------|
 | **main** | [Latest (development)](https://alexeev-prog.github.io/nadzoring/main) | 🟡 Development |
-| **v0.2.1** | [Release](https://alexeev-prog.github.io/nadzoring/v0.2.1) | 🟢 Stable |
+| **v0.2.2** | [Release](https://alexeev-prog.github.io/nadzoring/v0.2.2) | 🟢 Stable |
+| v0.2.1 | [Release](https://alexeev-prog.github.io/nadzoring/v0.2.1) | 🟢 Stable |
 | v0.2.0 | [Release](https://alexeev-prog.github.io/nadzoring/v0.2.0) | 🟢 Stable |
 | v0.1.9 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.9) | ⚪ Legacy |
 | v0.1.8 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.8) | ⚪ Legacy |
