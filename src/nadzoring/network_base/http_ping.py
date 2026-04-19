@@ -91,6 +91,7 @@ def http_ping(
     dns_ms: float | None = _measure_dns(hostname) if hostname else None
 
     session = Session()
+
     try:
         start: float = time.perf_counter()
         try:

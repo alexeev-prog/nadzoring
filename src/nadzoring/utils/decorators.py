@@ -2,6 +2,9 @@
 
 import functools
 import json
+import os
+import socket
+import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass
 from time import time
@@ -9,6 +12,7 @@ from types import SimpleNamespace
 from typing import Any, TypeVar, cast
 
 import click
+import socks
 import yaml
 
 from nadzoring.logger import setup_cli_logging
@@ -29,23 +33,7 @@ _DEFAULT_LIFETIME_TIMEOUT: float = 30.0
 
 @dataclass(frozen=True)
 class _CliOptionSpec:
-    """Descriptor for a single injectable CLI option group.
-
-    Adding a new option to the decorator requires only a new entry in
-    ``_OPTION_REGISTRY`` — nothing else in this file changes.
-
-    Attributes:
-        flag: Keyword argument name for ``common_cli_options``,
-            e.g. ``"include_verbose"``.
-        kwarg: Parameter name injected into the wrapped function,
-            e.g. ``"verbose"``.
-        click_options: Click option decorators that register the underlying
-            CLI flags.  May be empty when the injected value is synthesised
-            from multiple raw flags (e.g. ``timeout_config``).
-        extractor: ``(kwargs) -> value`` — pops the relevant keys from the
-            raw kwargs dict and returns the value to inject.
-        default: Value used when the option group is disabled.
-    """
+    """Descriptor for a single injectable CLI option group."""
 
     flag: str
     kwarg: str
@@ -55,20 +43,7 @@ class _CliOptionSpec:
 
 
 def _make_timeout_config(kwargs: dict[str, Any]) -> TimeoutConfig:
-    """Pop timeout-related kwargs and build a TimeoutConfig.
-
-    Resolution order for ``connect`` and ``read``:
-    1. Explicit ``--connect-timeout`` / ``--read-timeout``.
-    2. Generic ``--timeout`` (lifetime fallback for both phases).
-    3. Module-level defaults.
-
-    Args:
-        kwargs: Mutable dict from the wrapper call.
-
-    Returns:
-        Fully populated TimeoutConfig.
-
-    """
+    """Pop timeout-related kwargs and build a TimeoutConfig."""
     lifetime: float | None = kwargs.pop("timeout", None)
     connect: float | None = kwargs.pop("connect_timeout", None)
     read: float | None = kwargs.pop("read_timeout", None)
@@ -78,6 +53,106 @@ def _make_timeout_config(kwargs: dict[str, Any]) -> TimeoutConfig:
         read=(read if read is not None else (lifetime if lifetime is not None else _DEFAULT_READ_TIMEOUT)),
         lifetime=lifetime if lifetime is not None else _DEFAULT_LIFETIME_TIMEOUT,
     )
+
+
+def _parse_proxy_url(proxy_url: str) -> tuple[str, str, int]:
+    """
+    Parse proxy URL and return (proxy_type, host, port).
+
+    Supported formats:
+    - socks5://host:port
+    - socks4://host:port
+    - http://host:port
+    - https://host:port
+
+    Args:
+        proxy_url: Proxy URL string.
+
+    Returns:
+        Tuple of (proxy_type, host, port).
+
+    Raises:
+        ValueError: If proxy URL format is invalid.
+    """
+    if not proxy_url or "://" not in proxy_url:
+        raise ValueError(f"Invalid proxy URL format: {proxy_url}")
+
+    protocol, rest = proxy_url.split("://", 1)
+    protocol = protocol.lower()
+
+    if protocol not in {"socks5", "socks4", "http", "https"}:
+        raise ValueError(f"Unsupported proxy protocol: {protocol}. Supported: socks5, socks4, http, https")
+
+    if ":" in rest:
+        host, port_str = rest.split(":", 1)
+        port_str = port_str.strip()
+        if not port_str:
+            port = 1080 if protocol.startswith("socks") else 8080
+        else:
+            try:
+                port = int(port_str)
+                if port < 1 or port > 65535:
+                    raise ValueError(f"Port out of range: {port}")  # noqa: TRY301
+            except ValueError:
+                port = 1080 if protocol.startswith("socks") else 8080
+    else:
+        host = rest
+        port = 1080 if protocol.startswith("socks") else 8080
+
+    if not host:
+        raise ValueError(f"Missing host in proxy URL: {proxy_url}")
+
+    return protocol, host, port
+
+
+def _setup_global_proxy(proxy: str | None) -> None:
+    """
+    Setup global proxy for all socket connections.
+
+    Supports SOCKS4, SOCKS5, HTTP, HTTPS proxies.
+    For HTTP/HTTPS, sets environment variables (compatible with requests library)
+    and configures urllib. For SOCKS, patches the socket module globally.
+
+    Args:
+        proxy: Proxy URL (e.g., 'socks5://host:port', 'http://host:port') or None to disable.
+    """
+    if not proxy:
+        if hasattr(socket, "_original_socket"):
+            socket.socket = socket._original_socket  # type: ignore  # noqa: SLF001
+
+        for env_var in ["HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"]:
+            os.environ.pop(env_var, None)
+        return
+
+    try:
+        protocol, host, port = _parse_proxy_url(proxy)
+
+        if protocol == "socks5":
+            socket._original_socket = socket.socket  # type: ignore  # noqa: SLF001
+            socks.set_default_proxy(socks.SOCKS5, host, port)
+            socket.socket = socks.socksocket  # type: ignore
+        elif protocol == "socks4":
+            socket._original_socket = socket.socket  # type: ignore  # noqa: SLF001
+            socks.set_default_proxy(socks.SOCKS4, host, port)
+            socket.socket = socks.socksocket  # type: ignore
+
+        elif protocol in {"http", "https"}:
+            proxy_url_http = f"http://{host}:{port}"
+            proxy_url_https = f"https://{host}:{port}"
+
+            os.environ["HTTP_PROXY"] = proxy_url_http
+            os.environ["HTTPS_PROXY"] = proxy_url_https
+            os.environ["http_proxy"] = proxy_url_http
+            os.environ["https_proxy"] = proxy_url_https
+
+            proxy_handler = urllib.request.ProxyHandler({
+                "http": proxy_url_http,
+                "https": proxy_url_https,
+            })
+            opener = urllib.request.build_opener(proxy_handler)
+            urllib.request.install_opener(opener)
+    except Exception as e:
+        raise click.ClickException(f"Failed to setup proxy '{proxy}': {e}") from e
 
 
 _OPTION_REGISTRY: tuple[_CliOptionSpec, ...] = (
@@ -150,40 +225,28 @@ _OPTION_REGISTRY: tuple[_CliOptionSpec, ...] = (
         extractor=_make_timeout_config,
         default=None,
     ),
+    _CliOptionSpec(
+        flag="include_proxy",
+        kwarg="proxy",
+        click_options=(
+            click.option(
+                "--proxy",
+                type=str,
+                help="Proxy URL (e.g., 'socks5://127.0.0.1:1080', 'http://proxy:8080')",
+            ),
+        ),
+        extractor=lambda kw: kw.pop("proxy", None),
+        default=None,
+    ),
 )
 
 _REGISTRY_BY_FLAG: dict[str, _CliOptionSpec] = {spec.flag: spec for spec in _OPTION_REGISTRY}
 
-_ALWAYS_EXTRACTED: frozenset[str] = frozenset({"verbose", "quiet", "no_color", "output", "save"})
+_ALWAYS_EXTRACTED: frozenset[str] = frozenset({"verbose", "quiet", "no_color", "output", "save", "proxy"})
 
 
 def common_cli_options(**enabled_flags: bool) -> Callable[[F], F]:
-    """Decorator factory that adds common CLI options to click commands.
-
-    Pass any subset of the known ``include_*`` flags as keyword arguments.
-    Unknown flag names raise ``ValueError`` at decoration time.
-
-    Known flags (see ``_OPTION_REGISTRY`` for the authoritative list):
-        ``include_verbose``, ``include_quiet``, ``include_no_color``,
-        ``include_output``, ``include_save``, ``include_timeout``.
-
-    Args:
-        **enabled_flags: Mapping of ``include_<name>`` → ``bool``.
-            Omitted flags default to ``False``.
-
-    Returns:
-        A decorator that wraps a click command with the requested options.
-
-    Raises:
-        ValueError: If an unknown flag name is supplied.
-
-    Example:
-        @click.command()
-        @common_cli_options(include_verbose=True, include_timeout=True)
-        def port_scan(verbose: bool, timeout_config: TimeoutConfig) -> dict:
-            ...
-
-    """
+    """Decorator factory that adds common CLI options to click commands."""
     unknown = set(enabled_flags) - _REGISTRY_BY_FLAG.keys()
     if unknown:
         raise ValueError(f"Unknown common_cli_options flags: {unknown}")
@@ -212,6 +275,7 @@ def common_cli_options(**enabled_flags: bool) -> Callable[[F], F]:
                 no_color=extracted["no_color"],
                 output=extracted["output"],
                 save=extracted["save"],
+                proxy=extracted["proxy"],
             )
 
             func_kwargs: dict[str, Any] = {
@@ -220,6 +284,10 @@ def common_cli_options(**enabled_flags: bool) -> Callable[[F], F]:
             }
 
             _setup_logging(cli_opts)
+
+            proxy = extracted.get("proxy")
+            if proxy:
+                _setup_global_proxy(proxy)
 
             start: float = time()
             result = func(*args, **func_kwargs)
@@ -237,12 +305,7 @@ def common_cli_options(**enabled_flags: bool) -> Callable[[F], F]:
 
 
 def _setup_logging(cli_options: SimpleNamespace) -> None:
-    """Configure logging based on CLI options.
-
-    Args:
-        cli_options: Namespace with ``verbose``, ``quiet``, ``no_color``.
-
-    """
+    """Configure logging based on CLI options."""
     setup_cli_logging(
         verbose=cli_options.verbose,
         quiet=cli_options.quiet,
@@ -251,18 +314,7 @@ def _setup_logging(cli_options: SimpleNamespace) -> None:
 
 
 def _handle_output(result: Any, output_format: str, *, no_color: bool) -> None:
-    """Render command results in the requested format.
-
-    Args:
-        result: Data returned by the command.
-        output_format: One of ``json``, ``yaml``, ``table``, ``csv``,
-            ``html``, ``html_table``.
-        no_color: Disable ANSI colours in table output.
-
-    Raises:
-        click.ClickException: On any rendering error.
-
-    """
+    """Render command results in the requested format."""
     output_handlers: dict[str, Callable[[], None]] = {
         "json": lambda: click.echo(json.dumps(result, indent=2, default=str, ensure_ascii=False)),
         "yaml": lambda: click.echo(
@@ -290,17 +342,7 @@ def _handle_output(result: Any, output_format: str, *, no_color: bool) -> None:
 
 
 def _handle_save(result: Any, save_path: str | None, output_format: str) -> None:
-    """Persist command results to a file when a path is provided.
-
-    Args:
-        result: Data returned by the command.
-        save_path: Destination path, or ``None`` to skip.
-        output_format: Format used when serialising.
-
-    Raises:
-        click.ClickException: On any I/O error.
-
-    """
+    """Persist command results to a file when a path is provided."""
     if save_path is None:
         return
 
@@ -311,12 +353,6 @@ def _handle_save(result: Any, save_path: str | None, output_format: str) -> None
 
 
 def _show_completion_time(elapsed: float, *, verbose: bool) -> None:
-    """Print elapsed time when verbose mode is active.
-
-    Args:
-        elapsed: Seconds since the command started.
-        verbose: Emit the timing line only when ``True``.
-
-    """
+    """Print elapsed time when verbose mode is active."""
     if verbose:
         click.secho(f"\n⚡ Completed in {elapsed:.2f} seconds", dim=True)

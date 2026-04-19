@@ -64,6 +64,10 @@ Every command supports these flags:
      -
      - Read timeout (seconds). Falls back to ``--timeout``.
      - ``10.0``
+   * - ``--proxy``
+     -
+     - SOCKS5 proxy URL (e.g., ``socks5://127.0.0.1:1080``). Affects all HTTP/HTTPS requests.
+     - None
 
 **Timeout resolution order:**
 1. Explicit phase-specific flag (``--connect-timeout`` / ``--read-timeout``)

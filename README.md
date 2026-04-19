@@ -163,19 +163,19 @@ nadzoring arp detect-spoofing
 ```
 
 **Benefits of using Docker:**
-- ✅ **Isolated environment** — No Python version conflicts or dependency issues
-- ✅ **Easy updates** — Just rebuild the image with `git pull && docker build`
-- ✅ **No system modifications** — Leaves your host system untouched
-- ✅ **Consistent behavior** — Works the same across different Linux distributions
-- ✅ **Network capabilities** — Pre-configured with NET_ADMIN and NET_RAW for full functionality
+- [x] **Isolated environment** — No Python version conflicts or dependency issues
+- [x] **Easy updates** — Just rebuild the image with `git pull && docker build`
+- [x] **No system modifications** — Leaves your host system untouched
+- [x] **Consistent behavior** — Works the same across different Linux distributions
+- [x] **Network capabilities** — Pre-configured with NET_ADMIN and NET_RAW for full functionality
 
 **Platform recommendation:**
 
 | Platform | Recommended Method | Best For |
 |----------|-------------------|----------|
-| **Linux** | Docker (with alias) | Most users, servers, CI/CD |
-| **Linux** | Native (pipx) | Performance, development |
-| **Windows** | Native (pipx) | Best networking compatibility |
+| **Linux** | Docker (with alias) | Servers, CI/CD |
+| **Linux** | Native (pipx) | Most users, development |
+| **Windows** | Native (pipx) | Windows-users |
 
 > **Note for Windows users:** Docker on Windows has limitations with raw sockets and local network access. Native installation via pipx is strongly recommended for Windows. See [Docker.md](Docker.md) for Windows-specific guidance.
 
@@ -200,6 +200,7 @@ These options work with every command:
 | `--timeout` | | Lifetime timeout for the entire operation (seconds) | `30.0` |
 | `--connect-timeout` | | Connection timeout (seconds). Falls back to `--timeout` | `5.0` |
 | `--read-timeout` | | Read timeout (seconds). Falls back to `--timeout` | `10.0` |
+| `--proxy` | | SOCKS5 proxy URL (e.g., `socks5://127.0.0.1:1080`). All HTTP/HTTPS traffic uses this proxy. | None |
 
 **Timeout resolution order:**
 1. Explicit `--connect-timeout` / `--read-timeout`
