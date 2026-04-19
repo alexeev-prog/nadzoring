@@ -112,6 +112,7 @@ def _fetch_ct_subdomains(domain: str, timeout_config: TimeoutConfig) -> set[str]
     Args:
         domain: The apex domain to search.
         timeout_config: Unified timeout configuration.
+        proxy: Optional proxy URL.
 
     Returns:
         Set of unique subdomain strings discovered via CT logs.
