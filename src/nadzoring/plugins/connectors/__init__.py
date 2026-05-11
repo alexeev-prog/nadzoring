@@ -8,6 +8,12 @@ Categories
 - :mod:`.security` — Security connectors (SSL cert, HTTP headers, email, subdomains)
 - :mod:`.arp`      — ARP connectors (cache, spoofing detection)
 - :mod:`.cicd`     — CI/CD connectors (Docker, Kubernetes, GitHub Actions, GitLab CI, Jenkins)
+
+Constructor note
+------------------
+Some connectors use ``dataclasses.field(..., kw_only=True)`` for booleans and
+timeouts. Pass those arguments by keyword (including via
+:class:`~nadzoring.plugins.registry.PluginRegistry.build`).
 """
 
 from nadzoring.plugins.connectors.arp import ArpCacheConnector, ArpSpoofingConnector

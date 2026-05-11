@@ -8,6 +8,7 @@ from typing import ClassVar
 import pytest
 
 from nadzoring.plugins.base import ConnectorBase, ConnectorCategory, ConnectorMeta
+from nadzoring.plugins.connectors.security import SslCertConnector
 from nadzoring.plugins.connectors.web import HttpEndpointConnector
 from nadzoring.plugins.errors import (
     ConnectorNotFoundError,
@@ -22,6 +23,22 @@ def test_probe_result_ok_property() -> None:
     assert ProbeResult(status="ok", error=None).ok is True
     assert ProbeResult(status="ok", error="x").ok is False
     assert ProbeResult(status="degraded", error=None).ok is False
+
+
+def test_registry_build_ssl_cert_keyword_only_fields() -> None:
+    """``PluginRegistry.build`` forwards keyword-only flags to the connector."""
+    registry = PluginRegistry()
+    registry.register(SslCertConnector)
+    conn = registry.build(
+        "ssl-cert",
+        domains=["example.test"],
+        days_before=1,
+        verify=False,
+        full=True,
+    )
+    assert isinstance(conn, SslCertConnector)
+    assert conn.verify is False
+    assert conn.full is True
 
 
 def test_registry_register_build_list() -> None:

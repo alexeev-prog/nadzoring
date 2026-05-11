@@ -56,6 +56,61 @@ Minimal example
    print(dns_result.status, dns_result.details)
    print(ping_result.status, ping_result.error)
 
+Several network and security connectors mark **boolean and timeout fields as
+keyword-only** in their dataclass constructors. This avoids passing a bare
+``True``/``False`` positionally where it could be mistaken for a numeric
+parameter. Always pass those arguments by name (and the same applies to
+``PluginRegistry.build``, which forwards keyword arguments to the connector).
+
+.. code-block:: python
+
+   from nadzoring.plugins import PluginRegistry
+   from nadzoring.plugins.connectors import (
+       ConnectionsConnector,
+       HttpPingConnector,
+       SslCertConnector,
+       TracerouteConnector,
+   )
+
+   registry = PluginRegistry()
+   for cls in (
+       HttpPingConnector,
+       SslCertConnector,
+       ConnectionsConnector,
+       TracerouteConnector,
+   ):
+       registry.register(cls)
+
+   http = registry.build(
+       "http-ping",
+       urls=["https://example.com"],
+       verify_ssl=True,
+       follow_redirects=True,
+       include_headers=False,
+   ).probe()
+
+   tls = registry.build(
+       "ssl-cert",
+       domains=["example.com"],
+       days_before=14,
+       verify=True,
+       full=False,
+   ).probe()
+
+   connections = registry.build(
+       "connections",
+       protocol="tcp",
+       state_filter="LISTEN",
+       include_process=False,
+   ).probe()
+
+   trace = registry.build(
+       "traceroute",
+       targets=["198.51.100.1"],
+       max_hops=30,
+       use_sudo=False,
+   ).probe()
+
 ----
 
 Result contract

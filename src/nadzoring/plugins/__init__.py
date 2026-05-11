@@ -27,6 +27,8 @@ Quick start::
         "ssl-cert",
         domains=["example.com"],
         days_before=14,
+        verify=True,
+        full=False,
     ).probe()
 
     print(result.status, result.details)
