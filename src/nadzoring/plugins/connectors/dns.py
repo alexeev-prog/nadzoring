@@ -394,8 +394,7 @@ class DnsWhoisConnector(ConnectorBase):
     def probe(self) -> ProbeResult:
         from nadzoring.network_base.whois_lookup import whois_domain_lookup
 
-        try:
-            data = whois_domain_lookup(self.domain)
-            return _ok(data)
-        except Exception as exc:
-            return _err(str(exc))
+        data = whois_domain_lookup(self.domain)
+        if data and isinstance(data[0], dict) and data[0].get("error"):
+            return _err(str(data[0]["error"]))
+        return _ok(data)

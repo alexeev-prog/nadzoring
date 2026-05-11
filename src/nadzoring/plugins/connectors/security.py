@@ -49,9 +49,9 @@ class SslCertConnector(ConnectorBase):
 
     domains: list[str]
     days_before: int = 7
-    verify: bool = True
-    full: bool = False
-    timeout_config: TimeoutConfig = field(default_factory=TimeoutConfig)
+    verify: bool = field(default=True, kw_only=True)
+    full: bool = field(default=False, kw_only=True)
+    timeout_config: TimeoutConfig = field(default_factory=TimeoutConfig, kw_only=True)
 
     def probe(self) -> ProbeResult:
         from nadzoring.security.check_website_ssl_cert import (
@@ -123,8 +123,8 @@ class HttpHeadersConnector(ConnectorBase):
     )
 
     urls: list[str]
-    verify_ssl: bool = True
-    timeout_config: TimeoutConfig = field(default_factory=TimeoutConfig)
+    verify_ssl: bool = field(default=True, kw_only=True)
+    timeout_config: TimeoutConfig = field(default_factory=TimeoutConfig, kw_only=True)
 
     def probe(self) -> ProbeResult:
         from nadzoring.security.http_headers import check_http_security_headers
@@ -185,17 +185,7 @@ class EmailSecurityConnector(ConnectorBase):
     def probe(self) -> ProbeResult:
         from nadzoring.security.email_security import check_email_security
 
-        results = []
-        errors = []
-        for domain in self.domains:
-            try:
-                data = check_email_security(domain)
-                results.append(data)
-            except Exception as exc:
-                errors.append(f"{domain}: {exc}")
-
-        if errors and not results:
-            return _err("; ".join(errors))
+        results = [check_email_security(domain) for domain in self.domains]
 
         # Flag domains missing SPF or DMARC as degraded
         missing = [
@@ -204,11 +194,11 @@ class EmailSecurityConnector(ConnectorBase):
             if not r.get("spf", {}).get("found") or not r.get("dmarc", {}).get("found")
         ]
         return ProbeResult(
-            status="degraded" if missing or errors else "ok",
+            status="degraded" if missing else "ok",
             error=(
                 f"Missing/invalid SPF or DMARC on: {', '.join(missing)}"
                 if missing
-                else ("; ".join(errors) if errors else None)
+                else None
             ),
             details={"data": results},
         )
@@ -244,28 +234,25 @@ class SubdomainScanConnector(ConnectorBase):
     domain: str
     wordlist_path: Path | None = None
     threads: int = 20
-    bruteforce: bool = True
-    timeout_config: TimeoutConfig = field(default_factory=TimeoutConfig)
+    bruteforce: bool = field(default=True, kw_only=True)
+    timeout_config: TimeoutConfig = field(default_factory=TimeoutConfig, kw_only=True)
 
     def probe(self) -> ProbeResult:
         from nadzoring.security.subdomain_scan import scan_subdomains
 
-        try:
-            if not self.bruteforce:
-                wordlist: str | None = ""
-            elif self.wordlist_path is not None:
-                wordlist = str(self.wordlist_path)
-            else:
-                wordlist = None
-            results = scan_subdomains(
-                self.domain,
-                wordlist_path=wordlist,
-                max_threads=self.threads,
-                timeout_config=self.timeout_config,
-            )
-            return ProbeResult(
-                status="ok",
-                details={"data": results, "count": len(results)},
-            )
-        except Exception as exc:
-            return _err(str(exc))
+        if not self.bruteforce:
+            wordlist: str | None = ""
+        elif self.wordlist_path is not None:
+            wordlist = str(self.wordlist_path)
+        else:
+            wordlist = None
+        results = scan_subdomains(
+            self.domain,
+            wordlist_path=wordlist,
+            max_threads=self.threads,
+            timeout_config=self.timeout_config,
+        )
+        return ProbeResult(
+            status="ok",
+            details={"data": results, "count": len(results)},
+        )

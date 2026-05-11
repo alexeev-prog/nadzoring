@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
+from nadzoring.arp.models import ARPEntry
 from nadzoring.plugins.base import ConnectorBase, ConnectorCategory, ConnectorMeta
 from nadzoring.plugins.result import ProbeResult
+from nadzoring.utils.errors import ARPCacheRetrievalError
 
 _TAGS = ("arp", "network", "security")
 
@@ -17,6 +19,13 @@ def _ok(data: Any) -> ProbeResult:
 
 def _err(msg: str) -> ProbeResult:
     return ProbeResult(status="error", error=msg)
+
+
+def _arp_entry_row(entry: ARPEntry) -> dict[str, Any]:
+    """Serialise :class:`ARPEntry` for probe details (JSON-safe ``state``)."""
+    row: dict[str, Any] = asdict(entry)
+    row["state"] = entry.state.value
+    return row
 
 
 # ---------------------------------------------------------------------------
@@ -47,11 +56,11 @@ class ArpCacheConnector(ConnectorBase):
             return ProbeResult(
                 status="ok",
                 details={
-                    "data": [e.__dict__ if hasattr(e, "__dict__") else e for e in entries],
+                    "data": [_arp_entry_row(e) for e in entries],
                     "count": len(entries),
                 },
             )
-        except Exception as exc:
+        except ARPCacheRetrievalError as exc:
             return _err(str(exc))
 
 
@@ -113,5 +122,5 @@ class ArpSpoofingConnector(ConnectorBase):
                 status="ok",
                 details={"data": [], "count": 0},
             )
-        except Exception as exc:
+        except ARPCacheRetrievalError as exc:
             return _err(str(exc))

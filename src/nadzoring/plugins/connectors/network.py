@@ -85,7 +85,7 @@ class TracerouteConnector(ConnectorBase):
 
     targets: list[str]
     max_hops: int = 30
-    use_sudo: bool = False
+    use_sudo: bool = field(default=False, kw_only=True)
     timeout_config: TimeoutConfig = field(default_factory=TimeoutConfig)
 
     def probe(self) -> ProbeResult:
@@ -175,11 +175,8 @@ class PortScanConnector(ConnectorBase):
             timeout_config=self.timeout_config,
             max_workers=self.workers,
         )
-        try:
-            results = scan_ports(config)
-            return _ok([asdict(r) for r in results])
-        except Exception as exc:
-            return _err(str(exc))
+        results = scan_ports(config)
+        return _ok([asdict(r) for r in results])
 
 
 # ---------------------------------------------------------------------------
@@ -209,9 +206,9 @@ class HttpPingConnector(ConnectorBase):
     )
 
     urls: list[str]
-    verify_ssl: bool = True
-    follow_redirects: bool = True
-    include_headers: bool = False
+    verify_ssl: bool = field(default=True, kw_only=True)
+    follow_redirects: bool = field(default=True, kw_only=True)
+    include_headers: bool = field(default=False, kw_only=True)
     timeout_config: TimeoutConfig = field(default_factory=TimeoutConfig)
 
     def probe(self) -> ProbeResult:
@@ -281,11 +278,11 @@ class WhoisConnector(ConnectorBase):
         results = []
         errors = []
         for target in self.targets:
-            try:
-                data = whois_lookup(target)
+            data = whois_lookup(target)
+            if data.get("error"):
+                errors.append(f"{target}: {data['error']}")
+            else:
                 results.append({"target": target, "data": data})
-            except Exception as exc:
-                errors.append(f"{target}: {exc}")
 
         if errors and not results:
             return _err("; ".join(errors))
@@ -370,20 +367,17 @@ class ConnectionsConnector(ConnectorBase):
 
     protocol: str = "all"
     state_filter: str | None = None
-    include_process: bool = True
+    include_process: bool = field(default=True, kw_only=True)
 
     def probe(self) -> ProbeResult:
         from nadzoring.network_base.connections import get_connections
 
-        try:
-            data = get_connections(
-                protocol=self.protocol,
-                state_filter=self.state_filter,
-                include_process=self.include_process,
-            )
-            return _ok([asdict(row) if hasattr(row, "__dataclass_fields__") else row for row in data])
-        except Exception as exc:
-            return _err(str(exc))
+        data = get_connections(
+            protocol=self.protocol,
+            state_filter=self.state_filter,
+            include_process=self.include_process,
+        )
+        return _ok([asdict(row) if hasattr(row, "__dataclass_fields__") else row for row in data])
 
 
 # ---------------------------------------------------------------------------
@@ -547,10 +541,7 @@ class RouteTableConnector(ConnectorBase):
     def probe(self) -> ProbeResult:
         from nadzoring.network_base.route_table import get_route_table
 
-        try:
-            return _ok(get_route_table())
-        except Exception as exc:
-            return _err(str(exc))
+        return _ok(get_route_table())
 
 
 # ---------------------------------------------------------------------------
@@ -577,12 +568,9 @@ class NetworkParamsConnector(ConnectorBase):
         from nadzoring.network_base.ipv4_local_cli import get_local_ipv4
         from nadzoring.network_base.network_params import network_param
 
-        try:
-            params = network_param()
-            if params is None:
-                return _err("Network parameters are unavailable on this platform")
-            out: dict[str, Any] = dict(params)
-            out["local_ipv4"] = get_local_ipv4()
-            return _ok(out)
-        except Exception as exc:
-            return _err(str(exc))
+        params = network_param()
+        if params is None:
+            return _err("Network parameters are unavailable on this platform")
+        out: dict[str, Any] = dict(params)
+        out["local_ipv4"] = get_local_ipv4()
+        return _ok(out)
