@@ -59,6 +59,7 @@ Key Features
    api/security
    api/arp
    api/utils
+   plugins
    api_examples
 
 .. toctree::

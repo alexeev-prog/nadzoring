@@ -112,3 +112,18 @@ convention = "google"
 [lint.flake8-type-checking]
 quote-annotations = false
 exempt-modules = ["typing", "typing_extensions"]
+
+# Plugin connectors use lazy imports inside ``probe()`` to keep CLI startup light
+# and mirror domain-layer import patterns; ``meta`` is intentionally a class-level
+# descriptor on dataclass-backed connectors.
+[lint.per-file-ignores]
+"src/nadzoring/plugins/**" = [
+    "PLC0415",
+    "D102",
+    "RUF045",
+]
+"tests/test_plugins/**" = [
+    "D103",
+    "FBT001",
+    "PLC0415",
+]

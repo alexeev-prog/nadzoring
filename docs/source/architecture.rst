@@ -31,6 +31,8 @@ Package Layout
    │
    ├── arp/                      # Domain layer — ARP security
    │
+   ├── plugins/                  # Connector framework (non-CLI integrations)
+   │
    └── utils/                    # Cross-cutting utilities
        ├── errors.py             #   Exception hierarchy
        ├── validators.py         #   Input validation functions
@@ -51,6 +53,11 @@ Layer Responsibilities
     Contains all business logic.  Modules are scoped to a single concern
     (SRP).  Functions return typed dicts or dataclasses; they never print
     or call Click.
+
+**Integrations** (``plugins/``)
+    Optional connector classes for Python embedders (monitoring, tests).
+    They wrap domain functions and return :class:`nadzoring.plugins.result.ProbeResult`
+    objects.  The stock CLI does not depend on this package.
 
 **Cross-cutting** (``utils/``)
     Shared helpers with no dependency on domain modules.  ``errors.py``
