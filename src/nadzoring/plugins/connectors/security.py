@@ -8,6 +8,13 @@ from typing import Any
 
 from nadzoring.plugins.base import ConnectorBase, ConnectorCategory, ConnectorMeta
 from nadzoring.plugins.result import ProbeResult
+from nadzoring.security.check_website_ssl_cert import (
+    check_ssl_certificate_safe,
+    check_ssl_expiry_with_fallback,
+)
+from nadzoring.security.email_security import check_email_security
+from nadzoring.security.http_headers import check_http_security_headers
+from nadzoring.security.subdomain_scan import scan_subdomains
 from nadzoring.utils.timeout import TimeoutConfig
 
 _TAGS = ("security",)
@@ -19,11 +26,6 @@ def _ok(data: Any, latency_ms: float | None = None) -> ProbeResult:
 
 def _err(msg: str) -> ProbeResult:
     return ProbeResult(status="error", error=msg)
-
-
-# ---------------------------------------------------------------------------
-# security check-ssl
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -54,11 +56,6 @@ class SslCertConnector(ConnectorBase):
     timeout_config: TimeoutConfig = field(default_factory=TimeoutConfig, kw_only=True)
 
     def probe(self) -> ProbeResult:
-        from nadzoring.security.check_website_ssl_cert import (
-            check_ssl_certificate_safe,
-            check_ssl_expiry_with_fallback,
-        )
-
         results = []
         errors = []
         for domain in self.domains:
@@ -98,11 +95,6 @@ class SslCertConnector(ConnectorBase):
         )
 
 
-# ---------------------------------------------------------------------------
-# security check-headers
-# ---------------------------------------------------------------------------
-
-
 @dataclass
 class HttpHeadersConnector(ConnectorBase):
     """Analyse HTTP security headers for one or more URLs.
@@ -127,8 +119,6 @@ class HttpHeadersConnector(ConnectorBase):
     timeout_config: TimeoutConfig = field(default_factory=TimeoutConfig, kw_only=True)
 
     def probe(self) -> ProbeResult:
-        from nadzoring.security.http_headers import check_http_security_headers
-
         results = []
         errors = []
         for url in self.urls:
@@ -158,11 +148,6 @@ class HttpHeadersConnector(ConnectorBase):
         )
 
 
-# ---------------------------------------------------------------------------
-# security check-email
-# ---------------------------------------------------------------------------
-
-
 @dataclass
 class EmailSecurityConnector(ConnectorBase):
     """Check SPF, DKIM, and DMARC records for domains.
@@ -183,8 +168,6 @@ class EmailSecurityConnector(ConnectorBase):
     domains: list[str]
 
     def probe(self) -> ProbeResult:
-        from nadzoring.security.email_security import check_email_security
-
         results = [check_email_security(domain) for domain in self.domains]
 
         # Flag domains missing SPF or DMARC as degraded
@@ -202,11 +185,6 @@ class EmailSecurityConnector(ConnectorBase):
             ),
             details={"data": results},
         )
-
-
-# ---------------------------------------------------------------------------
-# security subdomains
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -238,8 +216,6 @@ class SubdomainScanConnector(ConnectorBase):
     timeout_config: TimeoutConfig = field(default_factory=TimeoutConfig, kw_only=True)
 
     def probe(self) -> ProbeResult:
-        from nadzoring.security.subdomain_scan import scan_subdomains
-
         if not self.bruteforce:
             wordlist: str | None = ""
         elif self.wordlist_path is not None:
@@ -252,7 +228,17 @@ class SubdomainScanConnector(ConnectorBase):
             max_threads=self.threads,
             timeout_config=self.timeout_config,
         )
+        row_errors: list[str] = []
+        good: list[dict[str, Any]] = []
+        for row in results:
+            if row.get("error"):
+                row_errors.append(str(row["error"]))
+            else:
+                good.append(row)
+        if row_errors and not good:
+            return _err("; ".join(row_errors))
         return ProbeResult(
-            status="ok",
-            details={"data": results, "count": len(results)},
+            status="degraded" if row_errors else "ok",
+            error="; ".join(row_errors) if row_errors else None,
+            details={"data": good, "count": len(good)},
         )

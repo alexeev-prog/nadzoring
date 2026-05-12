@@ -263,7 +263,7 @@ def test_connections_connector(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_ssl_cert_connector(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "nadzoring.security.check_website_ssl_cert.check_ssl_expiry_with_fallback",
+        "nadzoring.plugins.connectors.security.check_ssl_expiry_with_fallback",
         lambda domain, days, tc: {"domain": domain, "days_remaining": 90, "error": None},
     )
     result = SslCertConnector(
@@ -277,7 +277,7 @@ def test_ssl_cert_connector(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_ssl_cert_expiring(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "nadzoring.security.check_website_ssl_cert.check_ssl_expiry_with_fallback",
+        "nadzoring.plugins.connectors.security.check_ssl_expiry_with_fallback",
         lambda domain, days, tc: {"domain": domain, "days_remaining": 3, "error": None},
     )
     result = SslCertConnector(
@@ -291,7 +291,7 @@ def test_ssl_cert_expiring(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_http_headers_connector(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "nadzoring.security.http_headers.check_http_security_headers",
+        "nadzoring.plugins.connectors.security.check_http_security_headers",
         lambda url, **kw: {"url": url, "score": 80, "error": None},
     )
     result = HttpHeadersConnector(urls=["https://example.com"], verify_ssl=True).probe()
@@ -314,11 +314,11 @@ def test_ssl_cert_connector_full_mode(monkeypatch: pytest.MonkeyPatch) -> None:
         return {"domain": domain, "error": None, "verify_used": verify}
 
     monkeypatch.setattr(
-        "nadzoring.security.check_website_ssl_cert.check_ssl_expiry_with_fallback",
+        "nadzoring.plugins.connectors.security.check_ssl_expiry_with_fallback",
         should_not_call_expiry,
     )
     monkeypatch.setattr(
-        "nadzoring.security.check_website_ssl_cert.check_ssl_certificate_safe",
+        "nadzoring.plugins.connectors.security.check_ssl_certificate_safe",
         fake_safe,
     )
     result = SslCertConnector(
@@ -352,7 +352,7 @@ def test_dns_whois_connector_ok(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_email_security_connector(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "nadzoring.security.email_security.check_email_security",
+        "nadzoring.plugins.connectors.security.check_email_security",
         lambda domain: {
             "domain": domain,
             "spf": {"found": True},
@@ -363,9 +363,27 @@ def test_email_security_connector(monkeypatch: pytest.MonkeyPatch) -> None:
     assert result.status == "ok"
 
 
+def test_email_security_connector_missing_spf_or_dmarc(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Missing SPF or DMARC yields degraded status and a populated error string."""
+
+    monkeypatch.setattr(
+        "nadzoring.plugins.connectors.security.check_email_security",
+        lambda domain: {
+            "domain": domain,
+            "spf": {"found": False},
+            "dmarc": {"found": True},
+        },
+    )
+    result = EmailSecurityConnector(domains=["bad.example"]).probe()
+    assert result.status == "degraded"
+    assert result.error is not None
+    assert "bad.example" in result.error
+    assert "SPF" in result.error or "DMARC" in result.error
+
+
 def test_subdomain_scan_connector(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "nadzoring.security.subdomain_scan.scan_subdomains",
+        "nadzoring.plugins.connectors.security.scan_subdomains",
         lambda domain, **kw: [{"subdomain": f"www.{domain}", "ip": "192.0.2.1"}],
     )
     result = SubdomainScanConnector(
@@ -374,6 +392,37 @@ def test_subdomain_scan_connector(monkeypatch: pytest.MonkeyPatch) -> None:
     ).probe()
     assert result.status == "ok"
     assert result.details["count"] == 1
+
+
+def test_subdomain_scan_connector_all_rows_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    """When every row reports an error, the probe fails with a combined message."""
+
+    monkeypatch.setattr(
+        "nadzoring.plugins.connectors.security.scan_subdomains",
+        lambda domain, **kw: [{"error": "crt.sh timeout"}],
+    )
+    result = SubdomainScanConnector(domain="example.com", bruteforce=False).probe()
+    assert result.status == "error"
+    assert result.error is not None
+    assert "crt.sh timeout" in result.error
+
+
+def test_subdomain_scan_connector_partial_row_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Rows with errors downgrade the probe while successful rows stay in details."""
+
+    monkeypatch.setattr(
+        "nadzoring.plugins.connectors.security.scan_subdomains",
+        lambda domain, **kw: [
+            {"subdomain": f"www.{domain}", "ip": "192.0.2.1"},
+            {"error": "resolution failed"},
+        ],
+    )
+    result = SubdomainScanConnector(domain="example.com", bruteforce=False).probe()
+    assert result.status == "degraded"
+    assert result.error is not None
+    assert "resolution failed" in result.error
+    assert result.details["count"] == 1
+    assert result.details["data"][0]["subdomain"] == "www.example.com"
 
 
 def test_http_endpoint_connector_ok() -> None:
