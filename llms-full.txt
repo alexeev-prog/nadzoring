@@ -1,6 +1,5 @@
 # Nadzoring — Full Documentation
 
-
 ## Source: README.md
 
 <a id="readme-top"></a>
@@ -391,6 +390,15 @@ The documentation site includes:
 
 ---
 
+### LLM-friendly documentation
+
+For AI assistants and language models:
+
+- [`llms.txt`](llms.txt) — concise project overview and links to essential documentation.
+- [`llms-full.txt`](llms-full.txt) — consolidated project documentation for larger context windows.
+
+---
+
 ## Contributing
 
 Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request.
@@ -428,6 +436,7 @@ For commercial support or enterprise features, contact [alexeev.dev@mail.ru](mai
 
 ---
 Copyright © 2025 Alexeev Bronislav. Distributed under GNU GPL v3 license.
+
 
 ## Source: docs/source/quickstart.rst
 
@@ -1187,6 +1196,7 @@ Getting Help
    nadzoring dns reverse --help
    nadzoring network-base port-scan --help
    nadzoring security check-ssl --help
+
 
 ## Source: docs/source/commands/all_commands.rst
 
@@ -2826,6 +2836,7 @@ All library exceptions inherit from ``nadzoring.utils.errors.NadzoringError`` an
 
    from nadzoring.utils.errors import NadzoringError, DNSError, NetworkError, ARPError
 
+
 ## Source: docs/source/api_examples.rst
 
 ===========
@@ -3038,6 +3049,7 @@ ARP API
    rt = ARPRealtimeDetector()
    alerts = rt.monitor(interface="eth0", count=50, timeout_config=config)
    print(rt.get_stats())
+
 
 ## Source: docs/source/code_examples.rst
 
@@ -3557,3 +3569,1566 @@ Quick Website Block Check
    nadzoring security check-headers https://example.com
    nadzoring security check-email example.com
    nadzoring security subdomains example.com
+
+
+## Source: docs/source/architecture.rst
+
+Architecture
+============
+
+Nadzoring is structured in concentric layers following the principles of
+**Clean Architecture**, **Single Responsibility (SRP)**, **DRY**, and
+**KISS**.  This page explains the layout so that contributors and
+integrators know where each concern lives.
+
+----
+
+Package Layout
+--------------
+
+.. code-block:: text
+
+   src/nadzoring/
+   ├── cli.py                    # Entry-point: registers command groups
+   ├── __main__.py               # python -m nadzoring
+   │
+   ├── commands/                 # CLI layer — Click command groups
+   │   ├── dns_commands.py       #   dns group
+   │   ├── network_commands.py   #   network-base group
+   │   ├── security_commands.py  #   security group
+   │   └── arp_commands.py       #   arp group
+   │
+   ├── dns_lookup/               # Domain layer — DNS
+   │
+   ├── network_base/             # Domain layer — network diagnostics
+   │
+   ├── security/                 # Domain layer — security auditing
+   │
+   ├── arp/                      # Domain layer — ARP security
+   │
+   ├── plugins/                  # Connector framework (non-CLI integrations)
+   │
+   └── utils/                    # Cross-cutting utilities
+       ├── errors.py             #   Exception hierarchy
+       ├── validators.py         #   Input validation functions
+       ├── formatters.py         #   Output formatting (table/json/csv/html)
+       └── decorators.py         #   @common_cli_options decorator
+
+----
+
+Layer Responsibilities
+-----------------------
+
+**CLI layer** (``commands/``)
+    Owns *only* Click option parsing, progress bars, and output dispatch.
+    Must not contain business logic.  Calls domain-layer functions and
+    passes results to formatters.
+
+**Domain layer** (``dns_lookup/``, ``network_base/``, ``security/``, ``arp/``)
+    Contains all business logic.  Modules are scoped to a single concern
+    (SRP).  Functions return typed dicts or dataclasses; they never print
+    or call Click.
+
+**Integrations** (``plugins/``)
+    Optional connector classes for Python embedders (monitoring, tests).
+    They wrap domain functions and return :class:`nadzoring.plugins.result.ProbeResult`
+    objects.  The stock CLI does not depend on this package.
+
+**Cross-cutting** (``utils/``)
+    Shared helpers with no dependency on domain modules.  ``errors.py``
+    defines the exception hierarchy.  ``validators.py`` contains pure
+    functions.  ``formatters.py`` knows only about Python built-ins.
+
+----
+
+Design Principles Applied
+--------------------------
+
+SRP — Single Responsibility Principle
+    Each module owns exactly one concern.  ``validation.py`` validates
+    records; ``health.py`` scores them; ``utils.py`` resolves queries.
+    ``check_website_ssl_cert.py`` handles only SSL certificate inspection;
+    ``http_headers.py`` handles only header analysis; ``email_security.py``
+    handles only SPF/DKIM/DMARC.  Formatting lives in
+    ``utils/formatters.py``, not in domain modules.
+
+DRY — Don't Repeat Yourself
+    - Empty result dicts are built by factory helpers (``_make_empty_result``,
+      ``_make_result``).
+    - Record extraction is dispatched through a ``_EXTRACTORS`` map instead
+      of a long ``if/elif`` chain.
+    - CLI options are injected via the ``@common_cli_options`` decorator.
+    - DNS TXT record querying in ``email_security.py`` is abstracted behind
+      ``_query_txt()``, which tries ``dnspython``, then ``dig``, then
+      ``nslookup`` automatically.
+
+KISS — Keep It Simple
+    Complex operations (trace, poisoning detection, subdomain scanning) are
+    broken into small private functions with a single clear name.  Public
+    functions have one entry point with documented parameters and return
+    values.
+
+Error handling
+    Domain functions never raise on expected failures (DNS errors, network
+    timeouts, missing PTR records, SSL connection errors).  All failures are
+    returned as structured data so that CLI and scripting callers can handle
+    them uniformly.  Only truly unexpected errors (programming mistakes,
+    missing system commands) are allowed to propagate as exceptions.
+
+----
+
+Data Flow
+---------
+
+.. code-block:: text
+
+   User / Script
+        │
+        ▼
+   CLI layer (commands/)
+        │  Click parses args
+        │
+        ▼
+   Domain layer (dns_lookup / network_base / security / arp)
+        │  Business logic, structured results
+        │
+        ▼
+   External systems
+        │  dnspython, ping3, requests, scapy, ssl, socket,
+        │  system commands (dig, nslookup, whois, traceroute)
+        │
+        ▼
+   Results bubble back up
+        │
+        ▼
+   utils/formatters.py
+        │  table / json / csv / html
+        │
+        ▼
+   stdout / file
+
+----
+
+Security Module Data Flow
+--------------------------
+
+The ``security/`` domain package follows the same pattern with additional
+external dependencies:
+
+.. code-block:: text
+
+   nadzoring security check-ssl example.com
+        │
+        ▼
+   security_commands.py          # parses --days-before, --full, --no-verify
+        │
+        ▼
+   security/check_website_ssl_cert.py
+        │  ssl.create_default_context()
+        │  socket connection → TLS handshake → certificate parsing
+        │  _probe_tls_version() per TLS version (TLSv1.0–TLSv1.3)
+        │
+        ▼
+   Structured result dict → formatters.py → stdout / file
+
+   nadzoring security check-email example.com
+        │
+        ▼
+   security_commands.py
+        │
+        ▼
+   security/email_security.py
+        │  _query_txt() → dnspython | dig | nslookup
+        │  _analyze_spf() / _analyze_dkim() / _analyze_dmarc()
+        │
+        ▼
+   Structured result dict → formatters.py → stdout / file
+
+   nadzoring security subdomains example.com
+        │
+        ▼
+   security_commands.py
+        │
+        ▼
+   security/subdomain_scan.py
+        │  _fetch_ct_subdomains() → crt.sh HTTPS API
+        │  ThreadPoolExecutor → _probe_subdomain() → socket.gethostbyname()
+        │
+        ▼
+   List of result dicts → formatters.py → stdout / file
+
+----
+
+Adding a New Feature
+--------------------
+
+1. **Create a module** in the appropriate domain package (e.g.
+   ``security/myfeature.py`` or ``dns_lookup/myfeature.py``).
+2. **Define a public function** with a clear docstring, type hints, and
+   error handling that returns structured data.
+3. **Export it** from the package ``__init__.py``.
+4. **Add a CLI command** in the relevant ``commands/`` file using
+   ``@common_cli_options``.
+5. **Add a formatter** in ``utils/formatters.py`` if needed.
+6. **Write tests** in ``tests/``.
+7. **Document it** in a new or existing ``.rst`` file under ``commands/``
+   or the API reference.
+
+
+## Source: docs/source/error_handling.rst
+
+Error Handling
+==============
+
+Nadzoring follows a consistent error-handling pattern across all Python APIs:
+functions **never raise exceptions for expected failures** (DNS errors,
+network timeouts, missing PTR records, SSL connection errors). All such
+failures are returned as structured data with type-safe error fields,
+making the library safe to use in automation scripts without wrapping every
+call in try/except.
+
+Only truly unexpected errors (programming mistakes, missing system commands,
+unsupported operating systems) are allowed to propagate as exceptions.
+
+----
+
+Type-Safe Error Fields
+----------------------
+
+All result dictionaries use ``Literal`` types for their ``"error"`` field,
+defined in module-specific ``errors.py`` files. This enables:
+
+- **IDE autocompletion** for error strings
+- **Static type checking** (mypy catches typos)
+- **Single source of truth** for documentation
+
+.. code-block:: python
+
+   from nadzoring.dns_lookup.utils import resolve_with_timer
+   from nadzoring.dns_lookup.errors import DNSResolveError
+
+   result = resolve_with_timer("example.com", "A")
+
+   # Type-safe error checking
+   if result["error"] == "Domain does not exist":
+       handle_nxdomain()
+   elif result["error"] == "Query timeout":
+       retry_with_longer_timeout()
+
+Error literal modules:
+
+- ``nadzoring.dns_lookup.errors`` — DNS resolution, reverse DNS, trace
+- ``nadzoring.security.errors`` — SSL certificates, HTTP headers, email security
+- ``nadzoring.network_base.errors`` — ping, traceroute, WHOIS, port scanning
+- ``nadzoring.arp.errors`` — ARP cache retrieval, spoofing detection
+
+----
+
+DNS Result Pattern
+------------------
+
+Functions that perform DNS lookups (``resolve_with_timer``, ``reverse_dns``)
+return a dictionary with an ``"error"`` field typed as ``DNSResolveError | None``
+or ``DNSReverseError | None``. Always check it before using other fields:
+
+.. code-block:: python
+
+   from nadzoring.dns_lookup.utils import resolve_with_timer
+   from nadzoring.dns_lookup.errors import DNSResolveError
+
+   result = resolve_with_timer("example.com", "A")
+
+   if result["error"]:
+       # Handle the error — result["error"] is type DNSResolveError
+       print("DNS error:", result["error"])
+   else:
+       # Safe to use records and response_time
+       print(result["records"])
+       print(f"RTT: {result['response_time']} ms")
+
+Possible error values for ``resolve_with_timer`` (see ``DNSResolveError``):
+
+- ``"Domain does not exist"`` — NXDOMAIN response
+- ``"No records of requested type"`` — domain exists but has no records of the requested type
+- ``"Query timeout"`` — nameserver did not respond within the timeout
+- ``"Operation exceeded lifetime timeout"`` — overall timeout exceeded
+- ``"Resolver error"`` — unexpected resolver error
+
+**Reverse DNS:**
+
+.. code-block:: python
+
+   from nadzoring.dns_lookup.reverse import reverse_dns
+   from nadzoring.dns_lookup.errors import DNSReverseError
+
+   result = reverse_dns("8.8.8.8")
+
+   if result["error"]:
+       # result["error"] is type DNSReverseError | None
+       print("Reverse lookup failed:", result["error"])
+       # Possible values: "No PTR record", "No reverse DNS",
+       # "Query timeout", "Invalid IP address", "Resolver error"
+   else:
+       print(result["hostname"])
+
+----
+
+Result Handling Utilities
+-------------------------
+
+The ``nadzoring.utils.result`` module provides helper functions for working
+with error-bearing result dictionaries:
+
+.. code-block:: python
+
+   from nadzoring.utils.result import is_success, unwrap, unwrap_or
+   from nadzoring.utils.errors import NadzoringError
+
+   result = resolve_with_timer("example.com", "A")
+
+   # Check success without accessing error field
+   if is_success(result):
+       print(result["records"])
+
+   # Raise on error
+   try:
+       safe_result = unwrap(result)
+       print(safe_result["records"])
+   except NadzoringError as e:
+       print(f"Operation failed: {e}")
+
+   # Provide fallback on error
+   records = unwrap_or(result, [])
+   # records is either the original result dict or empty list
+
+----
+
+Timeout Errors
+--------------
+
+The ``OperationTimeoutError`` exception is raised when a lifetime timeout is
+exceeded. This is an **expected failure** — it should be caught and handled
+by converting to an error field in the result dict, not allowed to propagate
+to the user.
+
+.. code-block:: python
+
+   from nadzoring.utils.timeout import TimeoutConfig, timeout_context, OperationTimeoutError
+
+   config = TimeoutConfig(lifetime=5.0)
+
+   try:
+       with timeout_context(config):
+           result = long_running_operation()
+   except OperationTimeoutError:
+       result = {"error": "Operation exceeded lifetime timeout"}
+
+**When to use:** Lifetime timeouts are useful for operations that may hang
+indefinitely (e.g., DNS queries to unresponsive servers, socket connections
+to firewalled hosts). Phase-specific timeouts (connect/read) are handled by
+socket timeouts and do not raise ``OperationTimeoutError``.
+
+**Platform differences:** On Unix systems, ``timeout_context`` uses SIGALRM
+which can interrupt blocking system calls. On Windows, the timeout is checked
+only after the operation completes (best-effort).
+
+----
+
+Empty-Result Pattern
+--------------------
+
+Some functions return an empty dict (or empty list) when the result cannot be
+partially valid. This is common for geolocation, WHOIS, or system information
+commands.
+
+.. code-block:: python
+
+   from nadzoring.network_base.geolocation_ip import geo_ip
+
+   result = geo_ip("8.8.8.8")
+   if not result:
+       print("Geolocation unavailable (private IP, rate-limit, or network error)")
+   else:
+       print(result["city"], result["country"])
+
+   from nadzoring.network_base.whois_lookup import whois_lookup
+   from nadzoring.network_base.errors import WHOISError
+
+   result = whois_lookup("example.com")
+   if result.get("error"):
+       # result["error"] is type WHOISError | None
+       print("WHOIS lookup failed:", result["error"])
+       # Possible values: "Command not found", "Query timeout",
+       # "No information found", "Invalid target"
+
+----
+
+Security Module Error Types
+---------------------------
+
+**SSL/TLS Certificate Checks** (``nadzoring.security.errors.SSLCertError``):
+
+.. code-block:: python
+
+   from nadzoring.security.check_website_ssl_cert import check_ssl_certificate
+   from nadzoring.security.errors import SSLCertError
+
+   result = check_ssl_certificate("example.com")
+   if result.get("error"):
+       # Possible values: "Certificate expired", "Certificate not yet valid",
+       # "Hostname mismatch", "Self-signed certificate", "Connection timeout",
+       # "SSL handshake failed", "Certificate verification failed",
+       # "No certificate returned"
+       print("SSL error:", result["error"])
+
+**HTTP Security Headers** (``nadzoring.security.errors.HTTPHeaderError``):
+
+.. code-block:: python
+
+   from nadzoring.security.http_headers import check_http_security_headers
+   from nadzoring.security.errors import HTTPHeaderError
+
+   result = check_http_security_headers("https://example.com")
+   if result.get("error"):
+       # Possible values: "Request timeout", "Connection refused",
+       # "SSL verification failed", "Too many redirects", "Invalid URL"
+       print("HTTP check failed:", result["error"])
+
+**Email Security** (``nadzoring.security.errors.EmailSecurityError``):
+
+.. code-block:: python
+
+   from nadzoring.security.email_security import check_email_security
+   from nadzoring.security.errors import EmailSecurityError
+
+   result = check_email_security("example.com")
+   # Errors are collected in result["all_issues"] list
+   # Each issue is one of: "No SPF record", "No DKIM record",
+   # "No DMARC record", "SPF lookup timeout", etc.
+
+----
+
+Network Base Module Error Types
+-------------------------------
+
+**WHOIS Lookups** (``nadzoring.network_base.errors.WHOISError``):
+
+.. code-block:: python
+
+   from nadzoring.network_base.whois_lookup import whois_lookup
+   from nadzoring.network_base.errors import WHOISError
+
+   result = whois_lookup("example.com")
+   if result.get("error"):
+       # Possible values: "Command not found", "Query timeout",
+       # "No information found", "Invalid target"
+       print("WHOIS error:", result["error"])
+
+**Traceroute** (``nadzoring.network_base.errors.TracerouteError``):
+
+.. code-block:: python
+
+   from nadzoring.network_base.traceroute import traceroute
+   from nadzoring.network_base.errors import TracerouteError
+
+   # traceroute returns list of TraceHop objects, errors are logged
+   # but the function may raise on system-level failures with messages:
+   # "Permission denied (needs root)", "Command not found",
+   # "Network unreachable", "DNS resolution failed", "Timeout"
+
+**Port Scanning** (``nadzoring.network_base.errors.PortScanError``):
+
+.. code-block:: python
+
+   from nadzoring.network_base.port_scanner import scan_ports, ScanConfig
+   from nadzoring.network_base.errors import PortScanError
+
+   # scan_ports returns list of ScanResult, errors are logged internally
+   # Resolution failures return None for target_ip and are skipped
+
+**Geolocation** (``nadzoring.network_base.errors.GeolocationError``):
+
+.. code-block:: python
+
+   from nadzoring.network_base.geolocation_ip import geo_ip
+
+   result = geo_ip("8.8.8.8")
+   if not result:
+       # Empty dict indicates: "API request failed", "Rate limit exceeded",
+       # "Invalid IP address", or "Private IP address"
+       print("Geolocation unavailable")
+
+----
+
+ARP Module Error Types
+----------------------
+
+**ARP Cache Retrieval** (``nadzoring.arp.errors.ARPCacheError``):
+
+.. code-block:: python
+
+   from nadzoring.arp.cache import ARPCache, ARPCacheRetrievalError
+   from nadzoring.arp.errors import ARPCacheError
+
+   try:
+       cache = ARPCache()
+       entries = cache.get_cache()
+   except ARPCacheRetrievalError as e:
+       # Exception message is one of: "Command not found",
+       # "Permission denied (needs root)", "Unsupported platform",
+       # "Failed to parse ARP cache output"
+       print("ARP cache error:", e)
+
+**ARP Spoofing Detection** (``nadzoring.arp.errors.ARPSpoofingError``):
+
+.. code-block:: python
+
+   from nadzoring.arp.realtime import ARPRealtimeDetector
+   from nadzoring.arp.errors import ARPSpoofingError
+
+   detector = ARPRealtimeDetector()
+   try:
+       alerts = detector.monitor(interface="eth0", count=100)
+   except RuntimeError as e:
+       # RuntimeError wraps ARPSpoofingError messages:
+       # "No network interface specified", "Packet capture failed",
+       # "No ARP packets captured"
+       print("Monitoring failed:", e)
+
+----
+
+Exception Pattern
+-----------------
+
+Exceptions are reserved for system-level failures that the caller cannot
+reasonably handle inline. All custom exceptions inherit from
+``nadzoring.utils.errors.NadzoringError``.
+
+.. code-block:: python
+
+   from nadzoring.arp.cache import ARPCache, ARPCacheRetrievalError
+   from nadzoring.utils.errors import ARPError, DNSError, NetworkError, NadzoringError
+
+   try:
+       cache = ARPCache()
+       entries = cache.get_cache()
+   except ARPCacheRetrievalError as exc:
+       # System command missing, permission denied, etc.
+       # Exception message matches ARPCacheError literal
+       print("Cannot read ARP cache:", exc)
+
+   # Catch any Nadzoring error at any granularity
+   try:
+       # some operation
+       pass
+   except NadzoringError as exc:
+       print("A Nadzoring operation failed:", exc)
+   except DNSError as exc:
+       # Handle only DNS-related errors
+       print("DNS operation failed:", exc)
+
+Common exception types:
+
+- ``DNSError`` — base for all DNS errors
+  - ``DNSResolutionError`` — resolution failed
+  - ``DNSTimeoutError`` — query timed out
+  - ``DNSDomainNotFoundError`` — NXDOMAIN
+  - ``DNSNoRecordsError`` — record type not present
+- ``NetworkError`` — base for network errors
+  - ``HostResolutionError`` — hostname resolution failed
+  - ``ConnectionTimeoutError`` — connection timed out
+  - ``UnsupportedPlatformError`` — OS not supported
+- ``ARPError`` — base for ARP errors
+  - ``ARPCacheRetrievalError`` — failed to read ARP cache
+- ``ValidationError`` — input validation failed
+  - ``InvalidIPAddressError`` — not a valid IP
+  - ``InvalidDomainError`` — not a valid domain name
+  - ``InvalidPortError`` — port out of range
+
+----
+
+Command-Line Error Handling
+---------------------------
+
+When using the CLI, errors are displayed in red and the command exits with a
+non-zero status code. Use ``--quiet`` to suppress all output except the error
+message.
+
+.. code-block:: bash
+
+   $ nadzoring dns resolve non-existent-domain.example
+   DNS error: Domain does not exist
+   $ echo $?
+   1
+
+   $ nadzoring dns resolve -o json non-existent-domain.example
+   {"error": "Domain does not exist", ...}
+   $ echo $?
+   1
+
+Timeout errors in CLI:
+
+   When a lifetime timeout is exceeded, the command exits with an error
+   message and a non-zero status code. Phase-specific timeouts (connect/read)
+   are handled within the operation and returned as error fields where
+   applicable.
+
+.. code-block:: bash
+
+   $ nadzoring dns resolve --timeout 1 slow-domain.example
+   DNS error: Operation exceeded lifetime timeout
+   $ echo $?
+   1
+
+----
+
+Best Practices for Scripts
+--------------------------
+
+1. **Always check the error field** for DNS/network operations.
+2. **Use truthiness checks** for functions that return empty dicts/lists.
+3. **Use ``is_success()`` helper** for cleaner error checking.
+4. **Use ``unwrap_or()``** for graceful degradation with defaults.
+5. **Catch specific exceptions** only for system-level failures.
+6. **Use timeout contexts** for operations that may hang.
+7. **Use the Literal error types** for type-safe pattern matching.
+
+Example robust monitoring script with timeout support:
+
+.. code-block:: python
+
+   from nadzoring.dns_lookup.utils import resolve_with_timer
+   from nadzoring.dns_lookup.health import health_check_dns
+   from nadzoring.dns_lookup.errors import DNSResolveError
+   from nadzoring.utils.errors import NadzoringError
+   from nadzoring.utils.result import is_success, unwrap_or
+   from nadzoring.utils.timeout import TimeoutConfig
+
+   def check_domain(domain: str, timeout_sec: float = 30.0) -> dict:
+       """Safe domain checker — never raises."""
+       timeout_config = TimeoutConfig(lifetime=timeout_sec)
+
+       result = {
+           "domain": domain,
+           "a_record": None,
+           "health_score": None,
+           "error": None,
+       }
+
+       # DNS resolution with timeout
+       a_result = resolve_with_timer(
+           domain, "A",
+           timeout_config=timeout_config,
+       )
+
+       if not is_success(a_result):
+           # Type-safe error handling
+           error: DNSResolveError | None = a_result.get("error")
+           result["error"] = f"A record failed: {error}"
+           return result
+
+       result["a_record"] = a_result["records"][0]
+
+       # Health check with fallback
+       try:
+           health = health_check_dns(domain, timeout_config=timeout_config)
+           result["health_score"] = health["score"]
+       except NadzoringError as exc:
+           # System-level failure (unlikely, but possible)
+           result["error"] = f"Health check system error: {exc}"
+
+       return result
+
+   # Use it
+   data = check_domain("example.com", timeout_sec=10.0)
+   if data["error"]:
+       print(f"Check failed: {data['error']}")
+   else:
+       print(f"OK: {data['a_record']}  score={data['health_score']}")
+
+   # Using unwrap_or for graceful degradation
+   from nadzoring.utils.result import unwrap_or
+
+   result = resolve_with_timer("example.com", "A")
+   records = unwrap_or(result, ["0.0.0.0"])  # Fallback on error
+   print(f"Resolved to: {records[0]}")
+
+----
+
+Error Literal Reference
+-----------------------
+
+**DNS Module** (``nadzoring.dns_lookup.errors``):
+
+- ``DNSResolveError``: ``"Domain does not exist"``, ``"No records of requested type"``,
+  ``"Query timeout"``, ``"Operation exceeded lifetime timeout"``, ``"Resolver error"``
+- ``DNSReverseError``: ``"No PTR record"``, ``"No reverse DNS"``, ``"Query timeout"``,
+  ``"Invalid IP address"``, ``"Resolver error"``
+- ``DNSTraceError``: ``"Loop detected"``, ``"Delegation error"``, ``"No further delegation"``,
+  ``"Timeout"``, ``"Domain does not exist"``, ``"No answer"``
+
+**Security Module** (``nadzoring.security.errors``):
+
+- ``SSLCertError``: ``"Certificate expired"``, ``"Certificate not yet valid"``,
+  ``"Hostname mismatch"``, ``"Self-signed certificate"``, ``"Connection timeout"``,
+  ``"SSL handshake failed"``, ``"Certificate verification failed"``, ``"No certificate returned"``
+- ``HTTPHeaderError``: ``"Request timeout"``, ``"Connection refused"``,
+  ``"SSL verification failed"``, ``"Too many redirects"``, ``"Invalid URL"``
+- ``EmailSecurityError``: ``"No SPF record"``, ``"No DKIM record"``, ``"No DMARC record"``,
+  ``"SPF lookup timeout"``, ``"DKIM lookup timeout"``, ``"DMARC lookup timeout"``
+
+**Network Base Module** (``nadzoring.network_base.errors``):
+
+- ``PingError``: ``"Host unreachable"``, ``"Timeout"``, ``"Permission denied (needs root)"``,
+  ``"Invalid address"``
+- ``TracerouteError``: ``"Permission denied (needs root)"``, ``"Command not found"``,
+  ``"Network unreachable"``, ``"DNS resolution failed"``, ``"Timeout"``
+- ``WHOISError``: ``"Command not found"``, ``"Query timeout"``, ``"No information found"``,
+  ``"Invalid target"``
+- ``PortScanError``: ``"Connection refused"``, ``"Timeout"``, ``"Host unreachable"``,
+  ``"Invalid port range"``, ``"Resolution failed"``
+- ``GeolocationError``: ``"API request failed"``, ``"Rate limit exceeded"``,
+  ``"Invalid IP address"``, ``"Private IP address"``
+
+**ARP Module** (``nadzoring.arp.errors``):
+
+- ``ARPCacheError``: ``"Command not found"``, ``"Permission denied (needs root)"``,
+  ``"Unsupported platform"``, ``"Failed to parse ARP cache output"``
+- ``ARPSpoofingError``: ``"No network interface specified"``, ``"Packet capture failed"``,
+  ``"No ARP packets captured"``
+
+
+## Source: docs/source/installation.rst
+
+Installation
+============
+
+Requirements
+------------
+
+- **Python 3.12** or higher
+- **pip** (bundled with Python 3.12+)
+- Supported operating systems: **Linux**, **Windows**, **macOS**
+
+Optional system utilities (needed for specific commands):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Utility
+     - Required by
+   * - ``traceroute`` / ``tracepath``
+     - ``network-base traceroute`` (Linux)
+   * - ``tracert``
+     - ``network-base traceroute`` (Windows — built-in)
+   * - ``whois``
+     - ``network-base whois``
+   * - ``ip`` / ``ifconfig`` / ``route``
+     - ``network-base params``, ``network-base route`` (Linux)
+   * - ``ss``
+     - ``network-base connections`` (Linux)
+   * - ``net-tools`` (``route -n``)
+     - ``network-base params`` on some Linux distros
+   * - ``dig``
+     - ``security check-email`` (DNS TXT lookups — used when ``dnspython``
+       is not installed)
+   * - ``nslookup``
+     - ``security check-email`` (second fallback after ``dig``)
+
+Optional Python packages:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Package
+     - Required by
+   * - ``dnspython``
+     - ``security check-email`` (preferred; handles multi-chunk TXT records
+       reliably).  Install with ``pip install dnspython``.
+
+----
+
+Stable Release (Recommended)
+------------------------------
+
+Install the latest stable version from PyPI:
+
+.. code-block:: bash
+
+   pip install nadzoring
+
+Verify the installation:
+
+.. code-block:: bash
+
+   nadzoring --help
+
+----
+
+Development Version
+-------------------
+
+To install the latest development snapshot directly from GitHub:
+
+.. code-block:: bash
+
+   pip install git+https://github.com/alexeev-prog/nadzoring.git
+
+Or clone and install in editable mode for contributing:
+
+.. code-block:: bash
+
+   git clone https://github.com/alexeev-prog/nadzoring.git
+   cd nadzoring
+   pip install -e ".[dev]"
+
+----
+
+Installing Optional System Dependencies
+-----------------------------------------
+
+**Linux (Debian / Ubuntu):**
+
+.. code-block:: bash
+
+   sudo apt update
+   sudo apt install net-tools traceroute whois iproute2 dnsutils
+
+**Linux (RHEL / CentOS / Fedora):**
+
+.. code-block:: bash
+
+   sudo dnf install net-tools traceroute whois iproute bind-utils
+
+**macOS (Homebrew):**
+
+.. code-block:: bash
+
+   brew install iproute2mac whois
+
+**Windows:**
+
+``tracert`` and ``arp`` are built into Windows. No additional installs required
+for basic functionality.
+
+----
+
+Installing Optional Python Dependencies
+-----------------------------------------
+
+For reliable email security checks (``security check-email``), install
+``dnspython``:
+
+.. code-block:: bash
+
+   pip install dnspython
+
+Without ``dnspython``, Nadzoring falls back to ``dig`` and then ``nslookup``
+for DNS TXT record queries.  Multi-chunk TXT records (long SPF strings split
+across multiple quoted segments) are handled correctly in all three cases, but
+``dnspython`` is the most reliable option.
+
+----
+
+ARP Monitoring: Additional Setup
+----------------------------------
+
+The ``arp monitor-spoofing`` command uses `Scapy <https://scapy.net/>`_ for
+raw packet capture, which requires elevated privileges on most systems.
+
+**Linux** — grant raw-socket capability to avoid running as root:
+
+.. code-block:: bash
+
+   sudo setcap cap_net_raw+ep $(which python3)
+
+Or simply run the command with ``sudo``.
+
+**Windows** — run your terminal as Administrator.
+
+**macOS** — run with ``sudo``.
+
+----
+
+Traceroute: Privilege Setup (Linux)
+-------------------------------------
+
+The ``network-base traceroute`` command requires raw-socket access on Linux.
+Use one of the following approaches:
+
+.. code-block:: bash
+
+   # Option 1: run with sudo
+   nadzoring network-base traceroute --sudo example.com
+
+   # Option 2: grant capability to traceroute binary
+   sudo setcap cap_net_raw+ep $(which traceroute)
+
+   # Option 3: use tracepath (no root required — automatic fallback)
+   # Nadzoring tries tracepath automatically if traceroute fails
+
+----
+
+Shell Completions
+-----------------
+
+Nadzoring provides tab-completion support for **bash**, **zsh**, **fish**, and
+**PowerShell**. Enable it for your preferred shell using the commands below.
+
+Bash
+~~~~
+
+Add to ``~/.bashrc`` (or ``~/.bash_profile`` on macOS):
+
+.. code-block:: bash
+
+   echo 'eval "$(nadzoring completion bash)"' >> ~/.bashrc
+   source ~/.bashrc
+
+Alternative — save to a file and source it:
+
+.. code-block:: bash
+
+   nadzoring completion bash > ~/.nadzoring-complete.bash
+   echo 'source ~/.nadzoring-complete.bash' >> ~/.bashrc
+
+Zsh
+~~~
+
+Add to ``~/.zshrc``:
+
+.. code-block:: bash
+
+   echo 'eval "$(nadzoring completion zsh)"' >> ~/.zshrc
+   source ~/.zshrc
+
+Or save to a file in your ``fpath``:
+
+.. code-block:: bash
+
+   nadzoring completion zsh > "${fpath[1]}/_nadzoring"
+
+Fish
+~~~~
+
+Save directly to Fish completions directory:
+
+.. code-block:: bash
+
+   nadzoring completion fish > ~/.config/fish/completions/nadzoring.fish
+
+Or source it temporarily:
+
+.. code-block:: bash
+
+   nadzoring completion fish | source
+
+PowerShell
+~~~~~~~~~~
+
+Add to your PowerShell profile (``$PROFILE``):
+
+.. code-block:: powershell
+
+   nadzoring completion powershell >> $PROFILE
+
+To reload the profile immediately:
+
+.. code-block:: powershell
+
+   . $PROFILE
+
+Or use it in the current session only:
+
+.. code-block:: powershell
+
+   nadzoring completion powershell | Invoke-Expression
+
+Testing Completions
+~~~~~~~~~~~~~~~~~~~
+
+After installation, type ``nadzoring `` followed by **TAB** to see available
+commands:
+
+.. code-block:: bash
+
+   nadzoring [TAB]
+   # Should show: arp  completion  dns  network-base  security
+
+Type a command followed by space and **TAB** to see options:
+
+.. code-block:: bash
+
+   nadzoring dns [TAB]
+   # Should show: resolve  reverse  check  trace  compare  health  benchmark  poisoning  monitor
+
+Manual Activation (without saving to profile)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you don't want to modify your shell profile, you can activate completions
+manually:
+
+.. code-block:: bash
+
+   # Bash / Zsh
+   source <(nadzoring completion bash)
+
+   # Fish
+   nadzoring completion fish | source
+
+   # PowerShell
+   nadzoring completion powershell | Invoke-Expression
+
+Troubleshooting Completions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Completions not working?** Check these common issues:
+
+1. **Shell not reloaded** — restart your terminal or run
+   ``source ~/.bashrc`` (bash) / ``source ~/.zshrc`` (zsh)
+
+2. **Wrong shell** — ensure you're using the correct completion command for
+   your shell
+
+3. **PATH issue** — verify ``nadzoring`` is in your PATH: ``which nadzoring``
+
+4. **Completion not registered** — run the activation command directly to see
+   if there are any errors
+
+**Debugging bash completions:**
+
+.. code-block:: bash
+
+   # Enable debug output
+   set -x
+   nadzoring [TAB]
+   set +x
+
+**Check if completion is registered:**
+
+.. code-block:: bash
+
+   # Bash
+   complete -p | grep nadzoring
+   # Should output: complete -o nosort -F _nadzoring_completion nadzoring
+
+   # Zsh
+   echo $fpath | grep nadzoring
+
+**Show installation hints:**
+
+.. code-block:: bash
+
+   nadzoring completion hints bash      # For bash
+   nadzoring completion hints zsh       # For zsh
+   nadzoring completion hints fish      # For fish
+   nadzoring completion hints powershell  # For PowerShell
+
+Completions Commands Reference
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Command
+     - Description
+   * - ``nadzoring completion bash``
+     - Generate bash completion script
+   * - ``nadzoring completion zsh``
+     - Generate zsh completion script
+   * - ``nadzoring completion fish``
+     - Generate fish completion script
+   * - ``nadzoring completion powershell``
+     - Generate PowerShell completion script
+   * - ``nadzoring completion hints <shell>``
+     - Show detailed installation hints
+
+----
+
+Verifying the Installation
+--------------------------
+
+Run a quick smoke test after installing:
+
+.. code-block:: bash
+
+   # Check tool is reachable
+   nadzoring --help
+
+   # Resolve a well-known domain
+   nadzoring dns resolve google.com
+
+   # Reverse DNS lookup
+   nadzoring dns reverse 8.8.8.8
+
+   # Ping a host
+   nadzoring network-base ping 1.1.1.1
+
+   # Show local network parameters
+   nadzoring network-base params
+
+   # Check an SSL certificate
+   nadzoring security check-ssl example.com
+
+   # Audit HTTP security headers
+   nadzoring security check-headers https://example.com
+
+   # Validate email security records
+   nadzoring security check-email example.com
+
+   # Test timeout configuration (slow operation will abort)
+   nadzoring dns resolve --timeout 2 google.com
+
+   # Test shell completions (if enabled)
+   nadzoring [TAB]
+
+
+## Source: docs/source/monitoring_dns.rst
+
+Continuous DNS Monitoring
+=========================
+
+Nadzoring provides a built-in monitoring loop that periodically checks one
+or more DNS servers, tracks trends over time, fires threshold-based alerts,
+and persists all results to a JSONL log for later analysis.
+
+----
+
+Quick Start
+-----------
+
+Monitor ``example.com`` against two DNS servers every 60 seconds:
+
+.. code-block:: bash
+
+   nadzoring dns monitor example.com \
+       -n 8.8.8.8 -n 1.1.1.1 \
+       --interval 60 \
+       --log-file dns_monitor.jsonl
+
+Press **Ctrl-C** to stop. A statistical summary prints automatically.
+
+Analyse the log afterwards:
+
+.. code-block:: bash
+
+   nadzoring dns monitor-report dns_monitor.jsonl
+   nadzoring dns monitor-report dns_monitor.jsonl --server 8.8.8.8 -o json
+
+----
+
+CLI Reference: ``dns monitor``
+--------------------------------
+
+.. code-block:: text
+
+   nadzoring dns monitor [OPTIONS] DOMAIN
+
+.. list-table::
+   :header-rows: 1
+   :widths: 24 6 52 18
+
+   * - Option
+     - Short
+     - Description
+     - Default
+   * - ``--nameservers``
+     - ``-n``
+     - DNS server IP to monitor (repeatable)
+     - ``8.8.8.8``, ``1.1.1.1``
+   * - ``--interval``
+     - ``-i``
+     - Seconds between monitoring cycles
+     - ``60``
+   * - ``--type``
+     - ``-t``
+     - Record type: A, AAAA, MX, NS, TXT
+     - ``A``
+   * - ``--queries``
+     - ``-q``
+     - Queries per server per cycle
+     - ``3``
+   * - ``--max-rt``
+     -
+     - Alert threshold: max avg response time (ms)
+     - ``500``
+   * - ``--min-success``
+     -
+     - Alert threshold: minimum success rate (0–1)
+     - ``0.95``
+   * - ``--no-health``
+     -
+     - Skip health check each cycle
+     - ``False``
+   * - ``--log-file``
+     - ``-l``
+     - JSONL file to append all cycle results to
+     - None
+   * - ``--cycles``
+     - ``-c``
+     - Stop after N cycles (0 = indefinite)
+     - ``0``
+   * - ``--output``
+     - ``-o``
+     - Output format: table, json, csv, html
+     - ``table``
+   * - ``--quiet``
+     -
+     - Suppress all console output
+     - ``False``
+   * - ``--timeout``
+     -
+     - Lifetime timeout (seconds)
+     - ``30.0``
+   * - ``--connect-timeout``
+     -
+     - Connection timeout (seconds). Falls back to ``--timeout``.
+     - ``5.0``
+   * - ``--read-timeout``
+     -
+     - Read timeout (seconds). Falls back to ``--timeout``.
+     - ``10.0``
+
+**Examples:**
+
+.. code-block:: bash
+
+   # Monitor with default servers, save log
+   nadzoring dns monitor example.com \
+       --interval 60 \
+       --log-file dns_monitor.jsonl
+
+   # Strict thresholds — alert above 150 ms or below 99 % success
+   nadzoring dns monitor example.com \
+       -n 8.8.8.8 -n 1.1.1.1 -n 9.9.9.9 \
+       --interval 30 \
+       --max-rt 150 --min-success 0.99 \
+       --log-file dns_monitor.jsonl
+
+   # Run exactly 10 cycles and save a JSON report (great for CI)
+   nadzoring dns monitor example.com --cycles 10 -o json --save report.json
+
+   # Quiet mode for cron / systemd
+   nadzoring dns monitor example.com \
+       --quiet --log-file /var/log/nadzoring/dns_monitor.jsonl
+
+   # Custom timeouts for slow networks
+   nadzoring dns monitor example.com \
+       --connect-timeout 10 --read-timeout 20 --interval 60
+
+----
+
+CLI Reference: ``dns monitor-report``
+---------------------------------------
+
+Analyse a saved JSONL log and print aggregated per-server statistics:
+
+.. code-block:: text
+
+   nadzoring dns monitor-report [OPTIONS] LOG_FILE
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Option
+     - Description
+   * - ``--server / -s``
+     - Filter statistics to a specific server IP
+
+.. code-block:: bash
+
+   # Basic analysis
+   nadzoring dns monitor-report dns_monitor.jsonl
+
+   # Filter to a single server, export JSON
+   nadzoring dns monitor-report dns_monitor.jsonl --server 8.8.8.8 -o json
+
+   # Save as HTML report for dashboard
+   nadzoring dns monitor-report dns_monitor.jsonl -o html --save report.html
+
+----
+
+What Happens Each Cycle
+------------------------
+
+1. **Benchmark** — sends ``--queries`` queries to each server and records
+   average, min, and max response times plus the success rate.
+
+2. **Resolve** — one additional query captures the current DNS records
+   returned by each server.
+
+3. **Health check** (skip with ``--no-health``) — computes an overall
+   score (0–100) across A, AAAA, MX, NS, TXT, and CNAME records.
+
+4. **Threshold evaluation** — compares metrics against configured
+   thresholds and generates alert events for any breaches.
+
+5. **Alert dispatch** — calls the configured ``alert_callback`` (if any)
+   and prints warnings to the console.
+
+6. **Persistence** — appends a JSON line to the log file (if configured).
+
+7. **Sleep** — waits ``--interval`` seconds before the next cycle.
+
+----
+
+Alert Types
+-----------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Type
+     - Triggered when
+   * - ``resolution_failure``
+     - All queries failed (success rate = 0 %)
+   * - ``high_latency``
+     - Average response time exceeds ``--max-rt``
+   * - ``low_success_rate``
+     - Success rate falls below ``--min-success``
+   * - ``health_degraded``
+     - DNS health score drops below 80
+
+----
+
+Log File Format
+---------------
+
+Each line in the JSONL log is a complete cycle result:
+
+.. code-block:: json
+
+   {
+     "cycle": 42,
+     "timestamp": "2025-06-01T14:23:10.123456+00:00",
+     "domain": "example.com",
+     "samples": [
+       {
+         "server": "8.8.8.8",
+         "timestamp": "2025-06-01T14:23:10.123456+00:00",
+         "avg_response_time_ms": 18.4,
+         "min_response_time_ms": 14.1,
+         "max_response_time_ms": 24.7,
+         "success_rate": 1.0,
+         "records": ["93.184.216.34"],
+         "error": null
+       }
+     ],
+     "health_score": 85,
+     "health_status": "healthy",
+     "alerts": []
+   }
+
+----
+
+Python API
+----------
+
+Basic continuous monitoring
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+   from nadzoring.dns_lookup.monitor import DNSMonitor, MonitorConfig
+   from nadzoring.utils.timeout import TimeoutConfig
+
+   timeout_config = TimeoutConfig(connect=3.0, read=10.0, lifetime=30.0)
+
+   config = MonitorConfig(
+       domain="example.com",
+       nameservers=["8.8.8.8", "1.1.1.1"],
+       interval=60.0,
+       max_response_time_ms=500.0,
+       min_success_rate=0.95,
+       log_file="dns_monitor.jsonl",
+       timeout_config=timeout_config,
+   )
+
+   monitor = DNSMonitor(config)
+   monitor.run()
+   print(monitor.report())
+
+Custom alert callback
+~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+   import requests
+   from nadzoring.dns_lookup.monitor import AlertEvent, DNSMonitor, MonitorConfig
+   from nadzoring.utils.timeout import TimeoutConfig
+
+   SLACK_WEBHOOK = "https://hooks.slack.com/services/T.../B.../..."
+
+   timeout_config = TimeoutConfig(connect=2.0, read=8.0)
+
+
+   def send_slack_alert(alert: AlertEvent) -> None:
+       requests.post(
+           SLACK_WEBHOOK,
+           json={"text": f":warning: *{alert.alert_type}* — {alert.message}"},
+           timeout=5,
+       )
+
+
+   config = MonitorConfig(
+       domain="example.com",
+       nameservers=["8.8.8.8"],
+       interval=30.0,
+       max_response_time_ms=200.0,
+       alert_callback=send_slack_alert,
+       timeout_config=timeout_config,
+   )
+   DNSMonitor(config).run()
+
+Finite-cycle monitoring (CI / cron)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+   from nadzoring.dns_lookup.monitor import DNSMonitor, MonitorConfig
+   from nadzoring.utils.timeout import TimeoutConfig
+   from statistics import mean
+
+   timeout_config = TimeoutConfig(connect=2.0, read=8.0)
+
+   config = MonitorConfig(
+       domain="example.com",
+       nameservers=["8.8.8.8", "1.1.1.1"],
+       interval=10.0,
+       queries_per_sample=5,
+       run_health_check=False,
+       timeout_config=timeout_config,
+   )
+   monitor = DNSMonitor(config)
+   history = monitor.run_cycles(6)
+
+   rts = [
+       s.avg_response_time_ms
+       for c in history
+       for s in c.samples
+       if s.avg_response_time_ms is not None
+   ]
+   print(f"Mean RT over {len(history)} cycles: {mean(rts):.1f}ms")
+   print(monitor.report())
+
+Analysing a historical log
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+   from nadzoring.dns_lookup.monitor import load_log
+   from statistics import mean
+
+   cycles = load_log("dns_monitor.jsonl")
+
+   rts = [
+       s["avg_response_time_ms"]
+       for c in cycles
+       for s in c["samples"]
+       if s["server"] == "8.8.8.8" and s["avg_response_time_ms"] is not None
+   ]
+   alerts = [a for c in cycles for a in c.get("alerts", [])]
+
+   print(f"Cycles      : {len(cycles)}")
+   print(f"Avg RT (ms) : {mean(rts):.2f}")
+   print(f"Alerts      : {len(alerts)}")
+
+----
+
+Scheduling
+----------
+
+Cron (one cycle per minute)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: cron
+
+   * * * * * root nadzoring dns monitor example.com \
+       --cycles 1 --quiet \
+       --log-file /var/log/nadzoring/dns_monitor.jsonl
+
+.. note::
+
+   Use ``--cycles 1`` with cron — the process exits after one check
+   and cron handles the interval.
+
+systemd service (recommended for production)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Create ``/etc/systemd/system/nadzoring-dns-monitor.service``:
+
+.. code-block:: ini
+
+   [Unit]
+   Description=Nadzoring DNS Monitor
+   After=network-online.target
+   Wants=network-online.target
+
+   [Service]
+   Type=simple
+   User=nobody
+   ExecStart=/usr/local/bin/nadzoring dns monitor example.com \
+       -n 8.8.8.8 -n 1.1.1.1 \
+       --interval 60 \
+       --max-rt 300 \
+       --min-success 0.95 \
+       --log-file /var/log/nadzoring/dns_monitor.jsonl \
+       --quiet
+   Restart=on-failure
+   RestartSec=10
+   StandardOutput=journal
+   StandardError=journal
+
+   [Install]
+   WantedBy=multi-user.target
+
+.. code-block:: bash
+
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now nadzoring-dns-monitor
+   sudo journalctl -u nadzoring-dns-monitor -f
+
+----
+
+Complete Automation Script
+---------------------------
+
+.. code-block:: bash
+
+   #!/usr/bin/env bash
+   # dns_health_check.sh — hourly DNS health snapshot for cron
+   set -euo pipefail
+
+   DOMAIN="${1:-example.com}"
+   LOG_DIR="/var/log/nadzoring"
+   TODAY=$(date -u +%Y%m%d)
+   TS=$(date -u +%Y%m%d_%H%M%S)
+   DAILY_LOG="${LOG_DIR}/dns_monitor_${TODAY}.jsonl"
+   REPORT_DIR="/var/www/html/dns-reports"
+
+   mkdir -p "$LOG_DIR" "$REPORT_DIR"
+
+   nadzoring dns monitor "$DOMAIN" \
+       -n 8.8.8.8 -n 1.1.1.1 \
+       --cycles 1 --max-rt 300 --min-success 0.95 \
+       --log-file "$DAILY_LOG" --quiet
+
+   nadzoring dns health "$DOMAIN" \
+       -o json --save "${LOG_DIR}/health_${TS}.json" --quiet
+
+   nadzoring dns benchmark --domain "$DOMAIN" --queries 5 \
+       -o json --save "${LOG_DIR}/benchmark_${TS}.json" --quiet
+
+   nadzoring dns monitor-report "$DAILY_LOG" \
+       -o html --save "${REPORT_DIR}/report_${TODAY}.html"
+
+   find "$LOG_DIR" -name "dns_monitor_*.jsonl" -mtime +30 -delete
+   find "$LOG_DIR" -name "health_*.json"       -mtime +7  -delete
+   find "$LOG_DIR" -name "benchmark_*.json"    -mtime +7  -delete
+
+
