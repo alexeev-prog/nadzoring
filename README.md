@@ -386,6 +386,15 @@ The documentation site includes:
 
 ---
 
+### LLM-friendly documentation
+
+For AI assistants and language models:
+
+- [`llms.txt`](llms.txt) — concise project overview and links to essential documentation.
+- [`llms-full.txt`](llms-full.txt) — consolidated project documentation for larger context windows.
+
+---
+
 ## Contributing
 
 Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request.
