@@ -45,7 +45,6 @@ DefaultDriver(
     vcs=Git(
         branch_regex=BRANCH_REGEX,
         tag_regex=TAG_REGEX,
-        buffer_size=1 * 10**9,
         predicate=file_predicate([src]),
     ),
     builder=SphinxBuilder(src, args=SPHINX_ARGS),
