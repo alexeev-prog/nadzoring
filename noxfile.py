@@ -13,7 +13,7 @@ def test(session):
         "--cov=src/nadzoring/",
         "--cov-report=xml",
         "--cov-report=term-missing",
-        "--cov-fail-under=0",
+        "--cov-fail-under=60",
         "-v",
         "-s",
         "--tb=short",

@@ -76,6 +76,7 @@ Built from the ground up with AI-friendliness in mind, Nadzoring is fully type-a
     - [Running with Docker](#running-with-docker)
   - [Basic Usage](#basic-usage)
     - [Global Options](#global-options)
+    - [Interactive Shell](#interactive-shell)
     - [Shell Completions](#shell-completions)
       - [Bash](#bash)
       - [Zsh](#zsh)
@@ -117,6 +118,12 @@ Optional system utilities:
 
 ```bash
 pip install nadzoring
+```
+
+For the enhanced interactive prompt, install the optional extra:
+
+```bash
+pip install 'nadzoring[interactive]'
 ```
 
 Verify:
@@ -205,6 +212,36 @@ These options work with every command:
 1. Explicit `--connect-timeout` / `--read-timeout`
 2. Generic `--timeout` (applies to both phases when phase-specific not set)
 3. Module-level defaults (shown above)
+
+### Interactive Shell
+
+Run multiple diagnostics without restarting the CLI:
+
+```console
+$ nadzoring --interactive
+# Short form: nadzoring -i
+nadzoring v0.3.0 | type 'help' for commands, 'exit' to quit
+nadzoring> dns resolve example.com
+nadzoring> set output json
+nadzoring> dns reverse 8.8.8.8 --save "reverse lookup.json"
+nadzoring> dns resolve example.org --output table
+nadzoring> help dns resolve
+nadzoring> exit
+```
+
+All existing command groups and command-level flags work unchanged. `set output`
+sets a session-only default (`table`, `json`, `csv`, `html`, `html_table`, or `yaml`);
+an explicit `--output` / `-o` overrides it for one command. Use `help [command ...]`
+for Click help, `clear` to clear the screen, and `exit`, `quit`, or Ctrl-D to leave.
+Ctrl-C cancels the current input or command without leaving the session.
+
+The optional `interactive` extra provides a prompt_toolkit prompt with Tab completion
+for commands, options, and choice values. Without it, the shell uses readline where
+available, or bare `input()` without completion. History is shared across backends
+and persisted in `~/.nadzoring_history`. It includes command arguments: avoid entering
+secrets and delete the file to clear persisted history. History access failures warn
+without stopping the shell. Shell quoting is supported; pipes, redirection, variable
+expansion, and operating-system commands are not executed.
 
 ### Shell Completions
 

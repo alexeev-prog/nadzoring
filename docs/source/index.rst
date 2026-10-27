@@ -41,6 +41,7 @@ Key Features
 
    installation
    quickstart
+   interactive
    error_handling
    monitoring_dns
 
@@ -59,6 +60,7 @@ Key Features
    api/security
    api/arp
    api/utils
+   shell_api
    plugins
    api_examples
 
