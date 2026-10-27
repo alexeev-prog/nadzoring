@@ -1,0 +1,26 @@
+# Nadzoring
+
+> Nadzoring is a free and open-source command-line tool and 
+Python library for network diagnostics, service availability 
+monitoring, website block detection, and network analysis.
+
+## Documentation
+
+- [Getting Started](https://alexeev-prog.github.io/nadzoring/main/source/quickstart.html): Installation and initial setup.
+- [Command Reference](https://alexeev-prog.github.io/nadzoring/main/source/commands/all_commands.html): Available CLI commands and usage.
+- [Python API Reference](https://alexeev-prog.github.io/nadzoring/main/source/api_examples.html): Python API documentation.
+- [Examples](https://alexeev-prog.github.io/nadzoring/main/source/code_examples.html): Usage and code examples.
+
+## Overview
+
+Nadzoring provides network diagnostic and security utilities through 
+both a command-line interface and a Python API. Its capabilities 
+include DNS analysis, reverse DNS lookups, network diagnostics, 
+security auditing, ARP monitoring, SSL/TLS certificate inspection, and subdomain discovery.
+
+## Command Groups
+
+- [DNS](https://alexeev-prog.github.io/nadzoring/main/source/commands/all_commands.html): DNS resolution, reverse lookups, health checks, tracing, comparison, poisoning detection, and monitoring.
+- [Network](https://alexeev-prog.github.io/nadzoring/main/source/commands/all_commands.html): Network diagnostics including ping, HTTP probing, port scanning, WHOIS, traceroute, and routing.
+- [Security](https://alexeev-prog.github.io/nadzoring/main/source/commands/all_commands.html): SSL/TLS, HTTP security headers, email security, subdomain discovery, and certificate monitoring.
+- [ARP](https://alexeev-prog.github.io/nadzoring/main/source/commands/all_commands.html): ARP cache inspection, spoofing detection, and monitoring.
