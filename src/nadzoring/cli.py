@@ -9,9 +9,19 @@ from nadzoring.commands import (
     network_group,
     security_group,
 )
+from nadzoring.shell import start_interactive
 
 
 @click.group()
+@click.option(
+    "--interactive",
+    "-i",
+    is_flag=True,
+    is_eager=True,
+    expose_value=False,
+    callback=start_interactive,
+    help="Start an interactive shell.",
+)
 def cli() -> None:
     """FOSS tool for detecting website blocks, downdetecting and network analysis."""
 

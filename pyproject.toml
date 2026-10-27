@@ -26,6 +26,9 @@ dependencies = [
     "tqdm>=4.67.3",
 ]
 
+[project.optional-dependencies]
+interactive = ["prompt-toolkit>=3.0.52,<4"]
+
 [project.scripts]
 nadzoring = "nadzoring.__main__:main"
 
@@ -35,6 +38,7 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "prompt-toolkit>=3.0.52,<4",
     "furo>=2025.12.19",
     "mutmut>=3.5.0",
     "mypy>=1.19.1",
