@@ -18,8 +18,8 @@ load(globals())
 
 project = "nadzoring"
 author = "Alexeev Bronislav"
-version = "0.3.0"
-release = "0.3"
+version = "0.4.0"
+release = "0.4"
 project_copyright = "2025, Alexeev Bronislaw"
 
 GITHUB_USER = "alexeev-prog"

@@ -76,6 +76,7 @@ Built from the ground up with AI-friendliness in mind, Nadzoring is fully type-a
     - [Running with Docker](#running-with-docker)
   - [Basic Usage](#basic-usage)
     - [Global Options](#global-options)
+    - [Installation Diagnostics and Updates](#installation-diagnostics-and-updates)
     - [Interactive Shell](#interactive-shell)
     - [Shell Completions](#shell-completions)
       - [Bash](#bash)
@@ -87,6 +88,7 @@ Built from the ground up with AI-friendliness in mind, Nadzoring is fully type-a
       - [Troubleshooting Completions](#troubleshooting-completions)
       - [Completions Commands Reference](#completions-commands-reference)
   - [Documentation](#documentation)
+    - [LLM-friendly documentation](#llm-friendly-documentation)
   - [Contributing](#contributing)
   - [License \& Support](#license--support)
 
@@ -422,7 +424,8 @@ For complete command reference, Python API documentation, and advanced examples,
 | Version | Link | Status |
 |---------|------|--------|
 | **main** | [Latest (development)](https://alexeev-prog.github.io/nadzoring/main) | 🟡 Development |
-| **v0.3.0** | [Release](https://alexeev-prog.github.io/nadzoring/v0.3.0) | 🟢 Stable |
+| **v0.4.0** | [Release](https://alexeev-prog.github.io/nadzoring/v0.4.0) | 🟢 Stable |
+| v0.3.0 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.3.0) | ⚪ Legacy |
 | v0.2.2 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.2.2) | ⚪ Legacy |
 | v0.2.1 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.2.1) | ⚪ Legacy |
 | v0.2.0 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.2.0) | ⚪ Legacy |
