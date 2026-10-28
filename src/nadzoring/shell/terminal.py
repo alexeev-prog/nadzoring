@@ -34,8 +34,9 @@ def _fallback_input(command: click.Group, history: list[str]) -> Iterator[Callab
     saved_history = [readline.get_history_item(index) for index in range(1, readline.get_current_history_length() + 1)]
 
     def complete(_text: str, state: int) -> str | None:
-        values, _ = complete_line(command, readline.get_line_buffer()[: readline.get_endidx()])
-        return values[state] if state < len(values) else None
+        values, incomplete = complete_line(command, readline.get_line_buffer()[: readline.get_endidx()])
+        prefix = _text[: len(_text) - len(incomplete)]
+        return prefix + values[state] if state < len(values) else None
 
     readline.clear_history()
     for line in history:

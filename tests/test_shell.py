@@ -97,6 +97,9 @@ def test_clear_and_keyboard_interrupt(command, monkeypatch):
         ("dns re", "resolve", "re"),
         ("dns resolve --out", "--output", "--out"),
         ("dns resolve --output j", "json", "j"),
+        ("dns resolve --output=j", "json", "j"),
+        ("dns resolve --output=", "json", ""),
+        ("dns resolve -o j", "json", "j"),
         ("help dns re", "resolve", "re"),
         ("set o", "output", "o"),
         ("set output j", "json", "j"),
@@ -254,6 +257,9 @@ def test_history_persistence_and_backend_selection(backend, command, tmp_path, m
             completer = readline.set_completer.call_args_list[0].args[0]
             assert completer("e", 0) == "echo"
             assert completer("e", 10) is None
+            readline.get_line_buffer.return_value = "nested echo value --output=j"
+            readline.get_endidx.return_value = len("nested echo value --output=j")
+            assert completer("--output=j", 0) == "--output=json"
     assert history_path.read_text() == "previous\nnested echo x\n"
     if backend == "readline":
         readline.add_history.assert_any_call("original")
@@ -284,3 +290,96 @@ def test_toolkit_adapter(monkeypatch):
     monkeypatch.setattr("nadzoring.shell.toolkit.PromptSession", prompt)
     with toolkit_input(cli, ["previous"]) as read:
         assert read() == "help"
+    kwargs = prompt.call_args.kwargs
+    assert kwargs["complete_while_typing"] is True
+    assert kwargs["lexer"] is not None
+    assert kwargs["style"] is not None
+
+
+@pytest.mark.parametrize("line", ["set other ", "set output json ", "set output json extra "])
+def test_completion_rejects_extra_builtin_arguments(line):
+    assert complete_line(cli, line) == ([], "")
+
+
+def test_completion_preserves_option_help():
+    from prompt_toolkit.completion import CompleteEvent
+    from prompt_toolkit.document import Document
+
+    from nadzoring.shell.toolkit import ClickCompleter
+
+    items = list(ClickCompleter(cli).get_completions(Document("dns resolve --out"), CompleteEvent()))
+    assert len(items) == 1
+    assert items[0].text == "--output"
+    assert items[0].display_meta_text
+    document = Document("dns resolve --output=j example.com", len("dns resolve --output=j"))
+    item = next(ClickCompleter(cli).get_completions(document, CompleteEvent()))
+    assert item.text == "json"
+    assert document.text[: document.cursor_position + item.start_position] + item.text == "dns resolve --output=json"
+
+
+@pytest.mark.parametrize("directories_only", [False, True])
+def test_completion_paths(tmp_path, monkeypatch, directories_only):
+    from prompt_toolkit.completion import CompleteEvent
+    from prompt_toolkit.document import Document
+
+    from nadzoring.shell.toolkit import ClickCompleter
+
+    root = click.Group(
+        commands={
+            "read": click.Command(
+                "read", params=[click.Option(["--path"], type=click.Path(file_okay=not directories_only))]
+            )
+        }
+    )
+    (tmp_path / "sample.txt").touch()
+    (tmp_path / "sample-dir").mkdir()
+    monkeypatch.chdir(tmp_path)
+    items = list(ClickCompleter(root).get_completions(Document("read --path sam"), CompleteEvent()))
+    assert any(item.text == "ple-dir" for item in items)
+    assert any(item.text == "ple.txt" for item in items) is not directories_only
+
+
+@pytest.mark.parametrize(
+    "line, expected",
+    [
+        (
+            "dns resolve --output json",
+            [
+                ("class:command", "dns"),
+                ("", " "),
+                ("class:command", "resolve"),
+                ("", " "),
+                ("class:option", "--output"),
+                ("", " "),
+                ("", "json"),
+            ],
+        ),
+        (
+            'dns resolve "two words',
+            [
+                ("class:command", "dns"),
+                ("", " "),
+                ("class:command", "resolve"),
+                ("", " "),
+                ("class:string", '"two words'),
+            ],
+        ),
+        (
+            "set output 'json'",
+            [("class:command", "set"), ("", " "), ("", "output"), ("", " "), ("class:string", "'json'")],
+        ),
+        ("--timeout -1.5", [("class:option", "--timeout"), ("", " "), ("class:number", "-1.5")]),
+        (r"unknown escaped\ value", [("", "unknown"), ("", " "), ("", r"escaped\ value")]),
+        ("value\\", [("", "value\\")]),
+        ("", []),
+    ],
+)
+def test_shell_highlighting(line, expected):
+    from prompt_toolkit.document import Document
+
+    from nadzoring.shell.toolkit import ShellLexer
+
+    lexer = ShellLexer(cli).lex_document(Document(line))
+    assert lexer(0) == expected
+    assert "".join(text for _, text in lexer(0)) == line
+    assert lexer(1) == []

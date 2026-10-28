@@ -1,7 +1,7 @@
 """Interactive completion backed by Click's existing command tree."""
 
 import click
-from click.shell_completion import ShellComplete, split_arg_string
+from click.shell_completion import CompletionItem, ShellComplete, split_arg_string
 
 BUILTINS = ("help", "exit", "quit", "clear", "set")
 
@@ -16,18 +16,35 @@ def complete_line(command: click.Group, text: str) -> tuple[list[str], str]:
     Returns:
         Candidate values and the word they replace.
     """
+    items, incomplete = completion_items(command, text)
+    return [item.value for item in items], incomplete
+
+
+def completion_items(command: click.Group, text: str) -> tuple[list[CompletionItem], str]:
+    """Return Click candidates with descriptions and the replacement suffix.
+
+    Args:
+        command: Root CLI group.
+        text: Input before the cursor.
+
+    Returns:
+        Completion items and the partial value to replace.
+    """
     args = split_arg_string(text)
     incomplete = args.pop() if args and not text.endswith((" ", "\t")) else ""
     if args[:1] == ["set"]:
-        choices = ["output"] if len(args) == 1 else _output_choices(command)
-        return [value for value in choices if value.startswith(incomplete)], incomplete
+        choices = ["output"] if len(args) == 1 else _output_choices(command) if args == ["set", "output"] else []
+        return [CompletionItem(value) for value in choices if value.startswith(incomplete)], incomplete
     if args[:1] == ["help"]:
         args = args[1:]
     backend = ShellComplete(command, {}, "nadzoring", "_NADZORING_COMPLETE")
-    values = [item.value for item in backend.get_completions(args, incomplete)]
+    items = backend.get_completions(args, incomplete)
+    if incomplete.startswith("-") and "=" in incomplete:
+        incomplete = incomplete.partition("=")[2]
     if not args:
-        values.extend(value for value in BUILTINS if value.startswith(incomplete))
-    return sorted(set(values)), incomplete
+        items.extend(CompletionItem(value) for value in BUILTINS if value.startswith(incomplete))
+    unique = {item.value: item for item in items}
+    return [unique[value] for value in sorted(unique)], incomplete
 
 
 def _output_choices(command: click.Command) -> list[str]:

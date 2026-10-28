@@ -23,6 +23,14 @@ the shell still works with bare ``input()`` but without line editing or completi
 Completion follows the existing Click command tree, including nested commands,
 option names, and choice values, rather than maintaining a second command list.
 
+The enhanced prompt highlights command names, options, quoted strings (including
+unfinished quotes), and numeric values. Suggestions appear while typing; use Tab
+to complete and the arrow keys to select a candidate. Option suggestions include
+their Click help text. Start an option with ``-`` (for example, ``dns resolve --out``).
+Choice values work with both ``--output j`` and ``--output=j``. File and directory
+parameters also offer local path completion. Highlighting and path completion
+require the optional extra; readline retains command, option, and choice completion.
+
 Example session
 ---------------
 

@@ -227,7 +227,7 @@ def port_scan_command(
         ) as pbar:
 
             def _make_callback(
-                pbar: tqdm[Never],
+                pbar: tqdm,
                 target_idx: int,
                 target: str,
                 total_targets: int,
