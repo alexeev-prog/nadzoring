@@ -45,7 +45,7 @@ class TestUnwrap:
             unwrap({"error": "Domain does not exist"})
 
     def test_error_empty_string_raises_nadzoring_error(self):
-        with pytest.raises(NadzoringError, match=""):
+        with pytest.raises(NadzoringError, match="^$"):
             unwrap({"error": ""})
 
     def test_error_non_string_raises_nadzoring_error(self):

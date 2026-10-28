@@ -523,6 +523,11 @@ Python API
    brute_found = [r for r in results if r["source"] == "brute_force"]
    print(f"CT log: {len(ct_found)}  Brute-force: {len(brute_found)}")
 
+For ``scan_subdomains``, omitting ``wordlist_path`` or passing ``None`` enables
+the built-in wordlist. Passing an empty string disables brute-force discovery;
+a non-empty path selects a custom wordlist. The CLI equivalent of the empty
+string is ``--no-bruteforce``.
+
 Built-in wordlist categories
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

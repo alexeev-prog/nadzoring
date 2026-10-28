@@ -5,12 +5,12 @@ from __future__ import annotations
 import os
 
 import click
-from click.parser import split_arg_string
 from click.shell_completion import (
     CompletionItem,
     ShellComplete,
     add_completion_class,
     get_completion_class,
+    split_arg_string,
 )
 
 _SOURCE_POWERSHELL: str = """\

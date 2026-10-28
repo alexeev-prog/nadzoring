@@ -225,13 +225,13 @@ def scan_subdomains(
 
     ct_subdomains: set[str] = _fetch_ct_subdomains(domain, timeout_config)
 
-    if not wordlist_path:
-        brute_candidates: set[str] = set()
-    elif wordlist_path is not None:
+    if wordlist_path is None:
+        brute_candidates: set[str] = {f"{p}.{domain}" for p in _DEFAULT_WORDLIST}
+    elif wordlist_path:
         prefixes: list[str] = _load_wordlist(Path(wordlist_path))
         brute_candidates = {f"{p}.{domain}" for p in prefixes}
     else:
-        brute_candidates = {f"{p}.{domain}" for p in _DEFAULT_WORDLIST}
+        brute_candidates = set()
 
     source_map: dict[str, str] = {}
     all_candidates: set[str] = set()
