@@ -55,7 +55,7 @@ jobs:
 
     - name: Run tests
       run: nox --session test
-      
+
     - name: Upload coverage to Coveralls
       if: matrix.python-version == '3.14'
       env:

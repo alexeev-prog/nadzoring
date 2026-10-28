@@ -5130,5 +5130,3 @@ Complete Automation Script
    find "$LOG_DIR" -name "dns_monitor_*.jsonl" -mtime +30 -delete
    find "$LOG_DIR" -name "health_*.json"       -mtime +7  -delete
    find "$LOG_DIR" -name "benchmark_*.json"    -mtime +7  -delete
-
-

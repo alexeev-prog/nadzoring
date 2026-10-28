@@ -23,6 +23,12 @@ Versions
    * - `main </nadzoring/main/>`_
      - Latest development version from the main branch
      - **Latest**
+   * - `v0.5.0 </nadzoring/v0.5.0/>`_
+     - Latest stable release — add new features and improvements
+     - Stable
+   * - `v0.4.0 </nadzoring/v0.4.0/>`_
+     - Latest stable release — add new features and improvements
+     - Stable
    * - `v0.3.0 </nadzoring/v0.3.0/>`_
      - Latest stable release — add new features and improvements
      - Stable

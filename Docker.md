@@ -110,5 +110,3 @@ pipx install -e .
 | Windows  | Native (pipx)            | Best networking compatibility |
 
 **Note**: Docker on Windows is possible but often has limitations with raw sockets and local network access.
-
-
