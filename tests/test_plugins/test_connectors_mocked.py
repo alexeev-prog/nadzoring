@@ -365,7 +365,6 @@ def test_email_security_connector(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_email_security_connector_missing_spf_or_dmarc(monkeypatch: pytest.MonkeyPatch) -> None:
     """Missing SPF or DMARC yields degraded status and a populated error string."""
-
     monkeypatch.setattr(
         "nadzoring.plugins.connectors.security.check_email_security",
         lambda domain: {
@@ -396,7 +395,6 @@ def test_subdomain_scan_connector(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_subdomain_scan_connector_all_rows_error(monkeypatch: pytest.MonkeyPatch) -> None:
     """When every row reports an error, the probe fails with a combined message."""
-
     monkeypatch.setattr(
         "nadzoring.plugins.connectors.security.scan_subdomains",
         lambda domain, **kw: [{"error": "crt.sh timeout"}],
@@ -409,7 +407,6 @@ def test_subdomain_scan_connector_all_rows_error(monkeypatch: pytest.MonkeyPatch
 
 def test_subdomain_scan_connector_partial_row_errors(monkeypatch: pytest.MonkeyPatch) -> None:
     """Rows with errors downgrade the probe while successful rows stay in details."""
-
     monkeypatch.setattr(
         "nadzoring.plugins.connectors.security.scan_subdomains",
         lambda domain, **kw: [

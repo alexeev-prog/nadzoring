@@ -96,11 +96,7 @@ class ArpSpoofingConnector(ConnectorBase):
             cache = ARPCache()
             alerts = ARPSpoofingDetector(cache).detect()
             if self.interfaces:
-                alerts = [
-                    a
-                    for a in alerts
-                    if any(iface in self.interfaces for iface in a.interfaces)
-                ]
+                alerts = [a for a in alerts if any(iface in self.interfaces for iface in a.interfaces)]
             alert_list = [
                 {
                     "alert_type": a.alert_type,

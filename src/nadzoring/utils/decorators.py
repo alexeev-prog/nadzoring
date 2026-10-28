@@ -245,7 +245,7 @@ _REGISTRY_BY_FLAG: dict[str, _CliOptionSpec] = {spec.flag: spec for spec in _OPT
 _ALWAYS_EXTRACTED: frozenset[str] = frozenset({"verbose", "quiet", "no_color", "output", "save", "proxy"})
 
 
-def common_cli_options(**enabled_flags: bool) -> Callable[[F], F]:
+def common_cli_options(*, format_alias: bool = False, **enabled_flags: bool) -> Callable[[F], F]:
     """Decorator factory that adds common CLI options to click commands."""
     unknown = set(enabled_flags) - _REGISTRY_BY_FLAG.keys()
     if unknown:
@@ -258,6 +258,11 @@ def common_cli_options(**enabled_flags: bool) -> Callable[[F], F]:
 
         for spec in _OPTION_REGISTRY:
             if enabled_flags.get(spec.flag) or spec.kwarg in _ALWAYS_EXTRACTED:
+                if spec.kwarg == "output" and format_alias:
+                    decorated_func = click.option(
+                        "--output", "-o", "--format", type=click.Choice(["table", "json", "yaml"]), default="table"
+                    )(decorated_func)
+                    continue
                 for click_opt in reversed(spec.click_options):
                     decorated_func = click_opt(decorated_func)
 
@@ -295,7 +300,10 @@ def common_cli_options(**enabled_flags: bool) -> Callable[[F], F]:
 
             _handle_output(result, cli_opts.output, no_color=cli_opts.no_color)
             _handle_save(result, cli_opts.save, cli_opts.output)
-            _show_completion_time(elapsed, verbose=cli_opts.verbose)
+            _show_completion_time(
+                elapsed,
+                verbose=cli_opts.verbose and not (format_alias and cli_opts.output in {"json", "yaml"}),
+            )
 
             return result
 

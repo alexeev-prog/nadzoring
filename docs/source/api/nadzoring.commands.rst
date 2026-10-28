@@ -13,6 +13,7 @@ Submodules
    :maxdepth: 4
 
    nadzoring.commands.arp_commands
+   nadzoring.commands.core_commands
    nadzoring.commands.dns_commands
    nadzoring.commands.network_commands
    nadzoring.commands.security_commands

@@ -99,12 +99,10 @@ class TracerouteConnector(ConnectorBase):
                 per_hop_timeout=self.timeout_config.read,
                 use_sudo=self.use_sudo,
             )
-            results.append(
-                {
-                    "target": target,
-                    "hops": [asdict(h) for h in hops],
-                }
-            )
+            results.append({
+                "target": target,
+                "hops": [asdict(h) for h in hops],
+            })
 
         return ProbeResult(status="ok", details={"data": results})
 
@@ -160,9 +158,7 @@ class PortScanConnector(ConnectorBase):
                 if start_s.isdigit() and end_s.isdigit():
                     port_range = (int(start_s), int(end_s))
                 else:
-                    custom_ports = [
-                        int(p) for p in spec.replace(" ", "").split(",") if p.isdigit()
-                    ]
+                    custom_ports = [int(p) for p in spec.replace(" ", "").split(",") if p.isdigit()]
             else:
                 custom_ports = [int(p) for p in spec.replace(" ", "").split(",") if p.isdigit()]
 
@@ -234,9 +230,7 @@ class HttpPingConnector(ConnectorBase):
             return _err("; ".join(errors))
 
         avg_ms: float | None = None
-        total_values: list[float] = [
-            float(r["total_ms"]) for r in results if r.get("total_ms") is not None
-        ]
+        total_values: list[float] = [float(r["total_ms"]) for r in results if r.get("total_ms") is not None]
         if total_values:
             avg_ms = sum(total_values) / len(total_values)
 
@@ -473,10 +467,13 @@ class TlsCertConnector(ConnectorBase):
         context = ssl.create_default_context()
         start = time.perf_counter()
         try:
-            with socket.create_connection(
-                (self.host, self.port),
-                timeout=self.timeout_config.connect,
-            ) as raw_sock, context.wrap_socket(raw_sock, server_hostname=self.host) as tls_sock:
+            with (
+                socket.create_connection(
+                    (self.host, self.port),
+                    timeout=self.timeout_config.connect,
+                ) as raw_sock,
+                context.wrap_socket(raw_sock, server_hostname=self.host) as tls_sock,
+            ):
                 latency_ms = (time.perf_counter() - start) * 1000
                 cert_raw = tls_sock.getpeercert()
                 if not cert_raw:
@@ -487,9 +484,7 @@ class TlsCertConnector(ConnectorBase):
             expiry = datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=UTC)
             days_left = (expiry - datetime.now(UTC)).days
             subject_pairs: list[tuple[str, str]] = [
-                (str(attr[0]), str(attr[1]))
-                for rdn in (cert.get("subject") or ())
-                for attr in rdn
+                (str(attr[0]), str(attr[1])) for rdn in (cert.get("subject") or ()) for attr in rdn
             ]
             subject = dict(subject_pairs)
 

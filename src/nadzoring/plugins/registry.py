@@ -47,12 +47,9 @@ class PluginRegistry:
             ConnectorRegistrationError: If ``meta`` is missing, malformed,
                 or if a connector with the same name is already registered.
         """
-        if not hasattr(connector_cls, "meta") or not isinstance(
-            connector_cls.meta, ConnectorMeta
-        ):
+        if not hasattr(connector_cls, "meta") or not isinstance(connector_cls.meta, ConnectorMeta):
             raise ConnectorRegistrationError(
-                f"{connector_cls.__name__} must define a class-level "
-                "'meta: ConnectorMeta' attribute."
+                f"{connector_cls.__name__} must define a class-level 'meta: ConnectorMeta' attribute."
             )
 
         name = connector_cls.meta.name
@@ -122,11 +119,7 @@ class PluginRegistry:
             Alphabetically sorted list of matching :class:`ConnectorMeta`.
         """
         return sorted(
-            (
-                cls.meta
-                for cls in self._connectors.values()
-                if cls.meta.category == category
-            ),
+            (cls.meta for cls in self._connectors.values() if cls.meta.category == category),
             key=lambda m: m.name,
         )
 
@@ -140,11 +133,7 @@ class PluginRegistry:
             Alphabetically sorted list of matching :class:`ConnectorMeta`.
         """
         return sorted(
-            (
-                cls.meta
-                for cls in self._connectors.values()
-                if tag in cls.meta.tags
-            ),
+            (cls.meta for cls in self._connectors.values() if tag in cls.meta.tags),
             key=lambda m: m.name,
         )
 
@@ -165,6 +154,5 @@ class PluginRegistry:
             return self._connectors[name]
         except KeyError:
             raise ConnectorNotFoundError(
-                f"No connector named '{name}' is registered. "
-                f"Available: {sorted(self._connectors)}"
+                f"No connector named '{name}' is registered. Available: {sorted(self._connectors)}"
             ) from None
