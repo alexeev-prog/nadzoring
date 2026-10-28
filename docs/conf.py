@@ -20,7 +20,7 @@ project = "nadzoring"
 author = "Alexeev Bronislav"
 version = "0.5.0"
 release = "0.5"
-project_copyright = "2025, Alexeev Bronislaw"
+project_copyright = "2025-2026, Alexeev Bronislav"
 
 GITHUB_USER = "alexeev-prog"
 GITHUB_REPO = "nadzoring"
