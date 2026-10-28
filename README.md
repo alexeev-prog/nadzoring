@@ -422,9 +422,10 @@ For complete command reference, Python API documentation, and advanced examples,
 | Version | Link | Status |
 |---------|------|--------|
 | **main** | [Latest (development)](https://alexeev-prog.github.io/nadzoring/main) | 🟡 Development |
-| **v0.2.2** | [Release](https://alexeev-prog.github.io/nadzoring/v0.2.2) | 🟢 Stable |
-| v0.2.1 | [Release](https://alexeev-prog.github.io/nadzoring/v0.2.1) | 🟢 Stable |
-| v0.2.0 | [Release](https://alexeev-prog.github.io/nadzoring/v0.2.0) | 🟢 Stable |
+| **v0.3.0** | [Release](https://alexeev-prog.github.io/nadzoring/v0.3.0) | 🟢 Stable |
+| v0.2.2 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.2.2) | ⚪ Legacy |
+| v0.2.1 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.2.1) | ⚪ Legacy |
+| v0.2.0 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.2.0) | ⚪ Legacy |
 | v0.1.9 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.9) | ⚪ Legacy |
 | v0.1.8 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.8) | ⚪ Legacy |
 | v0.1.7 | [Legacy](https://alexeev-prog.github.io/nadzoring/v0.1.7) | ⚪ Legacy |
