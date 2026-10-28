@@ -9,7 +9,8 @@ import requests
 
 from nadzoring.security import email_security as email
 from nadzoring.security import http_headers as headers
-from nadzoring.security import ssl_monitor, subdomain_scan as scan
+from nadzoring.security import ssl_monitor
+from nadzoring.security import subdomain_scan as scan
 from nadzoring.utils.timeout import OperationTimeoutError, TimeoutConfig
 
 
