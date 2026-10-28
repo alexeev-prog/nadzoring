@@ -85,7 +85,11 @@ def test_tls_connector_expiry(monkeypatch, days, status):
 
 @pytest.mark.parametrize(
     "failure,status",
-    [(ssl.SSLCertVerificationError(), "error"), (TimeoutError(), "unreachable"), (OSError("failed"), "error")],
+    [
+        (ssl.SSLCertVerificationError(), "error"),
+        (TimeoutError(), "unreachable"),
+        (OSError("failed"), "error"),
+    ],
 )
 def test_tls_connector_errors(monkeypatch, failure, status):
     """Handle TLS verification and handshake transport failures."""
@@ -99,9 +103,13 @@ def test_local_network_connectors(monkeypatch):
     monkeypatch.setattr("nadzoring.network_base.route_table.get_route_table", Mock(return_value=[]))
     assert network.RouteTableConnector().probe().status == "ok"
     monkeypatch.setattr(
-        "nadzoring.network_base.network_params.network_param", Mock(side_effect=[None, {"interface": "eth0"}])
+        "nadzoring.network_base.network_params.network_param",
+        Mock(side_effect=[None, {"interface": "eth0"}]),
     )
-    monkeypatch.setattr("nadzoring.network_base.ipv4_local_cli.get_local_ipv4", Mock(return_value="192.0.2.1"))
+    monkeypatch.setattr(
+        "nadzoring.network_base.ipv4_local_cli.get_local_ipv4",
+        Mock(return_value="192.0.2.1"),
+    )
     assert network.NetworkParamsConnector().probe().status == "error"
     assert network.NetworkParamsConnector().probe().status == "ok"
 
@@ -109,7 +117,11 @@ def test_local_network_connectors(monkeypatch):
 @pytest.mark.parametrize("connector", [web.HttpEndpointConnector, web.WebhookConnector])
 @pytest.mark.parametrize(
     "failure,status",
-    [(TimeoutError(), "unreachable"), (urllib.error.URLError("offline"), "unreachable"), (OSError("failed"), "error")],
+    [
+        (TimeoutError(), "unreachable"),
+        (urllib.error.URLError("offline"), "unreachable"),
+        (OSError("failed"), "error"),
+    ],
 )
 def test_web_connector_errors(monkeypatch, connector, failure, status):
     """Map expected delivery and endpoint failures to structured results."""

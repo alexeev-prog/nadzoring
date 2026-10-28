@@ -31,8 +31,18 @@ def test_ip_ownership_and_patterns():
         ({"error": "timeout"}, {"error": "timeout"}, None, None),
         ({"records": ["8.8.8.8"]}, {"records": ["8.8.4.4"]}, "cdn_variation", "info"),
         ({"records": ["8.8.8.8"]}, {"records": ["1.1.1.1"]}, "record_mismatch", "high"),
-        ({"records": ["8.8.8.8"]}, {"records": ["8.8.8.8", "1.1.1.1"]}, "record_mismatch", "medium"),
-        ({"records": ["8.8.8.8"], "ttl": 1}, {"records": ["8.8.8.8"], "ttl": 4000}, "ttl_mismatch", "low"),
+        (
+            {"records": ["8.8.8.8"]},
+            {"records": ["8.8.8.8", "1.1.1.1"]},
+            "record_mismatch",
+            "medium",
+        ),
+        (
+            {"records": ["8.8.8.8"], "ttl": 1},
+            {"records": ["8.8.8.8"], "ttl": 4000},
+            "ttl_mismatch",
+            "low",
+        ),
         ({"records": []}, {"records": []}, None, None),
     ],
 )
@@ -74,7 +84,11 @@ def test_poisoning_orchestration(monkeypatch):
     }
 
     def resolve(domain, rtype, server, **kwargs):
-        return {"records": records[server], "error": "timeout" if server == "error" else None, "ttl": 100}
+        return {
+            "records": records[server],
+            "error": "timeout" if server == "error" else None,
+            "ttl": 100,
+        }
 
     monkeypatch.setattr(poison, "resolve_with_timer", resolve)
     monkeypatch.setattr(poison, "get_public_dns_servers", lambda: list(records))

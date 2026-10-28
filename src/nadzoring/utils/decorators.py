@@ -260,7 +260,11 @@ def common_cli_options(*, format_alias: bool = False, **enabled_flags: bool) -> 
             if enabled_flags.get(spec.flag) or spec.kwarg in _ALWAYS_EXTRACTED:
                 if spec.kwarg == "output" and format_alias:
                     decorated_func = click.option(
-                        "--output", "-o", "--format", type=click.Choice(["table", "json", "yaml"]), default="table"
+                        "--output",
+                        "-o",
+                        "--format",
+                        type=click.Choice(["table", "json", "yaml"]),
+                        default="table",
                     )(decorated_func)
                     continue
                 for click_opt in reversed(spec.click_options):

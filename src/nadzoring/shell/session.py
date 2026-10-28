@@ -87,7 +87,7 @@ class ShellSession:
 
 
 # Click option callbacks receive their boolean value positionally.
-def start_interactive(ctx: click.Context, _param: click.Parameter, value: bool) -> None:  # noqa: FBT001
+def start_interactive(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
     """Start the shell for Click's eager interactive option.
 
     Args:

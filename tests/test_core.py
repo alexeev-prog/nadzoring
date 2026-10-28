@@ -29,7 +29,11 @@ _current_version = rel.current_version
 def isolate_core(tmp_path, monkeypatch):
     monkeypatch.setattr(rel, "application_dirs", lambda: {"cache": tmp_path / "cache"})
     monkeypatch.setattr(rel, "current_version", lambda: "0.3.0")
-    monkeypatch.setattr(requests, "get", MagicMock(side_effect=AssertionError("Unmocked network request")))
+    monkeypatch.setattr(
+        requests,
+        "get",
+        MagicMock(side_effect=AssertionError("Unmocked network request")),
+    )
 
 
 @pytest.mark.parametrize("status,code", [("ok", 0), ("warning", 1), ("error", 2), ("update-available", 3)])
@@ -73,7 +77,10 @@ def test_cli_routes_and_exit_status(monkeypatch, name, arguments, operation, sta
     mock.assert_called_once()
 
 
-@pytest.mark.parametrize("target", ["https://example.com", "x/y", "user@host", "a:443", "-x", "", "a..b", "x "])
+@pytest.mark.parametrize(
+    "target",
+    ["https://example.com", "x/y", "user@host", "a:443", "-x", "", "a..b", "x "],
+)
 def test_cli_rejects_invalid_targets(target):
     response = CliRunner().invoke(cli, ["core", "check-network", "--target", target])
     assert response.exit_code == 2
@@ -95,7 +102,14 @@ def test_update_requires_confirmation_and_dry_run_never_spawns(monkeypatch):
     response = runner.invoke(cli, ["core", "update", "--dry-run", "--installer", "pip", "--format", "json"])
     assert response.exit_code == 0, response.output
     command = json.loads(json.loads(response.output)[0]["detail"])
-    assert command == [rel.sys.executable, "-m", "pip", "install", "--upgrade", "nadzoring"]
+    assert command == [
+        rel.sys.executable,
+        "-m",
+        "pip",
+        "install",
+        "--upgrade",
+        "nadzoring",
+    ]
     run.assert_not_called()
 
 
@@ -103,12 +117,24 @@ def test_completion_contains_core_commands():
     completer = BashComplete(cli, {}, "nadzoring", "_NADZORING_COMPLETE")
     assert "core" in [item.value for item in completer.get_completions([], "co")]
     names = {item.value for item in completer.get_completions(["core"], "")}
-    assert names == {"doctor", "check-deps", "check-permissions", "check-network", "version", "changelog", "update"}
+    assert names == {
+        "doctor",
+        "check-deps",
+        "check-permissions",
+        "check-network",
+        "version",
+        "changelog",
+        "update",
+    }
 
 
 def test_dependency_requirements_markers_extras_and_transitives(monkeypatch):
     requirements = {
-        "nadzoring": ["example[extra]>=2", "optional; extra == 'interactive'", "ignored; python_version < '2'"],
+        "nadzoring": [
+            "example[extra]>=2",
+            "optional; extra == 'interactive'",
+            "ignored; python_version < '2'",
+        ],
         "example": ["child>=1; extra == 'extra'", "example>=2"],
         "child": [],
     }
@@ -126,7 +152,8 @@ def test_dependency_requirements_markers_extras_and_transitives(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "requirement,version", [("example>=2", "1"), ("not a requirement!", "2"), ("example>=2", "invalid")]
+    "requirement,version",
+    [("example>=2", "1"), ("not a requirement!", "2"), ("example>=2", "invalid")],
 )
 def test_dependency_invalid_or_outdated(monkeypatch, requirement, version):
     monkeypatch.setattr(metadata, "requires", lambda name: [requirement] if name == "nadzoring" else [])
@@ -161,7 +188,11 @@ def test_native_directories(monkeypatch, tmp_path, platform):
 
 
 def test_permission_probes(monkeypatch, tmp_path):
-    monkeypatch.setattr(diag, "application_dirs", lambda: {"config": tmp_path / "missing", "cache": tmp_path})
+    monkeypatch.setattr(
+        diag,
+        "application_dirs",
+        lambda: {"config": tmp_path / "missing", "cache": tmp_path},
+    )
     monkeypatch.setattr(socket, "socket", MagicMock())
     rows = diag.check_permissions(verbose=True)
     assert exit_code(rows) == 0
@@ -171,7 +202,13 @@ def test_permission_probes(monkeypatch, tmp_path):
     monkeypatch.setattr(diag.os, "access", lambda *args: False)
     monkeypatch.setattr(diag, "TemporaryFile", MagicMock(side_effect=PermissionError("denied")))
     rows = diag.check_permissions()
-    assert [row["status"] for row in rows] == ["error", "error", "error", "error", "warning"]
+    assert [row["status"] for row in rows] == [
+        "error",
+        "error",
+        "error",
+        "error",
+        "warning",
+    ]
 
 
 def test_network_success_and_timeouts(monkeypatch):
@@ -212,7 +249,11 @@ def test_network_lifetime_timeout(monkeypatch):
 
 
 def test_missing_dns_configuration_is_expected_failure(monkeypatch):
-    monkeypatch.setattr(diag.dns.resolver, "Resolver", MagicMock(side_effect=dns.resolver.NoResolverConfiguration()))
+    monkeypatch.setattr(
+        diag.dns.resolver,
+        "Resolver",
+        MagicMock(side_effect=dns.resolver.NoResolverConfiguration()),
+    )
     assert diag._probe_dns("example.com", TimeoutConfig())["error"] is not None
 
 
@@ -247,7 +288,10 @@ def test_malformed_release_data(monkeypatch, data):
     assert rel.version_info(check=True)[0]["error"]
 
 
-@pytest.mark.parametrize("failure", [requests.Timeout("timeout"), OperationTimeoutError(), ValueError("json")])
+@pytest.mark.parametrize(
+    "failure",
+    [requests.Timeout("timeout"), OperationTimeoutError(), ValueError("json")],
+)
 def test_release_errors(monkeypatch, failure):
     monkeypatch.setattr(rel, "_fetch_json", MagicMock(side_effect=failure))
     assert rel.version_info(check=True)[0]["error"]
@@ -271,7 +315,14 @@ def test_changelog_release_and_fallback(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "content", ["garbage", "{}", "[]", '{"timestamp": 0, "data": {}}', '{"timestamp": "invalid", "data": {}}']
+    "content",
+    [
+        "garbage",
+        "{}",
+        "[]",
+        '{"timestamp": 0, "data": {}}',
+        '{"timestamp": "invalid", "data": {}}',
+    ],
 )
 def test_cache_invalid_entries(tmp_path, content):
     path = tmp_path / "cache.json"
@@ -325,6 +376,10 @@ def test_update_missing_installer_and_failures(monkeypatch):
     assert rel.update()[0]["error"] == "denied"
     run.return_value = SimpleNamespace(returncode=1, stdout="", stderr="")
     assert "exited with 1" in rel.update()[0]["error"]
-    for failure in (OSError("missing"), subprocess.TimeoutExpired("pip", 1), OperationTimeoutError()):
+    for failure in (
+        OSError("missing"),
+        subprocess.TimeoutExpired("pip", 1),
+        OperationTimeoutError(),
+    ):
         run.side_effect = failure
         assert rel.update()[0]["error"]

@@ -17,7 +17,11 @@ from packaging.requirements import InvalidRequirement, Requirement
 from packaging.version import InvalidVersion
 
 from nadzoring.core.models import CheckResult, result
-from nadzoring.utils.timeout import OperationTimeoutError, TimeoutConfig, timeout_context
+from nadzoring.utils.timeout import (
+    OperationTimeoutError,
+    TimeoutConfig,
+    timeout_context,
+)
 
 
 def application_dirs() -> dict[str, Path]:
@@ -69,19 +73,40 @@ def check_dependencies(*, strict: bool = False) -> list[CheckResult]:
             required_names.add(name)
             installed = metadata.version(requirement.name)
             if requirement.specifier and not requirement.specifier.contains(installed, prereleases=True):
-                rows.append(result(name, f"Installed {installed}; requires {requirement.specifier}", "error"))
+                rows.append(
+                    result(
+                        name,
+                        f"Installed {installed}; requires {requirement.specifier}",
+                        "error",
+                    )
+                )
             elif direct:
-                rows.append(result(name, f"Installed {installed}; requires {requirement.specifier or 'any'}"))
+                rows.append(
+                    result(
+                        name,
+                        f"Installed {installed}; requires {requirement.specifier or 'any'}",
+                    )
+                )
             for dependency in metadata.requires(requirement.name) or []:
                 pending.extend((dependency, requested_extra, False) for requested_extra in {"", *requirement.extras})
-        except (metadata.PackageNotFoundError, InvalidRequirement, InvalidVersion) as exc:
+        except (
+            metadata.PackageNotFoundError,
+            InvalidRequirement,
+            InvalidVersion,
+        ) as exc:
             rows.append(result("dependencies", str(exc), "error"))
     installed_names = {
         (dist.metadata.get("Name") or "").lower().replace("_", "-").replace(".", "-")
         for dist in metadata.distributions()
     }
     extras = sorted(installed_names - required_names - {""})
-    rows.append(result("extra-packages", ", ".join(extras) or "None", "warning" if strict and extras else "ok"))
+    rows.append(
+        result(
+            "extra-packages",
+            ", ".join(extras) or "None",
+            "warning" if strict and extras else "ok",
+        )
+    )
     return rows
 
 
@@ -115,7 +140,10 @@ def check_permissions(*, verbose: bool = False) -> list[CheckResult]:
             rows.append(result(name, str(exc), "error"))
     executable = os.access(sys.executable, os.X_OK)
     rows.append(result("executable", sys.executable, "ok" if executable else "error"))
-    socket_types = (("socket", socket.SOCK_STREAM, 0), ("raw-socket", socket.SOCK_RAW, socket.IPPROTO_ICMP))
+    socket_types = (
+        ("socket", socket.SOCK_STREAM, 0),
+        ("raw-socket", socket.SOCK_RAW, socket.IPPROTO_ICMP),
+    )
     for name, kind, protocol in socket_types:
         try:
             with socket.socket(socket.AF_INET, kind, protocol):
@@ -168,7 +196,10 @@ def _probe_https(target: str, config: TimeoutConfig) -> CheckResult:
     try:
         with requests.get(f"https://{host}/", timeout=(config.connect, config.read), stream=True) as response:
             response.raise_for_status()
-            return result("https", f"HTTP {response.status_code} ({(perf_counter() - start) * 1000:.2f} ms)")
+            return result(
+                "https",
+                f"HTTP {response.status_code} ({(perf_counter() - start) * 1000:.2f} ms)",
+            )
     except requests.RequestException as exc:
         return result("https", str(exc), "error")
 
@@ -192,13 +223,30 @@ def doctor(*, timeout_config: TimeoutConfig | None = None) -> list[CheckResult]:
     Returns:
         All diagnostic observations followed by a successful-check summary.
     """
-    rows = [result("python", sys.version.split()[0], "ok" if sys.version_info >= (3, 12) else "error")]
+    rows = [
+        result(
+            "python",
+            sys.version.split()[0],
+            "ok" if sys.version_info >= (3, 12) else "error",
+        )
+    ]
     rows.extend(check_dependencies())
     rows.extend(check_permissions())
     rows.extend(check_network(timeout_config=timeout_config))
     for tool in ("ping", "traceroute", "whois", "uv"):
         path = shutil.which(tool)
-        rows.append(result(f"tool:{tool}", path or "Optional tool not found", "ok" if path else "warning"))
+        rows.append(
+            result(
+                f"tool:{tool}",
+                path or "Optional tool not found",
+                "ok" if path else "warning",
+            )
+        )
     passed = sum(row["status"] == "ok" for row in rows)
-    rows.append(result("summary", f"{passed}/{len(rows)} checks passed ({100 * passed // len(rows)}%)"))
+    rows.append(
+        result(
+            "summary",
+            f"{passed}/{len(rows)} checks passed ({100 * passed // len(rows)}%)",
+        )
+    )
     return rows

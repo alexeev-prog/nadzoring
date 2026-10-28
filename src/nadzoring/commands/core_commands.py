@@ -56,7 +56,11 @@ def doctor_command(timeout_config: TimeoutConfig) -> list[CheckResult]:
 
 @core_group.command(name="check-deps")
 @common_cli_options(format_alias=True)
-@click.option("--strict", is_flag=True, help="Treat unrelated installed distributions as warnings.")
+@click.option(
+    "--strict",
+    is_flag=True,
+    help="Treat unrelated installed distributions as warnings.",
+)
 def check_deps_command(*, strict: bool) -> list[CheckResult]:
     """Validate dependency versions against installed package requirements."""
     return core.check_dependencies(strict=strict)
@@ -87,7 +91,11 @@ def version_command(timeout_config: TimeoutConfig, *, check: bool) -> list[Check
 
 @core_group.command(name="changelog")
 @common_cli_options(format_alias=True, include_timeout=True)
-@click.option("--version", "release_version", help="Release version (defaults to the installed version).")
+@click.option(
+    "--version",
+    "release_version",
+    help="Release version (defaults to the installed version).",
+)
 def changelog_command(release_version: str | None, timeout_config: TimeoutConfig) -> list[CheckResult]:
     """Retrieve GitHub release notes with a changelog fallback."""
     return core.changelog(release_version, timeout_config=timeout_config)
@@ -95,9 +103,18 @@ def changelog_command(release_version: str | None, timeout_config: TimeoutConfig
 
 @core_group.command(name="update")
 @common_cli_options(format_alias=True, include_timeout=True)
-@click.option("--installer", type=click.Choice(["auto", "pip", "uv"]), default="auto", show_default=True)
+@click.option(
+    "--installer",
+    type=click.Choice(["auto", "pip", "uv"]),
+    default="auto",
+    show_default=True,
+)
 @click.option("--dry-run", is_flag=True, help="Report the installer command without executing it.")
-@click.option("--yes", is_flag=True, help="Confirm modification of this interpreter's installation.")
+@click.option(
+    "--yes",
+    is_flag=True,
+    help="Confirm modification of this interpreter's installation.",
+)
 def update_command(timeout_config: TimeoutConfig, installer: str, *, dry_run: bool, yes: bool) -> list[CheckResult]:
     """Upgrade this installation with pip or uv (requires --yes or --dry-run)."""
     if not dry_run and not yes:

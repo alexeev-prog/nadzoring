@@ -21,22 +21,32 @@ def test_dns_connector_delegation(monkeypatch):
     """Handle DNS health, benchmark, and delegation trace outcomes."""
     monkeypatch.setattr("nadzoring.dns_lookup.health_check_dns", Mock(return_value={"error": "failed"}))
     assert dns.DnsHealthConnector("example.com").probe().status == "error"
-    monkeypatch.setattr("nadzoring.dns_lookup.benchmark_dns_servers", Mock(return_value=[{"failed_queries": 1}]))
+    monkeypatch.setattr(
+        "nadzoring.dns_lookup.benchmark_dns_servers",
+        Mock(return_value=[{"failed_queries": 1}]),
+    )
     assert dns.DnsBenchmarkConnector("example.com").probe().status == "degraded"
-    monkeypatch.setattr("nadzoring.dns_lookup.trace_dns", Mock(side_effect=[{"error": "failed"}, {"hops": []}]))
+    monkeypatch.setattr(
+        "nadzoring.dns_lookup.trace_dns",
+        Mock(side_effect=[{"error": "failed"}, {"hops": []}]),
+    )
     assert dns.DnsTraceConnector("example.com").probe().status == "error"
     assert dns.DnsTraceConnector("example.com").probe().status == "ok"
 
 
 def test_arp_connector_errors_and_filter(monkeypatch):
     """Translate cache failures and filter spoofing alerts by interface."""
-    monkeypatch.setattr("nadzoring.arp.cache.ARPCache", Mock(side_effect=ARPCacheRetrievalError("failed")))
+    monkeypatch.setattr(
+        "nadzoring.arp.cache.ARPCache",
+        Mock(side_effect=ARPCacheRetrievalError("failed")),
+    )
     assert arp.ArpCacheConnector().probe().status == "error"
     assert arp.ArpSpoofingConnector().probe().status == "error"
     monkeypatch.setattr("nadzoring.arp.cache.ARPCache", Mock())
     alert = SpoofingAlert("duplicate_ip", "192.0.2.1", "aa", ["eth0"], "test")
     monkeypatch.setattr(
-        "nadzoring.arp.detector.ARPSpoofingDetector", Mock(return_value=Mock(detect=Mock(return_value=[alert])))
+        "nadzoring.arp.detector.ARPSpoofingDetector",
+        Mock(return_value=Mock(detect=Mock(return_value=[alert]))),
     )
     assert arp.ArpSpoofingConnector(interfaces=["absent"]).probe().status == "ok"
     assert arp._ok([]).details == {"data": []}

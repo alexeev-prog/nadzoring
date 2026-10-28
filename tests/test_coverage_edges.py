@@ -36,7 +36,11 @@ def test_single_server_benchmark(monkeypatch, asynchronous):
 
 def test_parallel_benchmark_progress(monkeypatch):
     """Notify the caller after a parallel benchmark finishes."""
-    monkeypatch.setattr(benchmark, "_benchmark_single_server_async", AsyncMock(return_value={"avg_response_time": 1}))
+    monkeypatch.setattr(
+        benchmark,
+        "_benchmark_single_server_async",
+        AsyncMock(return_value={"avg_response_time": 1}),
+    )
     progress = Mock()
     asyncio.run(benchmark.benchmark_dns_servers_async(servers=["192.0.2.53"], progress_callback=progress))
     progress.assert_called_once_with("192.0.2.53", 1)

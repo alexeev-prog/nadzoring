@@ -15,7 +15,10 @@ from nadzoring.utils.errors import ARPCacheRetrievalError
 from nadzoring.utils.timeout import TimeoutConfig
 
 
-@pytest.mark.parametrize("platform,expected", [("linux", "linux"), ("win32", "windows"), ("darwin", "darwin")])
+@pytest.mark.parametrize(
+    "platform,expected",
+    [("linux", "linux"), ("win32", "windows"), ("darwin", "darwin")],
+)
 def test_cache_platform_dispatch(monkeypatch, platform, expected):
     """Dispatch to the platform-specific cache reader."""
     monkeypatch.setattr("nadzoring.arp.cache.sys.platform", platform)
@@ -36,7 +39,10 @@ def test_cache_unsupported_platform(monkeypatch):
 @pytest.mark.parametrize("failure", [None, "missing", "Permission denied", "failed"])
 def test_cache_command_results(monkeypatch, platform, failure):
     """Handle absent executables and subprocess errors without real commands."""
-    monkeypatch.setattr("nadzoring.arp.cache.which", lambda _: None if failure == "missing" else "/bin/tool")
+    monkeypatch.setattr(
+        "nadzoring.arp.cache.which",
+        lambda _: None if failure == "missing" else "/bin/tool",
+    )
     run = Mock(return_value=subprocess.CompletedProcess([], 0, ""))
     if failure and failure != "missing":
         run.side_effect = subprocess.CalledProcessError(1, "tool", stderr=failure)
@@ -105,7 +111,11 @@ def test_realtime_packets_and_reset():
     assert detector.process_packet(packet) is None
     assert "192.0.2.1 for 192.0.2.2" in detector.process_packet(Ether(src="aa:bb:cc:dd:ee:ff") / ARP(psrc="192.0.2.2"))
     stats = detector.get_stats()
-    assert stats == {"packets_processed": 3, "alerts_generated": 1, "unique_macs_seen": 1}
+    assert stats == {
+        "packets_processed": 3,
+        "alerts_generated": 1,
+        "unique_macs_seen": 1,
+    }
     detector.reset()
     assert not detector.ip_mac_map
     assert all(value == 0 for value in detector.get_stats().values())

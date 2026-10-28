@@ -75,7 +75,12 @@ def test_dkim_analysis(monkeypatch, found):
         ("v=DMARC1; ignored", None, None, "Missing policy"),
         ("v=DMARC1; p=none; pct=20", "none", 20, "only 20%"),
         ("v=DMARC1; p=reject; pct=invalid", "reject", None, "Invalid pct"),
-        ("v=DMARC1; p=reject; sp=quarantine; pct=100; rua=mailto:a, mailto:b; ruf=mailto:c", "reject", 100, None),
+        (
+            "v=DMARC1; p=reject; sp=quarantine; pct=100; rua=mailto:a, mailto:b; ruf=mailto:c",
+            "reject",
+            100,
+            None,
+        ),
     ],
 )
 def test_dmarc_analysis(monkeypatch, record, policy, pct, issue):
@@ -151,7 +156,10 @@ def test_http_headers_failures(monkeypatch, exception, error):
 def test_ct_discovery(monkeypatch, failure):
     """Normalize and deduplicate certificate transparency names."""
     response = Mock()
-    response.json.return_value = [{"name_value": "*.api.example.com\nexample.com\nother.net\napi.example.com"}, {}]
+    response.json.return_value = [
+        {"name_value": "*.api.example.com\nexample.com\nother.net\napi.example.com"},
+        {},
+    ]
     if failure:
         response.json.side_effect = failure
     monkeypatch.setattr(scan.requests, "get", Mock(return_value=response))
@@ -186,7 +194,10 @@ def test_subdomain_scan(monkeypatch, tmp_path):
 
     monkeypatch.setattr(scan, "_probe_subdomain", probe)
     results = scan.scan_subdomains("example.com", wordlist_path=str(wordlist))
-    assert [result["subdomain"] for result in results] == ["api.example.com", "www.example.com"]
+    assert [result["subdomain"] for result in results] == [
+        "api.example.com",
+        "www.example.com",
+    ]
     assert [result["source"] for result in results] == ["ct_log", "brute_force"]
     assert len(scan.scan_subdomains("example.com", wordlist_path="", timeout_config=TimeoutConfig())) == 1
     monkeypatch.setattr(scan, "_DEFAULT_WORDLIST", ("www",))

@@ -225,7 +225,7 @@ class DnsBenchmarkConnector(ConnectorBase):
         degraded = any(r["failed_queries"] > 0 for r in results)
         return ProbeResult(
             status="ok" if not degraded else "degraded",
-            error="One or more benchmark servers reported failed queries" if degraded else None,
+            error=("One or more benchmark servers reported failed queries" if degraded else None),
             details={"data": results},
         )
 
@@ -274,7 +274,7 @@ class DnsCompareConnector(ConnectorBase):
         consistent = len(differences) == 0
         return ProbeResult(
             status="ok" if consistent else "degraded",
-            error=None if consistent else "DNS responses are inconsistent across servers",
+            error=(None if consistent else "DNS responses are inconsistent across servers"),
             details={"data": result},
         )
 

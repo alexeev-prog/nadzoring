@@ -159,7 +159,10 @@ class FlaskConnector(ConnectorBase):
         try:
             http_status, body = _request(health_url, timeout=t)
             latency_ms = (time.perf_counter() - start) * 1000
-            details["health"] = {"http_status": http_status, "latency_ms": round(latency_ms, 2)}
+            details["health"] = {
+                "http_status": http_status,
+                "latency_ms": round(latency_ms, 2),
+            }
 
             if self.check_json:
                 data = _json(body)
@@ -182,7 +185,11 @@ class FlaskConnector(ConnectorBase):
                 details=details,
             )
         except TimeoutError:
-            return ProbeResult(status="unreachable", error="Flask health check timed out", details=details)
+            return ProbeResult(
+                status="unreachable",
+                error="Flask health check timed out",
+                details=details,
+            )
         except (urllib.error.URLError, OSError) as exc:
             return ProbeResult(status="unreachable", error=str(exc), details=details)
 
@@ -276,7 +283,10 @@ class DjangoConnector(ConnectorBase):
                 timeout=t,
             )
             latency_ms = (time.perf_counter() - start) * 1000
-            details["health"] = {"http_status": http_status, "latency_ms": round(latency_ms, 2)}
+            details["health"] = {
+                "http_status": http_status,
+                "latency_ms": round(latency_ms, 2),
+            }
 
             if self.check_json:
                 data = _json(body)
@@ -311,7 +321,11 @@ class DjangoConnector(ConnectorBase):
                 details=details,
             )
         except TimeoutError:
-            return ProbeResult(status="unreachable", error="Django health check timed out", details=details)
+            return ProbeResult(
+                status="unreachable",
+                error="Django health check timed out",
+                details=details,
+            )
         except (urllib.error.URLError, OSError) as exc:
             return ProbeResult(status="unreachable", error=str(exc), details=details)
 
@@ -321,7 +335,10 @@ class DjangoConnector(ConnectorBase):
             try:
                 admin_status, _ = _request(admin_url, timeout=t)
                 # 200 = login page served; 302 = redirect to login (also fine)
-                details["admin"] = {"http_status": admin_status, "ok": admin_status in {200, 302}}
+                details["admin"] = {
+                    "http_status": admin_status,
+                    "ok": admin_status in {200, 302},
+                }
             except urllib.error.HTTPError as exc:
                 details["admin"] = {"http_status": exc.code, "ok": False}
             except (urllib.error.URLError, OSError) as exc:
@@ -437,7 +454,11 @@ class FastAPIConnector(ConnectorBase):
                 details=details,
             )
         except TimeoutError:
-            return ProbeResult(status="unreachable", error="FastAPI health check timed out", details=details)
+            return ProbeResult(
+                status="unreachable",
+                error="FastAPI health check timed out",
+                details=details,
+            )
         except (urllib.error.URLError, OSError) as exc:
             return ProbeResult(status="unreachable", error=str(exc), details=details)
 

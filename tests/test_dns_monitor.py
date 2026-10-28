@@ -24,8 +24,16 @@ def monitor(monkeypatch):
             }
         ),
     )
-    monkeypatch.setattr(monitoring, "resolve_with_timer", Mock(return_value={"records": ["192.0.2.1"], "error": None}))
-    monkeypatch.setattr(monitoring, "health_check_dns", Mock(return_value={"score": 60, "status": "degraded"}))
+    monkeypatch.setattr(
+        monitoring,
+        "resolve_with_timer",
+        Mock(return_value={"records": ["192.0.2.1"], "error": None}),
+    )
+    monkeypatch.setattr(
+        monitoring,
+        "health_check_dns",
+        Mock(return_value={"score": 60, "status": "degraded"}),
+    )
     return monitoring.DNSMonitor(monitoring.MonitorConfig(nameservers=["192.0.2.53"], interval=0))
 
 

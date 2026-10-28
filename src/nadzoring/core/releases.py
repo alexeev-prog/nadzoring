@@ -19,7 +19,11 @@ from packaging.version import Version
 
 from nadzoring.core.diagnostics import application_dirs
 from nadzoring.core.models import CheckResult, Status, result
-from nadzoring.utils.timeout import OperationTimeoutError, TimeoutConfig, timeout_context
+from nadzoring.utils.timeout import (
+    OperationTimeoutError,
+    TimeoutConfig,
+    timeout_context,
+)
 
 _REPOSITORY = "alexeev-prog/nadzoring"
 _CACHE_TTL = 3600
@@ -63,7 +67,11 @@ def _fetch_json(url: str, config: TimeoutConfig) -> dict[str, Any]:
     cached = _read_cache(path)
     if cached is not None:
         return cached
-    with requests.get(url, timeout=(config.connect, config.read), headers={"Accept": "application/json"}) as response:
+    with requests.get(
+        url,
+        timeout=(config.connect, config.read),
+        headers={"Accept": "application/json"},
+    ) as response:
         response.raise_for_status()
         data = response.json()
     if not isinstance(data, dict):
@@ -92,7 +100,13 @@ def version_info(*, check: bool = False, timeout_config: TimeoutConfig | None = 
             latest = Version(data["info"]["version"])
             status: Status = "update-available" if latest > Version(installed) else "ok"
             return [result("version", f"Installed {installed}; latest {latest}", status)]
-    except (requests.RequestException, OperationTimeoutError, ValueError, KeyError, TypeError) as exc:
+    except (
+        requests.RequestException,
+        OperationTimeoutError,
+        ValueError,
+        KeyError,
+        TypeError,
+    ) as exc:
         return [result("version", str(exc), "error")]
 
 
@@ -130,9 +144,18 @@ def changelog(version: str | None = None, *, timeout_config: TimeoutConfig | Non
             except (requests.RequestException, ValueError, TypeError):
                 # Missing releases and rate limits can still use the changelog.
                 pass
-            data = _fetch_json(f"https://api.github.com/repos/{_REPOSITORY}/contents/CHANGELOG.md", config)
+            data = _fetch_json(
+                f"https://api.github.com/repos/{_REPOSITORY}/contents/CHANGELOG.md",
+                config,
+            )
             return [result("changelog", _decode_changelog(data, normalized))]
-    except (requests.RequestException, OperationTimeoutError, ValueError, KeyError, TypeError) as exc:
+    except (
+        requests.RequestException,
+        OperationTimeoutError,
+        ValueError,
+        KeyError,
+        TypeError,
+    ) as exc:
         return [result("changelog", str(exc), "error")]
 
 
@@ -173,7 +196,13 @@ def update(
         return [result("update", json.dumps(command))]
     try:
         with timeout_context(config):
-            completed = subprocess.run(command, capture_output=True, text=True, timeout=config.lifetime, check=False)
+            completed = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                timeout=config.lifetime,
+                check=False,
+            )
         detail = completed.stdout.strip() if completed.returncode == 0 else completed.stderr.strip()
         return [
             result(

@@ -63,16 +63,31 @@ def test_dns_queries(monkeypatch, quiet):
             }
         ),
     )
-    result = call("check_command", ("example.com",), None, ("A", "MX", "TXT", "NS"), TimeoutConfig(), quiet=quiet)
+    result = call(
+        "check_command",
+        ("example.com",),
+        None,
+        ("A", "MX", "TXT", "NS"),
+        TimeoutConfig(),
+        quiet=quiet,
+    )
     assert result == [
-        {"domain": "example.com", "A": "192.0.2.1", "MX": "Priority 10 mail", "TXT": "[failed]", "NS": "None"}
+        {
+            "domain": "example.com",
+            "A": "192.0.2.1",
+            "MX": "Priority 10 mail",
+            "TXT": "[failed]",
+            "NS": "None",
+        }
     ]
 
 
 def test_dns_whois(monkeypatch):
     """Return registration data or translate a domain-layer error."""
     monkeypatch.setattr(
-        commands, "whois_domain_lookup", Mock(side_effect=[[{"domain": "example.com"}], [{"error": "failed"}]])
+        commands,
+        "whois_domain_lookup",
+        Mock(side_effect=[[{"domain": "example.com"}], [{"error": "failed"}]]),
     )
     assert call("whois_command", "example.com", quiet=True) == [{"domain": "example.com"}]
     with pytest.raises(click.ClickException, match="failed"):
@@ -119,7 +134,16 @@ def test_dns_progress_callbacks(monkeypatch):
     assert call("compare_command", "example.com", ("8.8.8.8",), (), quiet=False) == [{"domain": "example.com"}]
     monkeypatch.setattr(commands, "benchmark_dns_servers", benchmark)
     assert (
-        call("benchmark_command", "example.com", (), "A", 1, TimeoutConfig(), parallel=True, quiet=False)[0]["avg_ms"]
+        call(
+            "benchmark_command",
+            "example.com",
+            (),
+            "A",
+            1,
+            TimeoutConfig(),
+            parallel=True,
+            quiet=False,
+        )[0]["avg_ms"]
         == "1.00"
     )
 

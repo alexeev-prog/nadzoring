@@ -113,7 +113,11 @@ def test_arp_detect_command(monkeypatch, interfaces, quiet):
     cache = Mock(get_cache=Mock(return_value=[ARPEntry("192.0.2.1", "aa", "eth0", ARPEntryState.REACHABLE)]))
     monkeypatch.setattr(arp, "ARPCache", Mock(return_value=cache))
     alert = SpoofingAlert("duplicate_ip", "192.0.2.1", "aa", ["eth0"], "suspicious")
-    monkeypatch.setattr(arp, "ARPSpoofingDetector", Mock(return_value=Mock(detect=Mock(return_value=[alert]))))
+    monkeypatch.setattr(
+        arp,
+        "ARPSpoofingDetector",
+        Mock(return_value=Mock(detect=Mock(return_value=[alert]))),
+    )
     monkeypatch.setattr(arp, "tqdm", Mock(return_value=Mock()))
     result = arp.detect_spoofing.callback.__wrapped__(interfaces, quiet=quiet)
     assert len(result) == (0 if interfaces == ("absent",) else 1)

@@ -33,7 +33,11 @@ from nadzoring.plugins.connectors.security import (
     SubdomainScanConnector,
 )
 from nadzoring.plugins.connectors.web import HttpEndpointConnector
-from nadzoring.plugins.examples.frameworks import DjangoConnector, FastAPIConnector, FlaskConnector
+from nadzoring.plugins.examples.frameworks import (
+    DjangoConnector,
+    FastAPIConnector,
+    FlaskConnector,
+)
 from nadzoring.utils.timeout import TimeoutConfig
 
 
@@ -48,7 +52,12 @@ def test_dns_resolve_connector_success(monkeypatch: pytest.MonkeyPatch) -> None:
         *,
         include_ttl: bool = False,
     ) -> dict:
-        return {"domain": domain, "record_type": record_type, "records": ["1.1.1.1"], "error": None}
+        return {
+            "domain": domain,
+            "record_type": record_type,
+            "records": ["1.1.1.1"],
+            "error": None,
+        }
 
     monkeypatch.setattr("nadzoring.dns_lookup.resolve_dns", fake_resolve)
     conn = DnsResolveConnector(domains=["a.test"], record_types=["A"])
@@ -155,7 +164,9 @@ def test_traceroute_connector_serialises_hops(monkeypatch: pytest.MonkeyPatch) -
     assert rows[0]["hops"][0]["hop"] == 1
 
 
-def test_traceroute_connector_forwards_use_sudo(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_traceroute_connector_forwards_use_sudo(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     hop = TraceHop(hop=1, host="r1", ip="10.0.0.1", rtt_ms=[1.0])
     seen: dict[str, object] = {}
 
@@ -191,7 +202,9 @@ def test_http_ping_connector(monkeypatch: pytest.MonkeyPatch) -> None:
     assert abs(result.details["data"][0]["total_ms"] - 5.0) < 0.001
 
 
-def test_http_ping_connector_forwards_http_flags(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_http_ping_connector_forwards_http_flags(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     fake = HttpPingResult(
         url="https://x",
         final_url="https://x",
@@ -264,7 +277,11 @@ def test_connections_connector(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_ssl_cert_connector(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "nadzoring.plugins.connectors.security.check_ssl_expiry_with_fallback",
-        lambda domain, days, tc: {"domain": domain, "days_remaining": 90, "error": None},
+        lambda domain, days, tc: {
+            "domain": domain,
+            "days_remaining": 90,
+            "error": None,
+        },
     )
     result = SslCertConnector(
         domains=["example.com"],
@@ -363,7 +380,9 @@ def test_email_security_connector(monkeypatch: pytest.MonkeyPatch) -> None:
     assert result.status == "ok"
 
 
-def test_email_security_connector_missing_spf_or_dmarc(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_email_security_connector_missing_spf_or_dmarc(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Missing SPF or DMARC yields degraded status and a populated error string."""
     monkeypatch.setattr(
         "nadzoring.plugins.connectors.security.check_email_security",
@@ -393,7 +412,9 @@ def test_subdomain_scan_connector(monkeypatch: pytest.MonkeyPatch) -> None:
     assert result.details["count"] == 1
 
 
-def test_subdomain_scan_connector_all_rows_error(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_subdomain_scan_connector_all_rows_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """When every row reports an error, the probe fails with a combined message."""
     monkeypatch.setattr(
         "nadzoring.plugins.connectors.security.scan_subdomains",
@@ -405,7 +426,9 @@ def test_subdomain_scan_connector_all_rows_error(monkeypatch: pytest.MonkeyPatch
     assert "crt.sh timeout" in result.error
 
 
-def test_subdomain_scan_connector_partial_row_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_subdomain_scan_connector_partial_row_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Rows with errors downgrade the probe while successful rows stay in details."""
     monkeypatch.setattr(
         "nadzoring.plugins.connectors.security.scan_subdomains",

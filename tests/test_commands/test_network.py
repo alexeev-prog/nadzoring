@@ -55,23 +55,37 @@ def test_service_detection(monkeypatch):
         Mock(
             side_effect=[
                 SimpleNamespace(
-                    detected_service="http", guessed_service=None, error=None, banner="test", method="probe"
+                    detected_service="http",
+                    guessed_service=None,
+                    error=None,
+                    banner="test",
+                    method="probe",
                 ),
                 SimpleNamespace(
-                    detected_service=None, guessed_service=None, error="refused", banner=None, method="port"
+                    detected_service=None,
+                    guessed_service=None,
+                    error="refused",
+                    banner=None,
+                    method="port",
                 ),
             ]
         ),
     )
     result = call(
-        "detect_service_command", "example.com", (80, 81), timeout_config=TimeoutConfig(), no_probe=False, quiet=False
+        "detect_service_command",
+        "example.com",
+        (80, 81),
+        timeout_config=TimeoutConfig(),
+        no_probe=False,
+        quiet=False,
     )
     assert result[0]["detected_service"] == "http"
     assert result[1]["status"] == "error: refused"
 
 
 @pytest.mark.parametrize(
-    "spec,expected", [(None, (None, None)), ("22,80", ([22, 80], None)), ("1-10", (None, (1, 10)))]
+    "spec,expected",
+    [(None, (None, None)), ("22,80", ([22, 80], None)), ("1-10", (None, (1, 10)))],
 )
 def test_port_specification(spec, expected):
     """Parse lists and ranges without scanning."""
@@ -164,16 +178,34 @@ def test_http_ping_command(monkeypatch):
 def test_connections_routes_and_traces(monkeypatch):
     """Shape system entries and display helpful empty-result messages."""
     connection = SimpleNamespace(
-        protocol="tcp", local_address="local", remote_address="remote", state=None, pid=1, process="test"
+        protocol="tcp",
+        local_address="local",
+        remote_address="remote",
+        state=None,
+        pid=1,
+        process="test",
     )
     monkeypatch.setattr(commands, "get_connections", Mock(side_effect=[[connection], []]))
     assert call("connections_command", "all", None, no_process=False, quiet=False)[0]["pid"] == 1
     assert call("connections_command", "all", None, no_process=False, quiet=False) == []
-    route = SimpleNamespace(destination="default", gateway="192.0.2.1", netmask=None, interface=None, metric=None)
+    route = SimpleNamespace(
+        destination="default",
+        gateway="192.0.2.1",
+        netmask=None,
+        interface=None,
+        metric=None,
+    )
     monkeypatch.setattr(commands, "get_route_table", Mock(side_effect=[[route], []]))
     assert call("route_command", quiet=False)[0]["netmask"] == "—"
     assert call("route_command", quiet=False) == []
     hop = SimpleNamespace(hop=1, host=None, ip=None, rtt_ms=[1.5, None])
     monkeypatch.setattr(commands, "traceroute", Mock(side_effect=[[hop], []]))
-    result = call("traceroute_command", ("example.com", "missing"), 30, TimeoutConfig(), use_sudo=False, quiet=False)
+    result = call(
+        "traceroute_command",
+        ("example.com", "missing"),
+        30,
+        TimeoutConfig(),
+        use_sudo=False,
+        quiet=False,
+    )
     assert result[0]["rtt"] == "1.5 ms / *"

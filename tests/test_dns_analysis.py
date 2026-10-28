@@ -29,11 +29,25 @@ def test_resolver_configuration(asynchronous):
 @pytest.mark.parametrize(
     "rtype,answers,expected",
     [
-        ("MX", [SimpleNamespace(preference=10, exchange="mail.example.com.")], ["10 mail.example.com"]),
+        (
+            "MX",
+            [SimpleNamespace(preference=10, exchange="mail.example.com.")],
+            ["10 mail.example.com"],
+        ),
         ("TXT", [SimpleNamespace(strings=[b"hello", "world", 1])], ["helloworld1"]),
         (
             "SOA",
-            [SimpleNamespace(mname="ns", rname="host", serial=1, refresh=2, retry=3, expire=4, minimum=5)],
+            [
+                SimpleNamespace(
+                    mname="ns",
+                    rname="host",
+                    serial=1,
+                    refresh=2,
+                    retry=3,
+                    expire=4,
+                    minimum=5,
+                )
+            ],
             ["ns host 1 2 3 4 5"],
         ),
         ("NS", ["ns.example.com."], ["ns.example.com"]),
@@ -96,7 +110,14 @@ def test_resolution_lifetime_timeout(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "score,status", [(100, "healthy"), (80, "healthy"), (79, "degraded"), (50, "degraded"), (49, "unhealthy")]
+    "score,status",
+    [
+        (100, "healthy"),
+        (80, "healthy"),
+        (79, "degraded"),
+        (50, "degraded"),
+        (49, "unhealthy"),
+    ],
 )
 def test_health_status_boundaries(score, status):
     """Respect exact status thresholds."""
@@ -150,7 +171,11 @@ def test_detailed_dns_check(monkeypatch):
 
     def resolve(domain, rtype, *args, **kwargs):
         records = {"MX": ["10 mail"], "TXT": ["v=spf1 -all"]}.get(rtype, [])
-        return {"records": records, "response_time": 1.5, "error": None if records else "No records of requested type"}
+        return {
+            "records": records,
+            "response_time": 1.5,
+            "error": None if records else "No records of requested type",
+        }
 
     monkeypatch.setattr(health, "resolve_with_timer", resolve)
     result = health.check_dns("example.com", validate_mx=True, validate_txt=True)
@@ -164,7 +189,10 @@ def test_dns_server_comparison(monkeypatch):
     """Compare records against the baseline and report TTL differences."""
 
     def resolve(domain, rtype, server, **kwargs):
-        return {"records": [server if rtype == "A" else "same"], "ttl": 100 if server == "first" else 50}
+        return {
+            "records": [server if rtype == "A" else "same"],
+            "ttl": 100 if server == "first" else 50,
+        }
 
     monkeypatch.setattr(compare, "resolve_with_timer", resolve)
     progress = Mock()

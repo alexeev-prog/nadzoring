@@ -82,8 +82,16 @@ def test_certificate_fetch(monkeypatch, certificate, mode):
 @pytest.mark.parametrize(
     "key,algorithm,strength",
     [
-        (rsa.generate_private_key(public_exponent=65537, key_size=1024).public_key(), "RSA", "weak"),
-        (rsa.generate_private_key(public_exponent=65537, key_size=2048).public_key(), "RSA", "good"),
+        (
+            rsa.generate_private_key(public_exponent=65537, key_size=1024).public_key(),
+            "RSA",
+            "weak",
+        ),
+        (
+            rsa.generate_private_key(public_exponent=65537, key_size=2048).public_key(),
+            "RSA",
+            "good",
+        ),
         (dsa.generate_private_key(key_size=1024).public_key(), "DSA", "weak"),
         (ec.generate_private_key(ec.SECP256R1()).public_key(), "EC", "good"),
         (ed25519.Ed25519PrivateKey.generate().public_key(), "Ed25519", "strong"),
@@ -102,10 +110,23 @@ def test_certificate_names(certificate):
     """Read subject, issuer, SAN, wildcard DNS names, and IP addresses."""
     assert certs.get_subject_info(certificate) == {"CN": "example.com", "O": "Example"}
     assert certs.get_issuer_info(certificate) == {"CN": "example.com", "O": "Example"}
-    assert certs.get_san_list(certificate) == ["DNS:example.com", "DNS:*.example.com", "IP:192.0.2.1"]
-    assert certs.check_domain_match(certificate, "example.com") == (True, ["DNS:example.com", "CN:example.com"])
-    assert certs.check_domain_match(certificate, "www.example.com") == (True, ["DNS:*.example.com"])
-    assert certs.check_domain_match(certificate, "192.0.2.1") == (True, ["IP:192.0.2.1"])
+    assert certs.get_san_list(certificate) == [
+        "DNS:example.com",
+        "DNS:*.example.com",
+        "IP:192.0.2.1",
+    ]
+    assert certs.check_domain_match(certificate, "example.com") == (
+        True,
+        ["DNS:example.com", "CN:example.com"],
+    )
+    assert certs.check_domain_match(certificate, "www.example.com") == (
+        True,
+        ["DNS:*.example.com"],
+    )
+    assert certs.check_domain_match(certificate, "192.0.2.1") == (
+        True,
+        ["IP:192.0.2.1"],
+    )
     assert certs.check_domain_match(certificate, "unrelated.net") == (False, [])
     assert not certs._match_wildcard("example.com", "www.example.com")
     assert not certs._match_wildcard("*.example.com", "deep.www.example.com")
@@ -134,7 +155,11 @@ def test_protocol_support(monkeypatch):
     """Separate accepted and rejected protocol versions."""
     monkeypatch.setattr(certs, "_probe_tls_version", Mock(side_effect=[True, False, True, False]))
     result = certs.check_protocols_and_ciphers("example.com")
-    assert result == {"supported": ["TLSv1.0", "TLSv1.2"], "failed": ["TLSv1.1", "TLSv1.3"], "has_outdated": True}
+    assert result == {
+        "supported": ["TLSv1.0", "TLSv1.2"],
+        "failed": ["TLSv1.1", "TLSv1.3"],
+        "has_outdated": True,
+    }
 
 
 def test_certificate_compatibility_helpers(certificate):
@@ -151,7 +176,11 @@ def test_comprehensive_certificate_check(monkeypatch, certificate, verify, chain
     """Compose parsed certificate metadata and verification status."""
     info = Mock(cert=certificate, chain=[certificate] if chain else [])
     monkeypatch.setattr(certs, "CertificateInfo", Mock(return_value=info))
-    monkeypatch.setattr(certs, "check_protocols_and_ciphers", Mock(return_value={"supported": ["TLSv1.3"]}))
+    monkeypatch.setattr(
+        certs,
+        "check_protocols_and_ciphers",
+        Mock(return_value={"supported": ["TLSv1.3"]}),
+    )
     result = certs.check_ssl_certificate("example.com", verify=verify)
     assert result["status"] == "valid"
     assert result["domain_match"] is True
@@ -172,7 +201,10 @@ def test_comprehensive_certificate_check(monkeypatch, certificate, verify, chain
         (TimeoutError(), "Connection timeout"),
         (ssl.SSLError(), "SSL handshake failed"),
         (ConnectionError(), "Connection failed"),
-        (RuntimeError("Server did not return a certificate"), "No certificate returned"),
+        (
+            RuntimeError("Server did not return a certificate"),
+            "No certificate returned",
+        ),
         (RuntimeError("other"), "SSL handshake failed"),
         (ValueError(), "SSL handshake failed"),
     ],

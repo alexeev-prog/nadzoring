@@ -9,13 +9,19 @@ import pytest
 from nadzoring.plugins.examples import frameworks as framework
 
 
-@pytest.mark.parametrize("connector", [framework.FlaskConnector, framework.DjangoConnector, framework.FastAPIConnector])
+@pytest.mark.parametrize(
+    "connector",
+    [framework.FlaskConnector, framework.DjangoConnector, framework.FastAPIConnector],
+)
 @pytest.mark.parametrize(
     "failure,status",
     [
         (TimeoutError("timeout"), "unreachable"),
         (OSError("offline"), "unreachable"),
-        (urllib.error.HTTPError("https://example.com", 500, "failed", {}, None), "error"),
+        (
+            urllib.error.HTTPError("https://example.com", 500, "failed", {}, None),
+            "error",
+        ),
     ],
 )
 def test_framework_health_errors(monkeypatch, connector, failure, status):
@@ -26,14 +32,20 @@ def test_framework_health_errors(monkeypatch, connector, failure, status):
     assert result.error
 
 
-@pytest.mark.parametrize("connector", [framework.FlaskConnector, framework.DjangoConnector, framework.FastAPIConnector])
+@pytest.mark.parametrize(
+    "connector",
+    [framework.FlaskConnector, framework.DjangoConnector, framework.FastAPIConnector],
+)
 def test_framework_unhealthy_body(monkeypatch, connector):
     """Report degraded status from application-level health failures."""
     monkeypatch.setattr(framework, "_request", Mock(return_value=(200, '{"status":"failed"}')))
     assert connector("https://example.com").probe().status == "degraded"
 
 
-@pytest.mark.parametrize("connector", [framework.FlaskConnector, framework.DjangoConnector, framework.FastAPIConnector])
+@pytest.mark.parametrize(
+    "connector",
+    [framework.FlaskConnector, framework.DjangoConnector, framework.FastAPIConnector],
+)
 @pytest.mark.parametrize("failure", [None, "http", "network"])
 def test_framework_optional_checks(monkeypatch, connector, failure):
     """Inspect optional endpoints and expose unsuccessful extra checks."""
