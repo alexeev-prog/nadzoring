@@ -14,6 +14,7 @@ Subpackages
 
    nadzoring.arp
    nadzoring.commands
+   nadzoring.core
    nadzoring.dns_lookup
    nadzoring.network_base
    nadzoring.security

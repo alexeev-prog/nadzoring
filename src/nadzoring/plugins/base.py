@@ -74,8 +74,7 @@ class ConnectorBase(abc.ABC):
                 self.target = target
                 self.timeout_config = timeout_config or TimeoutConfig()
 
-            def probe(self) -> ProbeResult:
-                ...
+            def probe(self) -> ProbeResult: ...
     """
 
     meta: ClassVar[ConnectorMeta]

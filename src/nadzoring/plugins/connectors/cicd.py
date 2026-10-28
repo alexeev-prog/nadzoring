@@ -212,10 +212,7 @@ class GithubActionsConnector(ConnectorBase):
             :class:`ProbeResult` with ``details["conclusion"]`` and
             ``details["run_url"]``.
         """
-        url = (
-            f"{self._API_BASE}/repos/{self.owner}/{self.repo}"
-            f"/actions/workflows/{self.workflow_id}/runs?per_page=1"
-        )
+        url = f"{self._API_BASE}/repos/{self.owner}/{self.repo}/actions/workflows/{self.workflow_id}/runs?per_page=1"
         headers = {
             "Authorization": f"Bearer {self.token}",
             "Accept": "application/vnd.github+json",
@@ -296,10 +293,7 @@ class GitlabCIConnector(ConnectorBase):
             ``details["pipeline_url"]``.
         """
         base = self.gitlab_url.rstrip("/")
-        url = (
-            f"{base}/api/v4/projects/{self.project_id}"
-            f"/pipelines?ref={self.ref}&per_page=1&order_by=id&sort=desc"
-        )
+        url = f"{base}/api/v4/projects/{self.project_id}/pipelines?ref={self.ref}&per_page=1&order_by=id&sort=desc"
         headers = {"PRIVATE-TOKEN": self.token}
         start = time.perf_counter()
         try:
@@ -378,13 +372,8 @@ class JenkinsConnector(ConnectorBase):
         import base64
 
         job_path = "/job/".join(self.job_name.split("/"))
-        url = (
-            self.jenkins_url.rstrip("/")
-            + f"/job/{job_path}/lastBuild/api/json"
-        )
-        credentials = base64.b64encode(
-            f"{self.username}:{self.api_token}".encode()
-        ).decode()
+        url = self.jenkins_url.rstrip("/") + f"/job/{job_path}/lastBuild/api/json"
+        credentials = base64.b64encode(f"{self.username}:{self.api_token}".encode()).decode()
         headers = {"Authorization": f"Basic {credentials}"}
 
         start = time.perf_counter()

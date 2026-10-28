@@ -16,7 +16,7 @@ Quick start::
     from nadzoring.plugins.connectors import (
         DnsResolveConnector,
         SslCertConnector,
-        FlaskConnector,       # from examples
+        FlaskConnector,  # from examples
     )
 
     registry = PluginRegistry()

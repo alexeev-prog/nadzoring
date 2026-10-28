@@ -213,6 +213,28 @@ These options work with every command:
 2. Generic `--timeout` (applies to both phases when phase-specific not set)
 3. Module-level defaults (shown above)
 
+### Installation Diagnostics and Updates
+
+The `core` group provides package-level diagnostics and self-management:
+
+```bash
+nadzoring core doctor --format json
+nadzoring core check-deps --strict
+nadzoring core check-permissions --verbose
+nadzoring core check-network --target pypi.org --timeout 15
+nadzoring core version --check
+nadzoring core changelog --version 0.2.2
+nadzoring core update --dry-run
+nadzoring core update --yes --installer pip
+```
+
+All commands support table, JSON and YAML output, `--quiet`, and `--no-color`.
+Exit codes are **0** (OK), **1** (warning), **2** (error), and **3** (update
+available). Release API responses are cached for one hour. Updates target the
+running interpreter and require explicit `--yes`; dry runs never execute an
+installer. See the [core command reference](docs/cli/core.rst) for the output
+schema, timeout behavior, permission checks, and installation-manager caveats.
+
 ### Interactive Shell
 
 Run multiple diagnostics without restarting the CLI:

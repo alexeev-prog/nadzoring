@@ -73,7 +73,9 @@ instance/
 
 # Sphinx documentation
 docs/_build/
-docs/source/api
+docs/source/api/*
+!docs/source/api/nadzoring.core*.rst
+!docs/source/api/nadzoring.commands.core_commands.rst
 
 # PyBuilder
 .pybuilder/
@@ -215,4 +217,3 @@ genapidoc.sh
 mutants/
 
 .grimp_cache
-

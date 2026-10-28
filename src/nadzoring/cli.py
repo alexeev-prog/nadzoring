@@ -5,6 +5,7 @@ import click
 from nadzoring.commands import (
     arp_group,
     completion_group,
+    core_group,
     dns_group,
     network_group,
     security_group,
@@ -31,6 +32,7 @@ cli.add_command(dns_group)
 cli.add_command(arp_group)
 cli.add_command(security_group)
 cli.add_command(completion_group)
+cli.add_command(core_group)
 
 
 def main() -> None:

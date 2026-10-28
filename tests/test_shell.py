@@ -10,9 +10,9 @@ import pytest
 from click.testing import CliRunner
 
 from nadzoring.cli import cli
+from nadzoring.shell import terminal
 from nadzoring.shell.completion import _output_choices, complete_line
 from nadzoring.shell.session import ShellSession, start_interactive
-from nadzoring.shell import terminal
 from nadzoring.utils.decorators import common_cli_options
 
 
@@ -272,8 +272,9 @@ def test_history_write_error_and_blank_lines(command, tmp_path, monkeypatch, cap
 
 def test_toolkit_adapter(monkeypatch):
     pytest.importorskip("prompt_toolkit")
-    from prompt_toolkit.document import Document
     from prompt_toolkit.completion import CompleteEvent
+    from prompt_toolkit.document import Document
+
     from nadzoring.shell.toolkit import ClickCompleter, toolkit_input
 
     results = list(ClickCompleter(cli).get_completions(Document("dns re"), CompleteEvent()))

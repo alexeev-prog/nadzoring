@@ -68,6 +68,7 @@ Versions
    :caption: Contents:
 
    source/index
+   cli/core
 
 Indices and tables
 ==================

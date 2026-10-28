@@ -67,9 +67,7 @@ class SslCertConnector(ConnectorBase):
                     timeout_config=self.timeout_config,
                 )
             else:
-                res = check_ssl_expiry_with_fallback(
-                    domain, self.days_before, self.timeout_config
-                )
+                res = check_ssl_expiry_with_fallback(domain, self.days_before, self.timeout_config)
 
             if res.get("error"):
                 errors.append(f"{domain}: {res['error']}")
@@ -81,8 +79,7 @@ class SslCertConnector(ConnectorBase):
 
         # Determine overall status from expiry warnings
         expiring = [
-            r for r in results
-            if r.get("days_remaining") is not None and r["days_remaining"] <= self.days_before
+            r for r in results if r.get("days_remaining") is not None and r["days_remaining"] <= self.days_before
         ]
         return ProbeResult(
             status="degraded" if expiring or errors else "ok",
@@ -178,11 +175,7 @@ class EmailSecurityConnector(ConnectorBase):
         ]
         return ProbeResult(
             status="degraded" if missing else "ok",
-            error=(
-                f"Missing/invalid SPF or DMARC on: {', '.join(missing)}"
-                if missing
-                else None
-            ),
+            error=(f"Missing/invalid SPF or DMARC on: {', '.join(missing)}" if missing else None),
             details={"data": results},
         )
 
