@@ -14,6 +14,7 @@ Thank you for your interest in contributing! Please read this guide carefully be
   - [Development Setup](#development-setup)
     - [Prerequisites](#prerequisites)
     - [Installation](#installation)
+    - [Pre-commit Hooks](#pre-commit-hooks)
     - [Running Tests](#running-tests)
     - [Linting, Formatting \& Type Checking](#linting-formatting--type-checking)
   - [Code Style](#code-style)
@@ -75,6 +76,25 @@ source .venv/bin/activate   # Linux / macOS
 
 uv sync
 ```
+
+### Pre-commit Hooks
+
+After running `uv sync`, install pre-commit and enable the Git hooks:
+
+```bash
+uv tool install pre-commit
+pre-commit install
+pre-commit run --all-files
+```
+
+Alternatively, install it with `pip install pre-commit` before running
+`pre-commit install`.
+
+The hooks fix trailing whitespace and end-of-file issues in text files, and run
+Ruff linting, Ruff formatting, and mypy for `src/nadzoring/`. Ruff and mypy use
+the project's dependencies through `uv run`; mypy checks the entire package
+to catch cross-module errors. Tests are not linted or type-checked by these hooks.
+If a hook modifies files, review and stage the changes, then retry the commit.
 
 ### Running Tests
 
