@@ -79,10 +79,13 @@ uv sync
 ### Running Tests
 
 ```bash
-pytest --cov=nadzoring --cov-report=term-missing
+uv run nox -s test
 ```
 
-100% test coverage is required for all new code.
+The test session enforces 100% statement coverage across `src/nadzoring/`,
+including CLI commands, domain modules, and plugin connectors. Mock external
+network and system dependencies rather than relying on live services or root
+privileges. Do not exclude uncovered application code to meet the threshold.
 
 ### Linting, Formatting & Type Checking
 
