@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.15' and sys_platform == 'win32'",
@@ -1625,11 +1625,11 @@ wheels = [
 
 [[package]]
 name = "ping3"
-version = "5.1.5"
+version = "5.1.6"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/0d/e5/702dfb79e74990585d502734065f8a1610d18473bbd4bd18e4058abe9dbc/ping3-5.1.5.tar.gz", hash = "sha256:6c99bc844e0b7dbc5c9765e8b530140daf1ccd2112c99db01ab79831bd8081cd", size = 19995, upload-time = "2025-08-10T16:07:30.582Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/03/e4/e62cd5de1144c64c4eabed41096745ab16b6bf47b695c68a0f81cf8df756/ping3-5.1.6.tar.gz", hash = "sha256:72588d79400d65dcd39c6c88a8f54b10ec46a9a0ff0a3e167d967e7e9c4fbe02", size = 24300, upload-time = "2026-09-30T05:31:47.681Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/34/03/2580e349f6cab60865456db4b8984a50c91c98e88fc5055a3cd7c30485a5/ping3-5.1.5-py3-none-any.whl", hash = "sha256:9503164d054b87b01a6bd0df83a49c29e7c8427eb06940f874ebd4ed2d8ba8f6", size = 15945, upload-time = "2025-08-10T16:07:28.777Z" },
+    { url = "https://files.pythonhosted.org/packages/84/72/6013bfb372b4b17665a1d5a057696e2ee3b3084ed33a7ad7628b6d9c439a/ping3-5.1.6-py3-none-any.whl", hash = "sha256:d8aadd2f02372fdbf15650fb1d20d57e084eb84f49a54c864c783da2929e5811", size = 16126, upload-time = "2026-09-30T05:31:46.514Z" },
 ]
 
 [[package]]
