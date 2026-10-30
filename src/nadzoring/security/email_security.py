@@ -255,7 +255,7 @@ def _analyse_dkim(domain: str) -> DkimResult:
     return result
 
 
-def _analyse_dmarc(domain: str) -> DmarcResult:  # noqa: C901
+def _analyse_dmarc(domain: str) -> DmarcResult:  # ruff: ignore[complex-structure]
     """
     Analyse the DMARC record for a domain.
 
@@ -280,7 +280,7 @@ def _analyse_dmarc(domain: str) -> DmarcResult:  # noqa: C901
 
     tags: dict[str, str] = {}
     for token in result.record.split(";"):
-        token = token.strip()  # noqa: PLW2901
+        token = token.strip()  # ruff: ignore[redefined-loop-name]
         if "=" in token:
             k, _, v = token.partition("=")
             tags[k.strip().lower()] = v.strip()

@@ -92,7 +92,7 @@ def _parse_proxy_url(proxy_url: str) -> tuple[str, str, int]:
             try:
                 port = int(port_str)
                 if port < 1 or port > 65535:
-                    raise ValueError(f"Port out of range: {port}")  # noqa: TRY301
+                    raise ValueError(f"Port out of range: {port}")  # ruff: ignore[raise-within-try]
             except ValueError:
                 port = 1080 if protocol.startswith("socks") else 8080
     else:
@@ -118,7 +118,7 @@ def _setup_global_proxy(proxy: str | None) -> None:
     """
     if not proxy:
         if hasattr(socket, "_original_socket"):
-            socket.socket = socket._original_socket  # type: ignore  # noqa: SLF001
+            socket.socket = socket._original_socket  # type: ignore  # ruff: ignore[private-member-access]
 
         for env_var in ["HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"]:
             os.environ.pop(env_var, None)
@@ -128,11 +128,11 @@ def _setup_global_proxy(proxy: str | None) -> None:
         protocol, host, port = _parse_proxy_url(proxy)
 
         if protocol == "socks5":
-            socket._original_socket = socket.socket  # type: ignore  # noqa: SLF001
+            socket._original_socket = socket.socket  # type: ignore  # ruff: ignore[private-member-access]
             socks.set_default_proxy(socks.SOCKS5, host, port)
             socket.socket = socks.socksocket  # type: ignore
         elif protocol == "socks4":
-            socket._original_socket = socket.socket  # type: ignore  # noqa: SLF001
+            socket._original_socket = socket.socket  # type: ignore  # ruff: ignore[private-member-access]
             socks.set_default_proxy(socks.SOCKS4, host, port)
             socket.socket = socks.socksocket  # type: ignore
 

@@ -137,7 +137,7 @@ def changelog(version: str | None = None, *, timeout_config: TimeoutConfig | Non
 
 
 def _decode_changelog(data: dict[str, Any], version: str) -> str:
-    import base64  # noqa: PLC0415 -- only needed for GitHub Contents API fallback
+    import base64  # ruff: ignore[import-outside-top-level] -- only needed for GitHub Contents API fallback
 
     return _changelog_section(base64.b64decode(data["content"], validate=False).decode("utf-8"), version)
 

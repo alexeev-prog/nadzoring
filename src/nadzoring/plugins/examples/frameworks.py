@@ -262,7 +262,7 @@ class DjangoConnector(ConnectorBase):
     extra_checks: list[str] = field(default_factory=list)
     timeout_config: TimeoutConfig = field(default_factory=TimeoutConfig)
 
-    def probe(self) -> ProbeResult:  # noqa: C901
+    def probe(self) -> ProbeResult:  # ruff: ignore[complex-structure]
         t = self.timeout_config.read
         details: dict[str, Any] = {}
         start = time.perf_counter()
@@ -400,7 +400,7 @@ class FastAPIConnector(ConnectorBase):
     extra_checks: list[str] = field(default_factory=list)
     timeout_config: TimeoutConfig = field(default_factory=TimeoutConfig)
 
-    def probe(self) -> ProbeResult:  # noqa: C901
+    def probe(self) -> ProbeResult:  # ruff: ignore[complex-structure]
         t = self.timeout_config.read
         details: dict[str, Any] = {}
         start = time.perf_counter()

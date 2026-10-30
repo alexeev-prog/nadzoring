@@ -641,7 +641,7 @@ def format_dns_health(health_result: dict[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 
-def format_dns_poisoning(  # noqa: C901
+def format_dns_poisoning(  # ruff: ignore[complex-structure]
     poisoning_result: dict[str, Any],
 ) -> list[dict[str, Any]]:
     """
@@ -802,7 +802,7 @@ def format_dns_poisoning(  # noqa: C901
             if itype == "Cdn Variation":
                 note: str = f"CDN node variation - same provider: {inc.get('owner', 'Unknown')}"
             elif itype == "Record Mismatch":
-                note = f"Control owner: {inc.get('control_owner', 'Unknown')} | Test owner: {inc.get('test_owner', 'Unknown')}"  # noqa: E501
+                note = f"Control owner: {inc.get('control_owner', 'Unknown')} | Test owner: {inc.get('test_owner', 'Unknown')}"  # ruff: ignore[line-too-long]
             elif itype == "Error Mismatch":
                 note = f"Control error: {inc['control_error']} | Test error: {inc['test_error']}"
             else:
