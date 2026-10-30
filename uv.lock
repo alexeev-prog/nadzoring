@@ -2492,11 +2492,11 @@ wheels = [
 
 [[package]]
 name = "types-pysocks"
-version = "1.7.1.20260508"
+version = "1.7.1.20260518"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ad/64/7141f6e2cc2b3188108dfbef7bdc13197c742db3867b567a958d6b2dd670/types_pysocks-1.7.1.20260508.tar.gz", hash = "sha256:134f8fcc5abd80a47da0787f390b84ed878add257d3bcc388af8851939abbe18", size = 8879, upload-time = "2026-05-08T04:48:12.074Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b3/6e/9f03a9eecb77b3c54870818877f00c2120570d6768efcc317522a157b002/types_pysocks-1.7.1.20260518.tar.gz", hash = "sha256:0ef3ae07bff70b2baa21b2ee323a724ceb7b242d13102528c5b495bbf2dc053c", size = 8915, upload-time = "2026-05-18T06:04:36.451Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a4/9b/7a859a94e448d28c16408a6856d16b533983014a927ffe7aa2db5206ecf5/types_pysocks-1.7.1.20260508-py3-none-any.whl", hash = "sha256:b3e95b73ed56d3de0d961aa842c9dae7e587c2026764365e16968064addc81fc", size = 9611, upload-time = "2026-05-08T04:48:11.23Z" },
+    { url = "https://files.pythonhosted.org/packages/d7/c5/eff9e732f267e6fe01a3cc91461804ddb35db3985feebe2711fb97093bd7/types_pysocks-1.7.1.20260518-py3-none-any.whl", hash = "sha256:2adc0bb2f696017ea6a8ed834d3f74d4d8b347b19a0ef25e96e939737f222295", size = 9621, upload-time = "2026-05-18T06:04:35.706Z" },
 ]
 
 [[package]]
