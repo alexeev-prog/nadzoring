@@ -105,7 +105,10 @@ def detect_service_on_host(
     guessed: str = get_service_on_port(port)
 
     sock = None
-    try:
+
+    def probe() -> ServiceDetectionResult:
+        """Exchange a service probe and interpret the banner."""
+        nonlocal sock
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(timeout_config.connect)
         sock.connect((host, port))
@@ -128,6 +131,8 @@ def detect_service_on_host(
             method="banner",
         )
 
+    try:
+        return probe()
     except ConnectionRefusedError:
         return ServiceDetectionResult(
             port=port,

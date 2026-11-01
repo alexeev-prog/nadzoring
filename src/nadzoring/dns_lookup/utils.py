@@ -259,19 +259,22 @@ def resolve_with_timer(
     if timeout_config is None:
         timeout_config = TimeoutConfig(connect=5.0, read=5.0, lifetime=10.0)
 
-    try:
+    def resolve() -> None:
+        """Resolve records while retaining resolver-specific errors."""
+
+        def query() -> None:
+            """Populate the timed DNS answer."""
+            resolver: Resolver = create_resolver(nameserver, timeout_config)
+            start_time: float = time()
+            answers: Answer = resolver.resolve(domain, record_type)
+            result["response_time"] = round((time() - start_time) * 1000, 2)
+            if answers.rrset and include_ttl:
+                result["ttl"] = answers.rrset.ttl
+            result["records"] = extract_records(answers, record_type)
+
         with timeout_context(timeout_config):
             try:
-                resolver: Resolver = create_resolver(nameserver, timeout_config)
-                start_time: float = time()
-                answers: Answer = resolver.resolve(domain, record_type)
-                result["response_time"] = round((time() - start_time) * 1000, 2)
-
-                if answers.rrset and include_ttl:
-                    result["ttl"] = answers.rrset.ttl
-
-                result["records"] = extract_records(answers, record_type)
-
+                query()
             except dns.resolver.NoAnswer:
                 result["error"] = "No records of requested type"
             except dns.resolver.NXDOMAIN:
@@ -282,6 +285,9 @@ def resolve_with_timer(
             except Exception as exc:
                 result["error"] = "Resolver error"
                 logger.debug("DNS resolution failed for %s %s: %s", domain, record_type, exc)
+
+    try:
+        resolve()
     except OperationTimeoutError:
         result["error"] = "Operation exceeded lifetime timeout"
 
@@ -348,7 +354,8 @@ async def resolve_with_timer_async(
 
     result: DNSResult = _make_empty_result(domain, record_type)
 
-    try:
+    async def query() -> None:
+        """Populate the timed asynchronous DNS answer."""
         resolver: AsyncResolver = create_async_resolver(nameserver, timeout_config)
         start_time: float = time()
         answers: Answer = await resolver.resolve(domain, record_type)
@@ -359,6 +366,8 @@ async def resolve_with_timer_async(
 
         result["records"] = extract_records(answers, record_type)
 
+    try:
+        await query()
     except dns.resolver.NoAnswer:
         result["error"] = "No records of requested type"
     except dns.resolver.NXDOMAIN:

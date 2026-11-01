@@ -149,6 +149,21 @@ class FlaskConnector(ConnectorBase):
     extra_checks: list[str] = field(default_factory=list)
     timeout_config: TimeoutConfig = field(default_factory=TimeoutConfig)
 
+    def _health_status(self, body: str, latency_ms: float, details: dict[str, Any]) -> ProbeResult | None:
+        """Validate the optional Flask JSON health status."""
+        if self.check_json:
+            data = _json(body)
+            body_status = str(data.get("status", "")).lower()
+            details["health"]["body_status"] = body_status
+            if body_status not in {"ok", "healthy", ""}:
+                return ProbeResult(
+                    status="degraded",
+                    latency_ms=latency_ms,
+                    error=f"Flask reported status '{body_status}'",
+                    details=details,
+                )
+        return None
+
     def probe(self) -> ProbeResult:
         t = self.timeout_config.read
         details: dict[str, Any] = {}
@@ -156,22 +171,9 @@ class FlaskConnector(ConnectorBase):
 
         # --- 1. Liveness ---
         health_url = self.base_url.rstrip("/") + self.health_path
+
         try:
             http_status, body = _request(health_url, timeout=t)
-            latency_ms = (time.perf_counter() - start) * 1000
-            details["health"] = {"http_status": http_status, "latency_ms": round(latency_ms, 2)}
-
-            if self.check_json:
-                data = _json(body)
-                body_status = str(data.get("status", "")).lower()
-                details["health"]["body_status"] = body_status
-                if body_status not in {"ok", "healthy", ""}:
-                    return ProbeResult(
-                        status="degraded",
-                        latency_ms=latency_ms,
-                        error=f"Flask reported status '{body_status}'",
-                        details=details,
-                    )
         except urllib.error.HTTPError as exc:
             latency_ms = (time.perf_counter() - start) * 1000
             details["health"] = {"http_status": exc.code}
@@ -185,6 +187,12 @@ class FlaskConnector(ConnectorBase):
             return ProbeResult(status="unreachable", error="Flask health check timed out", details=details)
         except (urllib.error.URLError, OSError) as exc:
             return ProbeResult(status="unreachable", error=str(exc), details=details)
+        else:
+            latency_ms = (time.perf_counter() - start) * 1000
+            details["health"] = {"http_status": http_status, "latency_ms": round(latency_ms, 2)}
+            health_result = self._health_status(body, latency_ms, details)
+            if health_result is not None:
+                return health_result
 
         # --- 2. Metrics (optional) ---
         if self.check_metrics:
@@ -269,7 +277,11 @@ class DjangoConnector(ConnectorBase):
 
         # --- 1. Health ---
         health_url = self.base_url.rstrip("/") + self.health_path
-        try:
+        latency_ms = 0.0
+
+        def check_health() -> ProbeResult | None:
+            """Read Django health and validate its optional JSON checks."""
+            nonlocal latency_ms
             http_status, body = _request(
                 health_url,
                 headers={"Accept": "application/json"},
@@ -289,6 +301,12 @@ class DjangoConnector(ConnectorBase):
                         error=f"Failing health checks: {', '.join(failed)}",
                         details=details,
                     )
+            return None
+
+        try:
+            health_result = check_health()
+            if health_result is not None:
+                return health_result
         except urllib.error.HTTPError as exc:
             latency_ms = (time.perf_counter() - start) * 1000
             body_text = exc.read().decode(errors="replace") if exc.fp else ""
@@ -407,7 +425,12 @@ class FastAPIConnector(ConnectorBase):
 
         # --- 1. Liveness ---
         health_url = self.base_url.rstrip("/") + self.health_path
-        try:
+
+        latency_ms = 0.0
+
+        def check_health() -> ProbeResult | None:
+            """Read FastAPI health and validate its JSON status."""
+            nonlocal latency_ms
             http_status, body = _request(health_url, timeout=t)
             latency_ms = (time.perf_counter() - start) * 1000
             data = _json(body)
@@ -424,6 +447,12 @@ class FastAPIConnector(ConnectorBase):
                     error=f"FastAPI reported status '{body_status}'",
                     details=details,
                 )
+            return None
+
+        try:
+            health_result = check_health()
+            if health_result is not None:
+                return health_result
         except urllib.error.HTTPError as exc:
             latency_ms = (time.perf_counter() - start) * 1000
             body_text = exc.read().decode(errors="replace") if exc.fp else ""

@@ -1,7 +1,7 @@
 """Prompt toolkit adapter, loaded only when the optional dependency is available."""
 
 import re
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator, Iterator
 from contextlib import contextmanager
 
 import click
@@ -86,7 +86,7 @@ class ClickCompleter(Completer):
 
 
 @contextmanager
-def toolkit_input(command: click.Group, history: list[str]) -> Iterator[Callable[[], str]]:
+def toolkit_input(command: click.Group, history: list[str]) -> Generator[Callable[[], str]]:
     """Create a prompt toolkit session with the shared history.
 
     Args:

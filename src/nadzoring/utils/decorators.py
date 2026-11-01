@@ -124,7 +124,8 @@ def _setup_global_proxy(proxy: str | None) -> None:
             os.environ.pop(env_var, None)
         return
 
-    try:
+    def configure() -> None:
+        """Install the selected socket or HTTP proxy."""
         protocol, host, port = _parse_proxy_url(proxy)
 
         if protocol == "socks5":
@@ -151,6 +152,9 @@ def _setup_global_proxy(proxy: str | None) -> None:
             })
             opener = urllib.request.build_opener(proxy_handler)
             urllib.request.install_opener(opener)
+
+    try:
+        configure()
     except Exception as e:
         raise click.ClickException(f"Failed to setup proxy '{proxy}': {e}") from e
 

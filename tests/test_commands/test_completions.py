@@ -1,4 +1,3 @@
-import pathlib
 from unittest.mock import MagicMock, patch
 
 import click
@@ -368,7 +367,7 @@ class TestIntegration:
     def runner(self):
         return CliRunner()
 
-    def test_complete_flow_bash(self, runner):
+    def test_complete_flow_bash(self, runner, tmp_path):
         with patch("nadzoring.commands.completions_commands._get_root_cli_and_prog_name") as mock_get:
             mock_cli = click.Group(name="nadzoring")
             mock_get.return_value = (mock_cli, "nadzoring")
@@ -376,14 +375,14 @@ class TestIntegration:
             result = runner.invoke(completion_group, ["bash"])
             assert result.exit_code == 0
 
-            with runner.isolated_filesystem():
-                pathlib.Path("completion.bash").write_text(result.output)
+            completion_file = tmp_path / "completion.bash"
+            completion_file.write_text(result.output)
 
-                with pathlib.Path("completion.bash").open() as f:
-                    content = f.read()
-                    assert "_NADZORING_COMPLETE" in content
-                    assert "complete" in content
-                    assert "nadzoring" in content
+            with completion_file.open() as f:
+                content = f.read()
+                assert "_NADZORING_COMPLETE" in content
+                assert "complete" in content
+                assert "nadzoring" in content
 
     def test_complete_flow_powershell(self, runner):
         with patch("nadzoring.commands.completions_commands._get_root_cli_and_prog_name") as mock_get:

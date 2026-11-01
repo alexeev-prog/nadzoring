@@ -1,6 +1,6 @@
 .. nadzoring documentation master file
 
-.. image:: nadzoring-logo.png
+.. image:: /nadzoring-logo.png
    :alt: Nadzoring Logo
    :width: 200px
    :align: center
@@ -50,16 +50,16 @@ Key Features
    :caption: Command Reference
 
    commands/all_commands
+   commands/arp
+   commands/dns
+   commands/network
+   commands/security
 
 .. toctree::
    :maxdepth: 2
    :caption: Python API Reference
 
-   api/dns_lookup
-   api/network_base
-   api/security
-   api/arp
-   api/utils
+   api/index
    shell_api
    plugins
    api_examples

@@ -2,6 +2,7 @@
 
 import contextlib
 import socket
+from collections.abc import Sequence
 from logging import Logger
 from socket import AddressFamily, SocketKind
 from typing import Any
@@ -15,7 +16,7 @@ from nadzoring.network_base.whois_lookup import whois_lookup
 
 logger: Logger = get_logger(__name__)
 
-type _AddrInfo = list[tuple[AddressFamily, SocketKind, int, str, tuple[Any, ...]]]
+type _AddrInfo = Sequence[tuple[AddressFamily, SocketKind, int, str, tuple[Any, ...]]]
 
 
 def _resolve_domain(domain: str) -> dict[str, str | None]:

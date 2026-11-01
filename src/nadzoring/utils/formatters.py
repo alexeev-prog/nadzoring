@@ -302,6 +302,56 @@ def print_html_table(data: Sequence[dict[str, Any]], *, full_page: bool = False)
         click.echo(_build_html_page("Nadzoring Results", html_table))
 
 
+def _write_results(data: Any, filename: str, fileformat: str) -> None:
+    """Serialize results and write the destination file."""
+    file_path = Path(filename)
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if fileformat == "json":
+        with file_path.open("w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False, default=str)
+
+    elif fileformat == "yaml":
+        with file_path.open("w", encoding="utf-8") as f:
+            yaml.dump(
+                data,
+                f,
+                allow_unicode=True,
+                default_flow_style=False,
+                sort_keys=False,
+                indent=2,
+                width=120,
+            )
+
+    elif fileformat == "csv":
+        with file_path.open("w", encoding="utf-8", newline="") as f:
+            if data:
+                writer = csv.DictWriter(f, fieldnames=data[0].keys())
+                writer.writeheader()
+                writer.writerows(data)
+
+    elif fileformat == "html":
+        html_table = tabulate.tabulate(data, headers="keys", tablefmt="html")
+        file_path.write_text(
+            _build_html_page("Nadzoring Analysis Results", html_table),
+            encoding="utf-8",
+        )
+
+    elif fileformat == "html_table":
+        file_path.write_text(
+            tabulate.tabulate(data, headers="keys", tablefmt="html"),
+            encoding="utf-8",
+        )
+
+    else:
+        file_path.write_text(
+            tabulate.tabulate(data, headers="keys", tablefmt="grid"),
+            encoding="utf-8",
+        )
+
+    click.secho(f"Results saved to {file_path}", fg="green")
+
+
 def save_results(
     data: Any,
     filename: str,
@@ -325,53 +375,7 @@ def save_results(
 
     """
     try:
-        file_path = Path(filename)
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-
-        if fileformat == "json":
-            with file_path.open("w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2, ensure_ascii=False, default=str)
-
-        elif fileformat == "yaml":
-            with file_path.open("w", encoding="utf-8") as f:
-                yaml.dump(
-                    data,
-                    f,
-                    allow_unicode=True,
-                    default_flow_style=False,
-                    sort_keys=False,
-                    indent=2,
-                    width=120,
-                )
-
-        elif fileformat == "csv":
-            with file_path.open("w", encoding="utf-8", newline="") as f:
-                if data:
-                    writer = csv.DictWriter(f, fieldnames=data[0].keys())
-                    writer.writeheader()
-                    writer.writerows(data)
-
-        elif fileformat == "html":
-            html_table = tabulate.tabulate(data, headers="keys", tablefmt="html")
-            file_path.write_text(
-                _build_html_page("Nadzoring Analysis Results", html_table),
-                encoding="utf-8",
-            )
-
-        elif fileformat == "html_table":
-            file_path.write_text(
-                tabulate.tabulate(data, headers="keys", tablefmt="html"),
-                encoding="utf-8",
-            )
-
-        else:
-            file_path.write_text(
-                tabulate.tabulate(data, headers="keys", tablefmt="grid"),
-                encoding="utf-8",
-            )
-
-        click.secho(f"Results saved to {file_path}", fg="green")
-
+        _write_results(data, filename, fileformat)
     except PermissionError:
         click.secho(f"Permission denied: cannot write to {filename}", fg="red", err=True)
     except OSError as exc:

@@ -63,47 +63,48 @@ def check_ssl_command(
 
     pbar: tqdm[Never] | None = None if quiet else tqdm(total=total, desc="Checking SSL certificates", unit="domain")
 
+    def check_domain(domain: str) -> None:
+        """Check and format one domain's certificate."""
+        if no_verify:
+            result: dict[str, Any] = check_ssl_expiry_with_fallback(domain, days_before, timeout_config=timeout_config)
+        else:
+            result = check_ssl_certificate_safe(domain, days_before, verify=True, timeout_config=timeout_config)
+
+        if not full:
+            filtered: dict[str, Any] = {
+                "domain": result["domain"],
+                "status": result.get("status", "unknown"),
+                "remaining_days": result.get("remaining_days"),
+                "expiry_date": result.get("expiry_date"),
+                "verification": result.get("verification"),
+                "issuer_cn": result.get("issuer", {}).get("CN", "Unknown"),
+                "subject_cn": result.get("subject", {}).get("CN", "Unknown"),
+                "key": (
+                    "{algorithm}/{curve_or_size}".format(
+                        algorithm=result.get("public_key", {}).get("algorithm", "?"),
+                        curve_or_size=(
+                            result.get("public_key", {}).get("curve")
+                            or str(result.get("public_key", {}).get("key_size", "?"))
+                        ),
+                    )
+                    if result.get("public_key")
+                    else None
+                ),
+                "domain_match": result.get("domain_match"),
+                "protocols_supported": ", ".join(result.get("protocols", {}).get("supported", [])) or None,
+                "has_outdated_protocols": result.get("protocols", {}).get("has_outdated"),
+            }
+            if "warning" in result:
+                filtered["warning"] = result["warning"]
+            if "error" in result:
+                filtered["error"] = result["error"]
+            results.append({k: v for k, v in filtered.items() if v is not None})
+        else:
+            results.append(result)
+
     for domain in domains:
         try:
-            if no_verify:
-                result: dict[str, Any] = check_ssl_expiry_with_fallback(
-                    domain, days_before, timeout_config=timeout_config
-                )
-            else:
-                result = check_ssl_certificate_safe(domain, days_before, verify=True, timeout_config=timeout_config)
-
-            if not full:
-                filtered: dict[str, Any] = {
-                    "domain": result["domain"],
-                    "status": result.get("status", "unknown"),
-                    "remaining_days": result.get("remaining_days"),
-                    "expiry_date": result.get("expiry_date"),
-                    "verification": result.get("verification"),
-                    "issuer_cn": result.get("issuer", {}).get("CN", "Unknown"),
-                    "subject_cn": result.get("subject", {}).get("CN", "Unknown"),
-                    "key": (
-                        "{algorithm}/{curve_or_size}".format(
-                            algorithm=result.get("public_key", {}).get("algorithm", "?"),
-                            curve_or_size=(
-                                result.get("public_key", {}).get("curve")
-                                or str(result.get("public_key", {}).get("key_size", "?"))
-                            ),
-                        )
-                        if result.get("public_key")
-                        else None
-                    ),
-                    "domain_match": result.get("domain_match"),
-                    "protocols_supported": ", ".join(result.get("protocols", {}).get("supported", [])) or None,
-                    "has_outdated_protocols": result.get("protocols", {}).get("has_outdated"),
-                }
-                if "warning" in result:
-                    filtered["warning"] = result["warning"]
-                if "error" in result:
-                    filtered["error"] = result["error"]
-                results.append({k: v for k, v in filtered.items() if v is not None})
-            else:
-                results.append(result)
-
+            check_domain(domain)
         except Exception as exc:
             results.append({
                 "domain": domain,

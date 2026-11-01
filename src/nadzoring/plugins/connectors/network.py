@@ -466,7 +466,9 @@ class TlsCertConnector(ConnectorBase):
 
         context = ssl.create_default_context()
         start = time.perf_counter()
-        try:
+
+        def handshake() -> ProbeResult:
+            """Read the peer certificate and assess its expiry."""
             with (
                 socket.create_connection(
                     (self.host, self.port),
@@ -506,6 +508,8 @@ class TlsCertConnector(ConnectorBase):
                 )
             return ProbeResult(status="ok", latency_ms=latency_ms, details=details)
 
+        try:
+            return handshake()
         except ssl.SSLCertVerificationError as exc:
             return _err(f"Certificate verification failed: {exc}")
         except TimeoutError:

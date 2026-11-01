@@ -1,6 +1,6 @@
-===============
+=====================
 CLI Command Reference
-===============
+=====================
 
 This page documents all CLI commands, their options, output formats, timeout configuration, and error handling patterns.
 

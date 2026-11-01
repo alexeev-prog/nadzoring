@@ -107,7 +107,9 @@ def _get_delegation_info(
         cannot be determined.
 
     """
-    try:
+
+    def resolve_delegation() -> str | None:
+        """Query authority records and resolve the next nameserver."""
         ns_query: QueryMessage = dns.message.make_query(current_domain, dns.rdatatype.NS)
         response: Message = dns.query.udp(ns_query, current_ns, timeout=timeout_config.connect)
 
@@ -130,6 +132,10 @@ def _get_delegation_info(
                 else:
                     return ns_ip
 
+        return None
+
+    try:
+        return resolve_delegation()
     except Exception as exc:
         hop["error"] = f"Delegation error: {exc}"
 

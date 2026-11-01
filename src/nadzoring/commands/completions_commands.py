@@ -51,7 +51,7 @@ class PowerShellComplete(ShellComplete):
 
     @property
     def func_name(self) -> str:
-        """Returns a PowerShell-safe function/variable name.
+        """A PowerShell-safe function/variable name.
 
         Replaces hyphens with underscores so the generated snippet is valid
         PowerShell syntax regardless of the program name.

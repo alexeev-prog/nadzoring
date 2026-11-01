@@ -247,7 +247,7 @@ Or use it in the current session only:
 Testing Completions
 ~~~~~~~~~~~~~~~~~~~
 
-After installation, type ``nadzoring `` followed by **TAB** to see available
+After installation, type ``nadzoring`` followed by a space and **TAB** to see available
 commands:
 
 .. code-block:: bash

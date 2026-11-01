@@ -118,11 +118,6 @@ def reverse_dns(
 
         start_time: float = time()
         answers: Answer = resolver.resolve(reverse_name, "PTR")
-        result["response_time"] = round((time() - start_time) * 1000, 2)
-
-        if answers:
-            result["hostname"] = str(answers[0]).rstrip(".")
-
     except dns.resolver.NoAnswer:
         result["error"] = "No PTR record"
     except dns.resolver.NXDOMAIN:
@@ -136,5 +131,9 @@ def reverse_dns(
     except Exception:
         result["error"] = "Resolver error"
         logger.debug("Reverse DNS failed for %s", ip_address)
+    else:
+        result["response_time"] = round((time() - start_time) * 1000, 2)
+        if answers:
+            result["hostname"] = str(answers[0]).rstrip(".")
 
     return result

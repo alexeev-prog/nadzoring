@@ -16,7 +16,8 @@ def parse_url(url: str) -> dict[str, str | int | list[tuple[str, str]] | None]:
 
     Returns:
         Dict[str, Union[str, int, List[Tuple[str, str]], None]]: A dictionary
-        containing the parsed URL components with the following keys:
+            containing the parsed URL components with the following keys:
+
             - original: The original URL string
             - protocol: The URL scheme (e.g., 'http', 'https', 'ftp')
             - username: Username component if present in the URL

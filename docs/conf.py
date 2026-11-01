@@ -14,7 +14,8 @@ sys.path.insert(0, os.path.abspath("../src/nadzoring"))
 sys.path.insert(0, os.path.abspath("src/nadzoring"))
 
 
-load(globals())
+if "POLYVERSION_DATA" in os.environ:
+    load(globals())
 
 project = "nadzoring"
 author = "Alexeev Bronislav"
@@ -49,11 +50,12 @@ extensions: list[str] = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.linkcode",
 ]
+napoleon_use_ivar = True
 
 pygments_style = "gruvbox-dark"
 
 html_theme = "furo"
-html_static_path: list[str] = ["_static"]
+html_static_path: list[str] = []
 
 html_js_files: list[tuple[str, dict[str, str]]] = [
     (

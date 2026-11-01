@@ -116,7 +116,9 @@ def changelog(version: str | None = None, *, timeout_config: TimeoutConfig | Non
     """
     config = timeout_config or TimeoutConfig()
     requested = version or current_version()
-    try:
+
+    def fetch() -> list[CheckResult]:
+        """Fetch release notes, falling back to the repository changelog."""
         normalized = str(Version(requested.removeprefix("v")))
         with timeout_context(config):
             try:
@@ -132,6 +134,9 @@ def changelog(version: str | None = None, *, timeout_config: TimeoutConfig | Non
                 pass
             data = _fetch_json(f"https://api.github.com/repos/{_REPOSITORY}/contents/CHANGELOG.md", config)
             return [result("changelog", _decode_changelog(data, normalized))]
+
+    try:
+        return fetch()
     except (requests.RequestException, OperationTimeoutError, ValueError, KeyError, TypeError) as exc:
         return [result("changelog", str(exc), "error")]
 

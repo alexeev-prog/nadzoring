@@ -632,7 +632,7 @@ dns monitor
 Continuously monitor DNS health and performance for a domain, logging
 each cycle to a structured JSONL file.
 
-See :doc:`/monitoring_dns` for the full monitoring guide.
+   See :doc:`../monitoring_dns` for the full monitoring guide.
 
 .. code-block:: text
 

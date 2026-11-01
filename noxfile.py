@@ -36,3 +36,10 @@ def mypy_typing(session):
     """Run mypy type checking."""
     session.run_always("uv", "sync", "--all-groups", external=True)
     session.run("uv", "run", "mypy", "src/nadzoring/")
+
+
+@nox.session(venv_backend="uv")
+def docs(session):
+    """Build documentation with warnings treated as errors."""
+    session.run_always("uv", "sync", "--all-groups", external=True)
+    session.run("uv", "run", "sphinx-build", "-W", "--keep-going", "-b", "html", "docs", "docs/_build/html")

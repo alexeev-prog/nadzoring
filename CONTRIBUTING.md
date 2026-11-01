@@ -126,6 +126,12 @@ pytest tests -s -v --tb=short --cov=src/nadzoring/ --strict-markers --cov-report
 All three commands must pass with **no warnings or errors** for code in `src/nadzoring`.
 Tests are exempt from these strict requirements, but they must still pass when run.
 
+Build the documentation locally with warnings treated as errors:
+
+```bash
+uv run nox -s docs
+```
+
 ---
 
 ## Code Style

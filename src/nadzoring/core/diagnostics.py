@@ -55,25 +55,30 @@ def check_dependencies(*, strict: bool = False) -> list[CheckResult]:
     required_names = {"nadzoring"}
     pending = [(text, "", True) for text in requirements]
     visited: set[tuple[str, str]] = set()
+
+    def check_requirement(text: str, extra: str, *, direct: bool) -> None:
+        """Validate one requirement and queue its dependencies."""
+        requirement = Requirement(text)
+        if requirement.marker and not requirement.marker.evaluate({"extra": extra}):
+            return
+        name = requirement.name.lower().replace("_", "-").replace(".", "-")
+        key = (str(requirement), extra)
+        if key in visited:
+            return
+        visited.add(key)
+        required_names.add(name)
+        installed = metadata.version(requirement.name)
+        if requirement.specifier and not requirement.specifier.contains(installed, prereleases=True):
+            rows.append(result(name, f"Installed {installed}; requires {requirement.specifier}", "error"))
+        elif direct:
+            rows.append(result(name, f"Installed {installed}; requires {requirement.specifier or 'any'}"))
+        for dependency in metadata.requires(requirement.name) or []:
+            pending.extend((dependency, requested_extra, False) for requested_extra in {"", *requirement.extras})
+
     while pending:
         text, extra, direct = pending.pop(0)
         try:
-            requirement = Requirement(text)
-            if requirement.marker and not requirement.marker.evaluate({"extra": extra}):
-                continue
-            name = requirement.name.lower().replace("_", "-").replace(".", "-")
-            key = (str(requirement), extra)
-            if key in visited:
-                continue
-            visited.add(key)
-            required_names.add(name)
-            installed = metadata.version(requirement.name)
-            if requirement.specifier and not requirement.specifier.contains(installed, prereleases=True):
-                rows.append(result(name, f"Installed {installed}; requires {requirement.specifier}", "error"))
-            elif direct:
-                rows.append(result(name, f"Installed {installed}; requires {requirement.specifier or 'any'}"))
-            for dependency in metadata.requires(requirement.name) or []:
-                pending.extend((dependency, requested_extra, False) for requested_extra in {"", *requirement.extras})
+            check_requirement(text, extra, direct=direct)
         except (metadata.PackageNotFoundError, InvalidRequirement, InvalidVersion) as exc:
             rows.append(result("dependencies", str(exc), "error"))
     installed_names = {
@@ -109,10 +114,11 @@ def check_permissions(*, verbose: bool = False) -> list[CheckResult]:
             with TemporaryFile(dir=parent) as stream:
                 stream.write(b"nadzoring permission probe")
                 stream.flush()
-            detail = f"Read/write access: {directory} (probed {parent})" if verbose else "Read/write access available"
-            rows.append(result(name, detail))
         except OSError as exc:
             rows.append(result(name, str(exc), "error"))
+        else:
+            detail = f"Read/write access: {directory} (probed {parent})" if verbose else "Read/write access available"
+            rows.append(result(name, detail))
     executable = os.access(sys.executable, os.X_OK)
     rows.append(result("executable", sys.executable, "ok" if executable else "error"))
     socket_types = (("socket", socket.SOCK_STREAM, 0), ("raw-socket", socket.SOCK_RAW, socket.IPPROTO_ICMP))

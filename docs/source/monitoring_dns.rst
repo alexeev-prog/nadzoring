@@ -356,7 +356,7 @@ Scheduling
 Cron (one cycle per minute)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. code-block:: cron
+.. code-block:: text
 
    * * * * * root nadzoring dns monitor example.com \
        --cycles 1 --quiet \

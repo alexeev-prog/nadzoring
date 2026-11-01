@@ -220,6 +220,13 @@ class GithubActionsConnector(ConnectorBase):
         start = time.perf_counter()
         try:
             _, body = _http_get_json(url, headers=headers, timeout=self.timeout_config.read)
+        except TimeoutError:
+            return ProbeResult(status="unreachable", error="GitHub API probe timed out")
+        except urllib.error.URLError as exc:
+            return ProbeResult(status="unreachable", error=str(exc.reason))
+        except OSError as exc:
+            return ProbeResult(status="error", error=str(exc))
+        else:
             latency_ms = (time.perf_counter() - start) * 1000
             runs = body.get("workflow_runs", [])
             if not runs:
@@ -246,12 +253,6 @@ class GithubActionsConnector(ConnectorBase):
                 )
             # in_progress / queued / neutral / skipped
             return ProbeResult(status="degraded", latency_ms=latency_ms, details=details)
-        except TimeoutError:
-            return ProbeResult(status="unreachable", error="GitHub API probe timed out")
-        except urllib.error.URLError as exc:
-            return ProbeResult(status="unreachable", error=str(exc.reason))
-        except OSError as exc:
-            return ProbeResult(status="error", error=str(exc))
 
 
 # ---------------------------------------------------------------------------
@@ -298,6 +299,13 @@ class GitlabCIConnector(ConnectorBase):
         start = time.perf_counter()
         try:
             _, pipelines = _http_get_json(url, headers=headers, timeout=self.timeout_config.read)
+        except TimeoutError:
+            return ProbeResult(status="unreachable", error="GitLab API probe timed out")
+        except urllib.error.URLError as exc:
+            return ProbeResult(status="unreachable", error=str(exc.reason))
+        except OSError as exc:
+            return ProbeResult(status="error", error=str(exc))
+        else:
             latency_ms = (time.perf_counter() - start) * 1000
             if not pipelines:
                 return ProbeResult(
@@ -322,12 +330,6 @@ class GitlabCIConnector(ConnectorBase):
                     details=details,
                 )
             return ProbeResult(status="degraded", latency_ms=latency_ms, details=details)
-        except TimeoutError:
-            return ProbeResult(status="unreachable", error="GitLab API probe timed out")
-        except urllib.error.URLError as exc:
-            return ProbeResult(status="unreachable", error=str(exc.reason))
-        except OSError as exc:
-            return ProbeResult(status="error", error=str(exc))
 
 
 # ---------------------------------------------------------------------------
@@ -379,6 +381,13 @@ class JenkinsConnector(ConnectorBase):
         start = time.perf_counter()
         try:
             _, body = _http_get_json(url, headers=headers, timeout=self.timeout_config.read)
+        except TimeoutError:
+            return ProbeResult(status="unreachable", error="Jenkins probe timed out")
+        except urllib.error.URLError as exc:
+            return ProbeResult(status="unreachable", error=str(exc.reason))
+        except OSError as exc:
+            return ProbeResult(status="error", error=str(exc))
+        else:
             latency_ms = (time.perf_counter() - start) * 1000
             result = body.get("result")
             details = {
@@ -398,9 +407,3 @@ class JenkinsConnector(ConnectorBase):
                     details=details,
                 )
             return ProbeResult(status="degraded", latency_ms=latency_ms, details=details)
-        except TimeoutError:
-            return ProbeResult(status="unreachable", error="Jenkins probe timed out")
-        except urllib.error.URLError as exc:
-            return ProbeResult(status="unreachable", error=str(exc.reason))
-        except OSError as exc:
-            return ProbeResult(status="error", error=str(exc))

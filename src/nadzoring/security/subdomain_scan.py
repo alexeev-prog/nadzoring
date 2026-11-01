@@ -124,15 +124,15 @@ def _fetch_ct_subdomains(domain: str, timeout_config: TimeoutConfig) -> set[str]
         response = requests.get(url, timeout=(timeout_config.connect, timeout_config.read))
         response.raise_for_status()
         entries: list[dict[str, Any]] = response.json()
-
+    except (RequestException, ValueError):
+        logger.warning("crt.sh query failed for %s", domain)
+    else:
         for entry in entries:
             name: str = entry.get("name_value", "")
             for line in name.splitlines():
                 cleaned: str = line.strip().lstrip("*").lstrip(".")
                 if cleaned.endswith(domain) and cleaned != domain:
                     subdomains.add(cleaned)
-    except (RequestException, ValueError):
-        logger.warning("crt.sh query failed for %s", domain)
 
     return subdomains
 

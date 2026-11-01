@@ -32,5 +32,5 @@ class ProbeResult:
 
     @property
     def ok(self) -> bool:
-        """Return ``True`` if the probe succeeded without errors."""
+        """Whether the probe succeeded without errors."""
         return self.error is None and self.status == "ok"

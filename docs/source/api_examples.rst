@@ -1,6 +1,6 @@
-===========
+===================
 Python API Examples
-===========
+===================
 
 This page provides practical Python API examples for all Nadzoring modules.
 

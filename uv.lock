@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.15' and sys_platform == 'win32'",
@@ -1462,6 +1462,7 @@ dev = [
     { name = "pytest-xdist" },
     { name = "ruff" },
     { name = "sphinx" },
+    { name = "sphinx-polyversion" },
     { name = "types-certifi" },
     { name = "types-click" },
     { name = "types-cryptography" },
@@ -1516,6 +1517,7 @@ dev = [
     { name = "pytest-xdist", specifier = ">=3.8.0" },
     { name = "ruff", specifier = ">=0.15.1" },
     { name = "sphinx", specifier = ">=9.1.0" },
+    { name = "sphinx-polyversion", specifier = ">=3.0.0" },
     { name = "types-certifi", specifier = ">=2021.10.8.3" },
     { name = "types-click", specifier = ">=7.1.8" },
     { name = "types-cryptography", specifier = ">=3.3.23.2" },
@@ -2332,6 +2334,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/98/0b/a866924ded68efec7a1759587a4e478aec7559d8165fac8b2ad1c0e774d6/sphinx_basic_ng-1.0.0b2.tar.gz", hash = "sha256:9ec55a47c90c8c002b5960c57492ec3021f5193cb26cebc2dc4ea226848651c9", size = 20736, upload-time = "2023-07-08T18:40:54.166Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3c/dd/018ce05c532a22007ac58d4f45232514cd9d6dd0ee1dc374e309db830983/sphinx_basic_ng-1.0.0b2-py3-none-any.whl", hash = "sha256:eb09aedbabfb650607e9b4b68c9d240b90b1e1be221d6ad71d61c52e29f7932b", size = 22496, upload-time = "2023-07-08T18:40:52.659Z" },
+]
+
+[[package]]
+name = "sphinx-polyversion"
+version = "3.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/63/b3/4192a156c9970ab903e1bc297f98820b2fe482554bf6807b89a7be35a51d/sphinx_polyversion-3.0.0.tar.gz", hash = "sha256:b716098fb7971c14ce117d85af1f3e09c37bdddc83f37f857a489bf7dd030050", size = 32881, upload-time = "2026-07-29T13:12:02.5Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/19/e6/d0423fc188fc584257131618d82efa950afa4697397a32b0c4eb6440c3e2/sphinx_polyversion-3.0.0-py3-none-any.whl", hash = "sha256:5774b16a5f05b539d396da9f1aea0130b862790d6735f7321a4cb021749dfe44", size = 36727, upload-time = "2026-07-29T13:12:03.736Z" },
 ]
 
 [[package]]

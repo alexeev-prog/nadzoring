@@ -154,7 +154,7 @@ class CertificateInfo:
 
     @property
     def cert(self) -> Certificate:
-        """Get the fetched certificate.
+        """The fetched certificate.
 
         Returns:
             The parsed X.509 certificate object.
@@ -169,7 +169,7 @@ class CertificateInfo:
 
     @property
     def chain(self) -> list[Certificate]:
-        """Get the complete certificate chain.
+        """The complete certificate chain.
 
         Returns:
             List of X.509 certificate objects representing the chain,
@@ -249,6 +249,9 @@ def check_domain_match(cert: Certificate, hostname: str) -> tuple[bool, list[str
 
     try:
         san: Extension[Any] = cert.extensions.get_extension_for_oid(ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
+    except ExtensionNotFound:
+        pass
+    else:
         if isinstance(san.value, SubjectAlternativeName):
             for name in san.value:
                 if isinstance(name, DNSName) and (
@@ -259,8 +262,6 @@ def check_domain_match(cert: Certificate, hostname: str) -> tuple[bool, list[str
                 if isinstance(name, IPAddress) and str(name.value) == hostname:
                     san_match = True
                     matches.append(f"IP:{name.value}")
-    except ExtensionNotFound:
-        pass
 
     subject: Name = cert.subject
     cn_attributes: list[NameAttribute] = subject.get_attributes_for_oid(NameOID.COMMON_NAME)
@@ -374,14 +375,15 @@ def get_san_list(cert: Certificate) -> list[str]:
     sans: list[str] = []
     try:
         san: Extension[Any] = cert.extensions.get_extension_for_oid(ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
+    except ExtensionNotFound:
+        pass
+    else:
         if isinstance(san.value, SubjectAlternativeName):
             for name in san.value:
                 if isinstance(name, DNSName):
                     sans.append(f"DNS:{name.value}")
                 elif isinstance(name, IPAddress):
                     sans.append(f"IP:{name.value}")
-    except ExtensionNotFound:
-        pass
     return sans
 
 
@@ -410,7 +412,9 @@ def _probe_tls_version(
         ``True`` if the server accepted the connection, ``False``
         if it refused or an error occurred.
     """
-    try:
+
+    def connect() -> bool:
+        """Configure the requested TLS version and attempt a handshake."""
         context: SSLContext = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
@@ -421,6 +425,9 @@ def _probe_tls_version(
             context.wrap_socket(sock, server_hostname=hostname),
         ):
             return True
+
+    try:
+        return connect()
     except (ssl.SSLError, ConnectionError, OSError):
         return False
 

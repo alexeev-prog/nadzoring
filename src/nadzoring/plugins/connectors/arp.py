@@ -95,6 +95,9 @@ class ArpSpoofingConnector(ConnectorBase):
         try:
             cache = ARPCache()
             alerts = ARPSpoofingDetector(cache).detect()
+        except ARPCacheRetrievalError as exc:
+            return _err(str(exc))
+        else:
             if self.interfaces:
                 alerts = [a for a in alerts if any(iface in self.interfaces for iface in a.interfaces)]
             alert_list = [
@@ -118,5 +121,3 @@ class ArpSpoofingConnector(ConnectorBase):
                 status="ok",
                 details={"data": [], "count": 0},
             )
-        except ARPCacheRetrievalError as exc:
-            return _err(str(exc))

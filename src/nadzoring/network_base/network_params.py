@@ -89,13 +89,14 @@ def _get_linux_gateway() -> str | None:
     try:
         route_output: str = check_output(shlex.split("route -n")).decode()
         ug_lines: list[str] = grep_in_line(route_output, filter_key="UG")
-
         if not ug_lines:
             logger.error("No gateway found in route table")
             return None
-
         gateway_candidate: str = ug_lines[0].split()[1]
-
+    except (CalledProcessError, IndexError):
+        logger.exception("Failed to get Linux gateway")
+        return None
+    else:
         try:
             IPv4Address(gateway_candidate)
         except Exception:
@@ -107,10 +108,6 @@ def _get_linux_gateway() -> str | None:
         except Exception:
             logger.exception("Failed to resolve gateway hostname")
             return gateway_candidate
-
-    except (CalledProcessError, IndexError):
-        logger.exception("Failed to get Linux gateway")
-        return None
 
 
 def _get_linux_mac_address(interface_name: str | None) -> str | None:

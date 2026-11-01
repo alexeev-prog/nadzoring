@@ -104,7 +104,7 @@ class ScanResult:
 
     @property
     def open_ports(self) -> list[int]:
-        """Get list of open port numbers."""
+        """List of open port numbers."""
         return [port for port, res in self.results.items() if res.state == "open"]
 
 
@@ -142,19 +142,12 @@ def get_ports_from_mode(config: ScanConfig) -> list[int]:
 
 def _grab_banner(sock: socket.socket, target_ip: str, port: int, timeout: float = DEFAULT_TIMEOUT) -> str | None:
     """Attempt to grab banner from open port."""
+    probes = {21: b"HELP\r\n", 25: b"EHLO scan.local\r\n", 22: b""}
+    probe = b"HEAD / HTTP/1.0\r\n\r\n" if port in HTTP_PORTS else probes.get(port, b"\r\n")
     try:
         sock.settimeout(timeout)
-        if port in HTTP_PORTS:
-            sock.send(b"HEAD / HTTP/1.0\r\n\r\n")
-        elif port == 21:
-            sock.send(b"HELP\r\n")
-        elif port == 25:
-            sock.send(b"EHLO scan.local\r\n")
-        elif port == 22:
-            pass
-        else:
-            sock.send(b"\r\n")
-
+        if probe:
+            sock.send(probe)
         banner: str = sock.recv(1024).decode("utf-8", errors="ignore").strip()
         return banner[:200] if banner else None
     except Exception:
@@ -169,7 +162,9 @@ def _scan_tcp_port(
     result = PortResult(port=port, state="filtered", service="unknown")
     sock = None
 
-    try:
+    def scan() -> None:
+        """Connect and populate the TCP port result."""
+        nonlocal sock
         start_time: datetime = datetime.now(tz=UTC)
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(timeout_config.connect)
@@ -192,6 +187,8 @@ def _scan_tcp_port(
         else:
             result.state = "filtered"
 
+    try:
+        scan()
     except TimeoutError:
         result.state = "filtered"
     except Exception as e:
@@ -209,7 +206,9 @@ def _scan_udp_port(target_ip: str, port: int, timeout_config: TimeoutConfig) -> 
     result = PortResult(port=port, state="filtered", service="unknown")
     sock = None
 
-    try:
+    def scan() -> None:
+        """Send a datagram and populate the UDP port result."""
+        nonlocal sock
         start_time: datetime = datetime.now(tz=UTC)
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.settimeout(timeout_config.connect)
@@ -228,6 +227,8 @@ def _scan_udp_port(target_ip: str, port: int, timeout_config: TimeoutConfig) -> 
             if e.errno == 10054:
                 result.state = "closed"
 
+    try:
+        scan()
     except Exception as e:
         logger.debug("Error scanning UDP port %d on %s: %s", port, target_ip, e)
     finally:

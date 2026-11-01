@@ -229,7 +229,7 @@ Perform a WHOIS lookup for a domain or IP address.
    nadzoring network-base whois -o json --save whois.json example.com
 
 .. note::
-   Requires the ``whois`` system utility.  See :doc:`/installation` for
+   Requires the ``whois`` system utility.  See :doc:`../installation` for
    installation instructions.
 
 ----

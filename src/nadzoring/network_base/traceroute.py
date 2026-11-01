@@ -309,7 +309,8 @@ def _run_windows_tracert(
     wall_timeout: float = max_hops * per_hop_timeout * 3 + 5
     cmd: str = f"tracert -h {max_hops} {target}"
 
-    try:
+    def run_tracert() -> bytes:
+        """Collect tracert output, stopping it at the wall timeout."""
         with Popen(
             cmd,
             shell=True,
@@ -321,6 +322,10 @@ def _run_windows_tracert(
             except TimeoutExpired:
                 proc.kill()
                 stdout_b, _ = proc.communicate()
+        return stdout_b
+
+    try:
+        stdout_b = run_tracert()
     except Exception:
         logger.exception(
             "Failed to run tracert for %s.\n\n"

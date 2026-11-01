@@ -92,7 +92,8 @@ def http_ping(
 
     session = Session()
 
-    try:
+    def request() -> HttpPingResult:
+        """Measure the request and convert lifetime expiry to a result."""
         start: float = time.perf_counter()
         try:
             with (
@@ -133,6 +134,9 @@ def http_ping(
             content_length=len(content),
             headers=headers,
         )
+
+    try:
+        return request()
     except RequestException as exc:
         return HttpPingResult(
             url=url,

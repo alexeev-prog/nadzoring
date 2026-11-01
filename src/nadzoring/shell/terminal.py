@@ -1,6 +1,6 @@
 """Optional terminal backends with a shared, plain-text command history."""
 
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from importlib import import_module
 from pathlib import Path
@@ -22,7 +22,7 @@ def _load_history(path: Path) -> list[str]:
 
 
 @contextmanager
-def _fallback_input(command: click.Group, history: list[str]) -> Iterator[Callable[[], str]]:
+def _fallback_input(command: click.Group, history: list[str]) -> Generator[Callable[[], str]]:
     """Configure readline when available, otherwise use bare input."""
     try:
         readline = import_module("readline")
@@ -55,7 +55,7 @@ def _fallback_input(command: click.Group, history: list[str]) -> Iterator[Callab
 
 
 @contextmanager
-def shell_input(command: click.Group) -> Iterator[Callable[[], str]]:
+def shell_input(command: click.Group) -> Generator[Callable[[], str]]:
     """Provide a line reader with completion and persistent history.
 
     Args:

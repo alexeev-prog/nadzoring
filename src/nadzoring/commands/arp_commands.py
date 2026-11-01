@@ -138,25 +138,24 @@ def monitor_spoofing(
     """
     alerts: list[dict[str, Any]] = []
 
+    def packet_callback(packet: Any) -> None:
+        """Process packet and collect alerts."""
+        alert: str | None = detector.process_packet(packet)
+        if alert:
+            alert_dict: dict[str, Any] = {
+                "timestamp": datetime.now(UTC).isoformat(),
+                "interface": interface or "all",
+                "message": alert,
+                "src_ip": getattr(packet[ARP], "psrc", "unknown"),
+                "src_mac": getattr(packet[Ether], "src", "unknown"),
+            }
+            alerts.append(alert_dict)
+
+            if not quiet:
+                click.secho(f"\n! {alert}", fg="red", bold=True)
+
     try:
         detector = ARPRealtimeDetector()
-
-        def packet_callback(packet: Any) -> None:
-            """Process packet and collect alerts."""
-            alert: str | None = detector.process_packet(packet)
-            if alert:
-                alert_dict: dict[str, Any] = {
-                    "timestamp": datetime.now(UTC).isoformat(),
-                    "interface": interface or "all",
-                    "message": alert,
-                    "src_ip": getattr(packet[ARP], "psrc", "unknown"),
-                    "src_mac": getattr(packet[Ether], "src", "unknown"),
-                }
-                alerts.append(alert_dict)
-
-                if not quiet:
-                    click.secho(f"\n! {alert}", fg="red", bold=True)
-
         if not quiet:
             click.echo(f"Monitoring ARP spoofing on {interface or 'all interfaces'}...\nPress Ctrl+C to stop.")
 
@@ -169,13 +168,13 @@ def monitor_spoofing(
             timeout=timeout_config.lifetime if timeout_config.lifetime > 0 else None,
         )
 
-        if not quiet:
-            click.echo(f"\nCaptured {len(packets)} ARP packets.")
-
     except KeyboardInterrupt:
         if not quiet:
             click.echo("\n\nMonitoring stopped by user.")
     except Exception as e:
         raise click.ClickException(f"Monitoring failed: {e}") from e
+    else:
+        if not quiet:
+            click.echo(f"\nCaptured {len(packets)} ARP packets.")
 
     return alerts
